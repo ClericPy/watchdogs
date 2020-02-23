@@ -1,6 +1,6 @@
 # watchdogs
 
-The whole thing is keeping some watchdogs to monitor the web's change.
+The whole thing is to keep some watchdogs to monitor the web's change.
 
 ## Intro
 
