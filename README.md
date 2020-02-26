@@ -5,6 +5,7 @@ The whole thing is to keep some watchdogs to monitor the web's change.
 ## Intro
 
 1. This is a web app based on [fastapi](https://github.com/tiangolo/fastapi), [databases](https://github.com/encode/databases), [uniparser](https://github.com/ClericPy/uniparser).
-2. The implementation of views is to be plug-in and portable, which means it can be embedded in other web apps also based on fastapi.
-3. Very simple to create new crawler with the Web UI.
+2. The implementation of views is to be plug-in and portable, which means it can be mounted on other web apps as a [sub app](https://fastapi.tiangolo.com/advanced/sub-applications-proxy/#mount-the-sub-application):
+    1. `app.mount("/uniparser", uniparser_app)`
+3. Quite simple to create new crawler with the Web UI.
 4. All the crawlers runs in the async environment, 
