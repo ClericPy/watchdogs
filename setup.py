@@ -13,8 +13,8 @@ rm -rf dist;rm -rf build;python3 setup.py bdist_wheel;twine upload "dist/*";rm -
 """
 
 py_version = sys.version_info
-if py_version.major < 3 or py_version.minor < 7:
-    raise RuntimeError('Only support python3.7+')
+if py_version.major < 3 or py_version.minor < 6:
+    raise RuntimeError('Only support python3.6+')
 
 with open('requirements.txt') as f:
     install_requires = [line for line in f.read().strip().split('\n')]
@@ -47,6 +47,7 @@ setup(
         "License :: OSI Approved :: MIT License",
         'Programming Language :: Python',
         "Programming Language :: Python :: 3",
+        "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
     ],

@@ -1,5 +1,7 @@
 uniparser>=0.1.5
 fastapi
+uvicorn
 databases
 torequests
 orjson
+fire
