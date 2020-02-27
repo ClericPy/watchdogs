@@ -10,9 +10,9 @@ app.mount("/uniparser", sub_app)
 
 @app.on_event("startup")
 async def startup():
-    await setup_app()
+    await setup_app(app)
 
 
 @app.on_event("shutdown")
 async def shutdown():
-    await release_app()
+    await release_app(app)
