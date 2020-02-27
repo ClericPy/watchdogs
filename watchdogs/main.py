@@ -23,10 +23,17 @@ def start_server(db_url=None,
                  admin=None,
                  password=None,
                  uninstall=False,
+                 ignore_stdout_log=False,
+                 ignore_file_log=False,
                  **uvicorn_kwargs):
     if uninstall:
         return clear_dir(GlobalConfig.CONFIG_DIR)
-    setup(db_url=db_url, admin=admin, password=password)
+    setup(
+        db_url=db_url,
+        admin=admin,
+        password=password,
+        ignore_stdout_log=ignore_stdout_log,
+        ignore_file_log=ignore_file_log)
     run(app, **uvicorn_kwargs)
 
 
