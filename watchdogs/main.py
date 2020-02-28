@@ -2,7 +2,7 @@ from fire import Fire
 from uvicorn import run
 
 from .app import app
-from .settings import setup, GlobalConfig
+from .settings import setup, Config
 
 
 def clear_dir(dir_path):
@@ -27,7 +27,7 @@ def start_server(db_url=None,
                  ignore_file_log=False,
                  **uvicorn_kwargs):
     if uninstall:
-        return clear_dir(GlobalConfig.CONFIG_DIR)
+        return clear_dir(Config.CONFIG_DIR)
     setup(
         db_url=db_url,
         admin=admin,

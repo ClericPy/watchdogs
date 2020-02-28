@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
 from .settings import release_app, setup_app
-from .uniparser import sub_app
+from .uniparser_app import sub_app
 
 app = FastAPI()
 
