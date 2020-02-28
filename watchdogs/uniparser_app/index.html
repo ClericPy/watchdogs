@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="referrer" content="never">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <link rel="shortcut icon" type="image/ico" href="/icon.png" />
+    <title>Uniparser Test Console</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="{{cdn_urls['VUE_JS_CDN']}}"></script>
+    <script src="{{cdn_urls['ELEMENT_JS_CDN']}}"></script>
+    <script src="{{cdn_urls['VUE_RESOURCE_CDN']}}"></script>
+    <style>
+        @import url("{{cdn_urls['ELEMENT_CSS_CDN']}}");
+
+        html>body {
+            width: 60%;
+            height: 98%;
+            margin: 0 0 0 20%;
+            background-color: #eceff1;
+            word-wrap: break-word;
+        }
+
+        .sub-title {
+            color: #606266;
+            font-size: 0.9em;
+        }
+
+        #el-drawer__title>span:focus {
+            outline-color: white;
+        }
+
+        a:link {
+            color: #000000;
+            text-decoration: none;
+        }
+
+        a:visited {
+            color: #000000;
+            text-decoration: none;
+        }
+
+        a:hover {
+            color: #000000;
+            text-decoration: none;
+        }
+
+        a:active {
+            color: #000000;
+            text-decoration: none;
+        }
+
+        div.rule {
+            border: 1px dashed #aaaaaa;
+            padding: 5px;
+        }
+
+        .el-input-group__prepend {
+            width: 7em;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <el-container>
+            <el-header style="margin-top: 2em;"><a href="https://github.com/ClericPy/uniparser" target="_blank"
+                    rel="noopener noreferrer">Uniparser Test Console v{{version}}</a></el-header>
+            <el-main>
+                <el-form :model="crawler_rule">
+                    <el-input v-model="crawler_rule.name" style="width: 40%;zoom: 100%;" placeholder="">
+                        <span slot="prepend">Rule Name</span>
+                    </el-input><br>
+                    <el-input v-model="crawler_rule.regex" style="width: 40%;zoom: 100%;" placeholder="">
+                        <span slot="prepend">Regex Pattern</span>
+                    </el-input><br>
+                    <el-input v-model="crawler_rule.encoding" style="width: 40%;zoom: 100%;" placeholder="">
+                        <span slot="prepend">Encoding</span>
+                    </el-input>
+                    <el-form-item label="Request Args">
+                        <el-button type="text" @click="input_curl">cURL Parse</el-button>
+                        <el-input v-model="crawler_rule.request_args" placeholder="Json dict for Requests"
+                            type="textarea" autosize></el-input>
+                    </el-form-item>
+                    <el-form-item>
+                        <el-button type="primary" @click="download"> <i class="el-icon-download"></i> Download
+                        </el-button>
+                    </el-form-item>
+                    <el-form-item :label="'Response Body ' + request_status " id="request_status">
+                        <el-input type="textarea" :autosize="{ minRows: 2, maxRows: 5}" placeholder="" width="50%"
+                            v-model="input_object">
+                        </el-input>
+                    </el-form-item>
+                    <el-form-item label="Parse Rules">
+                        <br>
+                        <template v-for="(rule, index) in crawler_rule.parse_rules" class="rule">
+                            <div class="rule">
+                                <el-input type="text" style="width: 50%;zoom: 100%;" autosize
+                                    placeholder="Rule name for saving parse result" v-model="rule.name">
+                                    <template slot="prepend" class="sub-title">Rule Name</template>
+                                </el-input>
+                                <i class="el-icon-delete" @click="del_rule(index)">
+                                </i>
+                                <br>
+                                <div v-if="rule.name">
+                                    <div class="sub-title">Rules Chain</div>
+                                    <template v-for="(r, i) in crawler_rule.parse_rules[index].chain_rules"
+                                        class="rule_chain">
+                                        <i v-if="r[0]" @click="get_doc(r[0])" title="Read the parse doc"
+                                            class="el-icon-info"></i>
+                                        <el-autocomplete @keyup.ctrl.13.native="parse"
+                                            @keyup.alt.13.native="add_new_rule_chain(index)" class="inline-input"
+                                            style="width: 10%;zoom: 100%;" v-model="r[0]"
+                                            :fetch-suggestions="querySearch" placeholder="Parser Name">
+                                        </el-autocomplete>
+                                        <el-input @keyup.ctrl.13.native="parse"
+                                            @keyup.alt.13.native="add_new_rule_chain(index)" type="textarea"
+                                            style="width: 35%;zoom: 120%;display:inline-block;" :rows="1" autosize
+                                            placeholder="Param. Ctrl+Enter=Submit; Alt+Enter=New" v-model="r[1]">
+                                        </el-input>
+                                        <el-input @keyup.ctrl.13.native="parse"
+                                            @keyup.alt.13.native="add_new_rule_chain(index)" type="textarea"
+                                            style="width: 35%;zoom: 120%;display:inline-block;" :rows="1" autosize
+                                            placeholder="Value. Ctrl+Enter=Submit; Alt+Enter=New" v-model="r[2]">
+                                        </el-input>
+                                        <i class="el-icon-delete" @click="del_rule_chain(index, i)">
+                                        </i>
+                                        <br>
+                                    </template>
+                                    <i class="el-icon-circle-plus" style="margin: 0.5em 0 0.5em 45%; zoom: 1.2;"
+                                        @click="add_new_rule_chain(index)"></i>
+                                    <br>
+                                    <div class="sub-title">ChildRules</div>
+                                    <el-input type="textarea" style="width: 50%;"
+                                        placeholder="Child rules, JSON list of ParseRule objects" v-model="rule.childs">
+                                    </el-input>
+                                    <br>
+                                </div>
+                            </div>
+                        </template>
+                        <i class="el-icon-circle-plus-outline" @click="add_new_rule"
+                            style="margin: 0.5em 0 0.5em 45%; zoom: 1.5;"></i>
+                    </el-form-item>
+                    <el-form-item>
+                        <el-button type="primary" @click="parse"> <i class="el-icon-video-play"> Parse </i>
+                        </el-button>
+                        <el-button type="warning" @click="load_rule_popup"> <i class="el-icon-edit-outline"> Loads </i>
+                        </el-button>
+                    </el-form-item>
+                    <hr>
+                    <el-form-item label="CrawlerRule JSON" title="Can be loaded by CrawlerRule.from_json">
+                        <el-checkbox v-model="pretty_json">Pretty</el-checkbox>
+                        <el-input type="textarea" autosize placeholder="" v-model="current_crawler_rule_json">
+                        </el-input>
+                    </el-form-item>
+                    <el-drawer close-on-press-escape="true" title="Parse Result" :visible.sync="drawer" size="50%"
+                        direction="ttb">
+                        <b style="font-size: 0.8em;">${parse_result.type}</b>
+                        <textarea name="doc" id="show_parse_result"
+                            style="width: 100%; height: 100%;">${parse_result.data}</textarea>
+                    </el-drawer>
+                    <el-drawer :close-on-press-escape="false" title="Doc" :visible.sync="doc_drawer" size="50%"
+                        direction="ttb">
+                        <textarea name="doc" id="show_doc" style="width: 100%; height: 100%;"
+                            :v-model="current_doc">${current_doc}</textarea>
+                    </el-drawer>
+                </el-form>
+                <el-dialog title="Input the JSON string" :visible.sync="new_rule_visible">
+                    <el-form>
+                        <el-input v-model="new_rule_json" placeholder="Json dict for Requests" type="textarea"
+                            :autosize="{ minRows: 5, maxRows: 10}" :autofocus="true"></el-input>
+                    </el-form>
+                    <div slot="footer" class="dialog-footer">
+                        <el-button @click="load_rule()"> Cancel </el-button>
+                        <el-button type="primary" @click="load_rule()"> OK </el-button>
+                    </div>
+                </el-dialog>
+            </el-main>
+        </el-container>
+    </div>
+    <script>
+        var Main = {
+            data() {
+                return {
+                    pretty_json: true,
+                    drawer: false,
+                    options: '',
+                    docs: '',
+                    crawler_rule: {
+                        name: 'HelloWorld',
+                        regex: '',
+                        encoding: "",
+                        parse_rules: [],
+                        request_args: JSON.stringify({
+                            "method": "get",
+                            "url": "http://httpbin.org/forms/post",
+                            "headers": {
+                                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"
+                            }
+                        }, null, 2),
+                    },
+                    input_object: '',
+                    request_status: '',
+                    parse_result: '',
+                    current_doc: '',
+                    doc_drawer: false,
+                    new_rule_visible: false,
+                    new_rule_json: '',
+                }
+            },
+            methods: {
+                querySearch(queryString, cb) {
+                    var options = this.options;
+                    var results = queryString ? options.filter(this.createFilter(queryString)) : options;
+                    cb(results);
+                },
+                createFilter(queryString) {
+                    return (item) => {
+                        return (item.value.toLowerCase().indexOf(queryString.toLowerCase()) === 0);
+                    };
+                },
+                openAlert(body, title) {
+                    this.$alert(body, title, {
+                        confirmButtonText: 'Ok',
+                        distinguishCancelAndClose: true,
+                        closeOnPressEscape: true,
+                        closeOnClickModal: true,
+                    });
+                },
+                download() {
+                    var data = this.crawler_rule
+                    this.$http.post('request', data).then(
+                        r => {
+                            this.input_object = r.body.text
+                            this.request_status = r.body.status
+                            let color = r.body.ok ? 'green' : 'red'
+                            document.querySelector('#request_status>label').style.color = color
+                        }, r => {
+                            this.status = 'testTask failed, Bad request (' + r.status + ') :' + r
+                                .statusText
+                            this.status_icon_flag = 'error'
+                        }
+                    )
+                },
+                parse() {
+                    var data = {
+                        'rule': this.current_crawler_rule_json,
+                        'input_object': this.input_object,
+                    }
+                    if (!this.crawler_rule.parse_rules || !this.input_object) {
+                        this.openAlert('Send request and fill the parse_rules before parsing.')
+                        return
+                    }
+                    this.$http.post('parse', JSON.stringify(data)).then(
+                        r => {
+                            this.parse_result = r.body
+                            this.drawer = true
+                        }, r => {
+                            this.status = 'testTask failed, Bad request (' + r.status + ') :' + r.statusText
+                            this.status_icon_flag = 'error'
+                        }
+                    )
+                },
+                add_new_rule_chain(index) {
+                    this.crawler_rule.parse_rules[index].chain_rules.push(['', '', ''])
+                },
+                add_new_rule() {
+                    this.crawler_rule.parse_rules.push({
+                        name: '',
+                        chain_rules: [
+                            ['', '', '']
+                        ],
+                        childs: "",
+                    })
+                },
+                del_rule(index) {
+                    this.crawler_rule.parse_rules.splice(index, 1)
+                },
+                del_rule_chain(index, i) {
+                    this.crawler_rule.parse_rules[index].chain_rules.splice(i, 1)
+                },
+                get_doc(name) {
+                    this.current_doc = this.docs[name] || 'Not found parser: ' + name
+                    this.doc_drawer = true
+                },
+                load_rule() {
+                    if (!this.new_rule_json) {
+                        this.new_rule_visible = false
+                        return
+                    }
+                    try {
+                        var new_rule = JSON.parse(this.new_rule_json)
+                        if (new_rule.request_args && new_rule.request_args.url) {
+                            new_rule.request_args = JSON.stringify(new_rule.request_args, null, 2)
+                        }
+                        this.crawler_rule = new_rule
+                        this.new_rule_visible = false
+                    } catch (err) {
+                        alert(err)
+                    }
+                },
+                load_rule_popup() {
+                    this.new_rule_visible = true
+                    if (!this.new_rule_json) {
+                        this.new_rule_json = this.current_crawler_rule_json
+                    }
+                },
+                input_curl() {
+                    this.$prompt('Input cURL string (or url)', '', {
+                        confirmButtonText: 'OK',
+                        cancelButtonText: 'Cancel',
+                        inputPattern: /^(curl |http).*/,
+                        inputErrorMessage: 'cURL string should start with curl, or url should start with http'
+                    }).then(({
+                        value
+                    }) => {
+                        this.$http.post('curl_parse', value).then(
+                            r => {
+                                if (r.body.ok) {
+                                    console.log(r.body.result)
+                                    this.crawler_rule.request_args = JSON.stringify(r.body.result, null,
+                                        2)
+                                } else {
+                                    this.$message({
+                                        type: 'error',
+                                        message: 'cURL parse failed: ' + r.body.result
+                                    });
+                                }
+                            }, r => {
+                                this.$message({
+                                    type: 'error',
+                                    message: 'cURL parse failed'
+                                });
+                            }
+                        );
+                    }).catch(() => {
+                        this.$message({
+                            type: 'info',
+                            message: 'Cancel'
+                        });
+                    });
+                }
+            },
+            watch: {},
+            computed: {
+                current_crawler_rule_json: function () {
+                    var rules = []
+                    this.crawler_rule.parse_rules.forEach(item => {
+                        if (item.name) {
+                            try {
+                                childs = JSON.parse(item.childs || [])
+
+                            } catch (error) {
+                                childs = item.childs
+                            }
+                            var chain_rules = []
+                            item.chain_rules.forEach(i => {
+                                if (i[0] && i[1]) {
+                                    chain_rules.push([i[0], i[1], i[2]])
+                                }
+                            });
+                            rules.push({
+                                'name': item.name,
+                                'chain_rules': chain_rules,
+                                'childs': childs
+                            })
+                        }
+                    });
+                    var data = {
+                        name: this.crawler_rule.name,
+                        request_args: JSON.parse(this.crawler_rule.request_args),
+                        parse_rules: rules,
+                        regex: this.crawler_rule.regex,
+                        encoding: this.crawler_rule.encoding,
+                    }
+                    if (this.pretty_json) {
+                        return JSON.stringify(data, null, 2)
+                    } else {
+                        return JSON.stringify(data)
+                    }
+                }
+            }
+        }
+
+        function init_app(app) {
+            app.add_new_rule()
+            app.$http.get('init_app').then(
+                r => {
+                    result = r.body
+                    app.docs = result.parser_name_docs
+                    let options = []
+                    result.parser_name_choices.forEach(item => {
+                        options.push(item)
+                    });
+                    app.options = options
+                }, r => {}
+            )
+        }
+        var vue_app = Vue.extend(Main)
+        var app = new vue_app({
+            delimiters: ['${', '}']
+        }).$mount('#app')
+        init_app(app)
+    </script>
+</body>
+
+</html>

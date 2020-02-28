@@ -102,7 +102,6 @@ async def crawler_loop(tasks, db):
     crawler = Crawler(storage=rule_db)
     while 1:
         await crawl_once(tasks, crawler)
-        quit()
         await sleep(Config.check_interval)
 
 
