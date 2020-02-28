@@ -6,8 +6,6 @@ from starlette.templating import Jinja2Templates
 from uniparser import CrawlerRule, Uniparser, __version__
 from uniparser.utils import ensure_request, get_available_async_request
 
-from ..config import Config
-
 app = FastAPI(openapi_prefix="/watchdog")
 
 adapter = get_available_async_request()
@@ -34,12 +32,12 @@ def init_app():
 
 @app.get("/")
 def index(request: Request):
-    cdn_urls = dict(
-        VUE_JS_CDN=Config.VUE_JS_CDN,
-        ELEMENT_CSS_CDN=Config.ELEMENT_CSS_CDN,
-        ELEMENT_JS_CDN=Config.ELEMENT_JS_CDN,
-        VUE_RESOURCE_CDN=Config.VUE_RESOURCE_CDN,
-    )
+    cdn_urls = {
+        'VUE_JS_CDN': 'https://cdn.staticfile.org/vue/2.6.11/vue.min.js',
+        'ELEMENT_CSS_CDN': 'https://cdn.staticfile.org/element-ui/2.13.0/theme-chalk/index.css',
+        'ELEMENT_JS_CDN': 'https://cdn.staticfile.org/element-ui/2.13.0/index.js',
+        'VUE_RESOURCE_CDN': 'https://cdn.staticfile.org/vue-resource/1.5.1/vue-resource.min.js'
+    }
     return templates.TemplateResponse(
         'index.html',
         dict(cdn_urls=cdn_urls, version=__version__, request=request))
