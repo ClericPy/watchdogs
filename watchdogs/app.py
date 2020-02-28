@@ -5,7 +5,7 @@ from .uniparser_app import sub_app
 
 app = FastAPI()
 
-app.mount("/uniparser", sub_app)
+app.mount("/watchdog", sub_app)
 
 
 @app.on_event("startup")
