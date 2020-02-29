@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="referrer" content="never">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <link rel="shortcut icon" type="image/ico" href="/icon.png" />
+    <title>Uniparser Test Console</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="{{cdn_urls['VUE_JS_CDN']}}"></script>
+    <script src="{{cdn_urls['ELEMENT_JS_CDN']}}"></script>
+    <script src="{{cdn_urls['VUE_RESOURCE_CDN']}}"></script>
+    <style>
+        @import url("{{cdn_urls['ELEMENT_CSS_CDN']}}");
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <el-container>
+
+        </el-container>
+    </div>
+    <script>
+        var Main = {
+            data() {
+                return {
+
+                }
+            },
+            methods: {
+
+            },
+            watch: {},
+            computed: {
+
+            }
+        }
+        var vue_app = Vue.extend(Main)
+        var app = new vue_app({
+            delimiters: ['${', '}']
+        }).$mount('#app')
+    </script>
+</body>
+
+</html>

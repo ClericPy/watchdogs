@@ -1,12 +1,11 @@
-import datetime
 import logging
-from asyncio import ensure_future, sleep, wait
+from asyncio import ensure_future
 from logging.handlers import RotatingFileHandler
 
 from databases import Database
-from uniparser.crawler import Crawler
 
 from .config import Config
+from .crawler import crawler_loop
 
 
 def setup_logger(ignore_stdout_log=False, ignore_file_log=False):
@@ -55,6 +54,7 @@ def setup_uniparser():
     GlobalConfig.JSONDecodeError = JSONDecodeError
     GlobalConfig.json_dumps = dumps
     GlobalConfig.json_loads = loads
+    GlobalConfig.GLOBAL_TIMEOUT = 30
 
 
 def setup(db_url=None,
@@ -70,47 +70,15 @@ def setup(db_url=None,
     setup_db(db_url)
 
 
-async def crawl_once(tasks, crawler):
-    db = crawler.storage.db
-    # sqlite do not has datediff...
-    query = tasks.select()
-    todo = []
-    now = datetime.datetime.now()
-    async with Config.db_lock:
-        async for task in db.iterate(query=query):
-            # print(dict(task), 'crawl_once')
-            # not reach interval
-            if task.last_check_time + datetime.timedelta(
-                    seconds=task.interval) > now:
-                # wait interval
-                continue
-            print(dict(task), 'start crawling')
-            # task.interval = 299
-            # query = tasks.update()
-            # values = {"name": "example1", "completed": True}
-            # await db.execute(query=query, values=values)
-    return
-    done, pending = wait(todo, timeout=Config.default_crawler_timeout)
-    async with Config.db_lock:
-        for task in done:
-            pass
-
-
-async def crawler_loop(tasks, db):
-    from .models import RuleStorageDB
-    rule_db = RuleStorageDB(db)
-    crawler = Crawler(storage=rule_db)
-    while 1:
-        await crawl_once(tasks, crawler)
-        await sleep(Config.check_interval)
-
-
 async def setup_app(app):
     db = Config.db
     if db:
         await db.connect()
         from .models import tasks, create_tables
         create_tables(str(db.url))
+        # TODO async start crawler loop
+        # crawler_loop
+        ensure_future(crawler_loop(tasks, db))
         try:
             query = tasks.insert().prefix_with('OR IGNORE')
             values = {
@@ -122,9 +90,6 @@ async def setup_app(app):
             print(e)
             pass
             # print(e.__class__.__name__, 1111111)IntegrityError
-        # TODO async start crawler loop
-        # crawler_loop
-        ensure_future(crawler_loop(tasks, db))
 
 
 async def release_app(app):

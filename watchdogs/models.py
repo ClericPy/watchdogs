@@ -47,12 +47,16 @@ tasks = sqlalchemy.Table(
         server_default="1970-01-01 08:00:00",
         nullable=False),
     sqlalchemy.Column(
-        "last_change_time",
+        "next_check_time",
         sqlalchemy.TIMESTAMP,
         server_default="1970-01-01 08:00:00",
         nullable=False),
     sqlalchemy.Column(
-        "custom_info", sqlalchemy.TEXT, server_default="", nullable=False),
+        "last_change_time",
+        sqlalchemy.TIMESTAMP,
+        server_default="1970-01-01 08:00:00",
+        nullable=False),
+    sqlalchemy.Column("custom_info", sqlalchemy.TEXT),
 )
 host_rules = sqlalchemy.Table(
     "host_rules",
