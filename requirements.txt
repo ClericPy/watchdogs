@@ -1,7 +1,7 @@
-uniparser>=1.0.1
+uniparser>=1.0.3
 fastapi
 uvicorn
 databases
 torequests
-orjson
 fire
+jinja2

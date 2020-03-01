@@ -6,9 +6,10 @@ from databases import Database
 
 from .config import Config
 from .crawler import crawler_loop
+from .models import RuleStorageDB
 
 
-def setup_logger(ignore_stdout_log=False, ignore_file_log=False):
+def init_logger(ignore_stdout_log=False, ignore_file_log=False):
     logger = logging.getLogger('watchdog')
     formatter_str = "%(asctime)s %(levelname)-5s [%(name)s] %(filename)s(%(lineno)s): %(message)s"
     formatter = logging.Formatter(formatter_str, datefmt="%Y-%m-%d %H:%M:%S")
@@ -27,7 +28,7 @@ def setup_logger(ignore_stdout_log=False, ignore_file_log=False):
             Config.CONFIG_DIR / 'error.log',
             maxBytes=1024 * 1024 * 1,
             backupCount=1)
-        handler.setLevel(logging.INFO)
+        handler.setLevel(logging.ERROR)
         handler.setFormatter(formatter)
         logger.addHandler(handler)
 
@@ -36,7 +37,6 @@ def setup_logger(ignore_stdout_log=False, ignore_file_log=False):
         handler.setLevel(logging.INFO)
         handler.setFormatter(formatter)
         logger.addHandler(handler)
-
     return logger
 
 
@@ -45,14 +45,24 @@ def setup_db(db_url=None):
         sqlite_path = Config.CONFIG_DIR / 'storage.sqlite'
         db_url = f'sqlite:///{sqlite_path}'
     Config.db = Database(db_url)
+    Config.rule_db = RuleStorageDB(Config.db)
 
 
 def setup_uniparser():
     from orjson import JSONDecodeError, dumps, loads
     from uniparser.config import GlobalConfig
+    from uniparser.parsers import JsonSerializable
+
+    def default(obj):
+        if isinstance(obj, JsonSerializable):
+            return dict(obj)
+
+    def compatible_orjson_dumps(*args, **kwargs):
+        result = dumps(default=default, *args, **kwargs)
+        return result.decode('utf-8')
 
     GlobalConfig.JSONDecodeError = JSONDecodeError
-    GlobalConfig.json_dumps = dumps
+    GlobalConfig.json_dumps = compatible_orjson_dumps
     GlobalConfig.json_loads = loads
     GlobalConfig.GLOBAL_TIMEOUT = 30
 
@@ -64,7 +74,7 @@ def setup(db_url=None,
           ignore_file_log=False):
     Config.admin = admin
     Config.password = password
-    setup_logger(
+    Config.logger = init_logger(
         ignore_stdout_log=ignore_stdout_log, ignore_file_log=ignore_file_log)
     setup_uniparser()
     setup_db(db_url)
@@ -83,13 +93,26 @@ async def setup_app(app):
             query = tasks.insert().prefix_with('OR IGNORE')
             values = {
                 "name": "example1",
-                "request_args": 'test1',
+                "request_args": '{"method":"get","url":"http://httpbin.org/forms/post","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}}',
             }
             print(await db.execute(query=query, values=values))
         except Exception as e:
             print(e)
             pass
             # print(e.__class__.__name__, 1111111)IntegrityError
+        from .models import CrawlerRule
+        try:
+            crawler_rule = CrawlerRule.loads(
+                '{"name":"HelloWorld","request_args":{"method":"get","url":"http://httpbin.org/forms/post","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[{"name":"result","chain_rules":[["css","p","$text"],["python","getitem","[0]"]],"childs":""}],"regex":"","encoding":""}'
+            )
+            try:
+                await Config.rule_db.add_crawler_rule(crawler_rule)
+            except:
+                import traceback
+                traceback.print_exc()
+        except Exception as e:
+            print(e)
+            pass
 
 
 async def release_app(app):

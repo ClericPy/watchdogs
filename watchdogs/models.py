@@ -1,5 +1,5 @@
 import sqlalchemy
-from sqlalchemy.sql import func, text
+from sqlalchemy.sql import text
 from uniparser import CrawlerRule, HostRule
 from uniparser.crawler import RuleStorage, get_host
 
@@ -16,7 +16,7 @@ tasks = sqlalchemy.Table(
     sqlalchemy.Column(
         "name", sqlalchemy.String(64), nullable=False, index=True, unique=True),
     sqlalchemy.Column(
-        "enable", sqlalchemy.Integer, server_default=text('0'), nullable=False),
+        "enable", sqlalchemy.Integer, server_default=text('1'), nullable=False),
     sqlalchemy.Column(
         "tags", sqlalchemy.String(128), server_default="", nullable=False),
     sqlalchemy.Column("request_args", sqlalchemy.TEXT, nullable=False),
@@ -42,6 +42,9 @@ tasks = sqlalchemy.Table(
         nullable=False),
     sqlalchemy.Column("latest_result", sqlalchemy.TEXT),
     sqlalchemy.Column(
+        "result_list", sqlalchemy.TEXT, nullable=False,
+        server_default='[]'),  # JSON list
+    sqlalchemy.Column(
         "last_check_time",
         sqlalchemy.TIMESTAMP,
         server_default="1970-01-01 08:00:00",
@@ -64,14 +67,6 @@ host_rules = sqlalchemy.Table(
     sqlalchemy.Column('host', sqlalchemy.String(128), primary_key=True),
     sqlalchemy.Column('host_rule', sqlalchemy.TEXT),
 )
-task_logs = sqlalchemy.Table(
-    "task_logs",
-    metadata,
-    sqlalchemy.Column('task_id', sqlalchemy.Integer, primary_key=True),
-    sqlalchemy.Column('log', sqlalchemy.TEXT),
-    sqlalchemy.Column(
-        "create_time", sqlalchemy.TIMESTAMP, server_default=func.now()),
-)
 
 
 def create_tables(db_url):
@@ -92,7 +87,7 @@ class RuleStorageDB(RuleStorage):
         query = "SELECT host_rule FROM host_rules WHERE host = :host"
         host_rule = await self.db.fetch_one(query=query, values={"host": host})
         if host_rule:
-            return HostRule.loads(host_rule)
+            return HostRule.loads(host_rule[0])
         else:
             return default
 
@@ -144,6 +139,7 @@ class RuleStorageDB(RuleStorage):
             host_rule = HostRule.loads(row.host_rule)
             crawler_rule = host_rule.pop(rule_name, None)
             if crawler_rule:
+                # update host_rule
                 await self.add_host_rule(host_rule)
                 return crawler_rule
 
