@@ -13,20 +13,44 @@
     <script src="{{cdn_urls['VUE_RESOURCE_CDN']}}"></script>
     <style>
         @import url("{{cdn_urls['ELEMENT_CSS_CDN']}}");
+
+        .full-screen,
+        body,
+        .el-tabs__content,
+        .el-tabs__content>* {
+            width: 100%;
+            height: 100%;
+        }
+
+        html {
+            margin: 0 auto;
+            width: 90%;
+            height: 90%;
+        }
     </style>
 </head>
 
 <body>
-    <div id="app">
-        <el-container>
+    <div id="app" class="full-screen">
+        <template class="full-screen">
+            <el-tabs v-model="activeName" class="full-screen">
+                <el-tab-pane label="Tasks" name="tasks">
 
-        </el-container>
+                </el-tab-pane>
+                <el-tab-pane label="New Task" name="new task">
+                    <iframe src="/uniparser" frameborder="0" style="width: 100%;height: 100%;"></iframe>
+                </el-tab-pane>
+                <el-tab-pane label="Rules" name="rule">
+
+                </el-tab-pane>
+            </el-tabs>
+        </template>
     </div>
     <script>
         var Main = {
             data() {
                 return {
-
+                    activeName: 'new task'
                 }
             },
             methods: {
