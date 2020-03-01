@@ -1,5 +1,4 @@
 from asyncio import Lock
-import logging
 from pathlib import Path
 
 
@@ -10,7 +9,8 @@ class Config(object):
     db = None
     admin = None
     password = None
-    logger = logging.getLogger('watchdog')
+    logger = None
+    rule_db = None
     check_interval = 60
     default_interval = 5 * 60
     default_crawler_timeout = 60
