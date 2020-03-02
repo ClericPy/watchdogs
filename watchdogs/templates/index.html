@@ -32,29 +32,144 @@
 
 <body>
     <div id="app" class="full-screen">
-        <template class="full-screen">
+        <template>
             <el-tabs v-model="activeName" class="full-screen">
                 <el-tab-pane label="Tasks" name="tasks">
 
                 </el-tab-pane>
                 <el-tab-pane label="New Task" name="new task">
-                    <iframe src="/uniparser" frameborder="0" style="width: 100%;height: 100%;"></iframe>
+                    <iframe src="/uniparser" frameborder="0" ref="iframe" style="width: 100%; height: 90%;"></iframe>
+                    <el-button icon='el-icon-upload' type='primary' style="margin: 0 0 0 20%;"
+                        @click="add_crawler_rule"> 1. Save Crawler Rule</el-button>
+                    <el-button icon='el-icon-plus' type='primary' style="margin: 0;" @click="show_form_add_new_task"> 2.
+                        Add
+                        New Task</el-button>
                 </el-tab-pane>
                 <el-tab-pane label="Rules" name="rule">
 
                 </el-tab-pane>
             </el-tabs>
         </template>
+
+
+
+        <el-dialog title="New Task" :visible.sync="dialogFormVisible">
+            <el-form :model="new_task_form">
+                <el-form-item label="Task Name">
+                    <el-input v-model="new_task_form.name" autocomplete="off"></el-input>
+                </el-form-item>
+                <el-form-item label="Tags">
+                    <el-input v-model="new_task_form.tags" autocomplete="off" ></el-input>
+                </el-form-item>
+                <el-form-item label="request_args">
+                    <el-input v-model="new_task_form.request_args" autocomplete="off"></el-input>
+                </el-form-item>
+                <el-form-item label="origin_url">
+                    <el-input v-model="new_task_form.origin_url" autocomplete="off"></el-input>
+                </el-form-item>
+                <el-form-item label="interval">
+                    <el-input v-model="new_task_form.interval" autocomplete="off"></el-input>
+                </el-form-item>
+                <el-form-item label="work_hours">
+                    <el-input v-model="new_task_form.work_hours" autocomplete="off"></el-input>
+                </el-form-item>
+                <el-form-item label="max_result_count">
+                    <el-input v-model="new_task_form.max_result_count" autocomplete="off"></el-input>
+                </el-form-item>
+                <el-form-item label="custom_info">
+                    <el-input v-model="new_task_form.custom_info" autocomplete="off"></el-input>
+                </el-form-item>
+            </el-form>
+            <div slot="footer" class="dialog-footer">
+                <el-button @click="dialogFormVisible = false">Cancel</el-button>
+                <el-button type="primary" @click="dialogFormVisible = false">OK</el-button>
+            </div>
+        </el-dialog>
+
+
     </div>
     <script>
         var Main = {
             data() {
                 return {
-                    activeName: 'new task'
+                    activeName: 'new task',
+                    dialogFormVisible: false,
+                    new_task_form: {
+                        name: '',
+                        enable: 1,
+                        tags: '',
+                        request_args: '',
+                        origin_url: '',
+                        interval: '',
+                        work_hours: '0, 24',
+                        max_result_count: '',
+                        custom_info: '',
+                    },
                 }
             },
             methods: {
+                add_crawler_rule() {
+                    let current_crawler_rule = JSON.parse(this.$refs.iframe.contentWindow.document.getElementById(
+                        'current_crawler_rule_json').value)
+                    let data = JSON.stringify(current_crawler_rule)
+                    this.$http.post('add_crawler_rule', data).then(
+                        r => {
+                            if (r.body.ok) {
+                                this.$message({
+                                    message: 'Add rule success: ' + r.body.ok,
+                                    type: 'success'
+                                });
+                            } else {
+                                this.$message.error({
+                                    message: 'Add rule failed: ' + r.body.error,
+                                    duration: 0,
+                                    showClose: true,
+                                });
+                            }
 
+                        }, r => {
+                            let status = 'testTask failed, Bad request (' + r.status + ') :' + r
+                                .statusText
+                            this.$message.error({
+                                message: 'Add rule failed: ' + r.status,
+                                duration: 0,
+                                showClose: true,
+                            });
+                        }
+                    )
+                },
+                show_form_add_new_task() {
+                    let current_crawler_rule = JSON.parse(this.$refs.iframe.contentWindow.document.getElementById(
+                        'current_crawler_rule_json').value)
+                    this.new_task_form.request_args = JSON.stringify(current_crawler_rule.request_args)
+                    this.dialogFormVisible = true
+
+                    // this.$http.post('show_form_add_new_task', data).then(
+                    //     r => {
+                    //         if (r.body.ok) {
+                    //             this.$message({
+                    //                 message: 'Add rule success: ' + r.body.ok,
+                    //                 type: 'success'
+                    //             });
+                    //         } else {
+                    //             this.$message.error({
+                    //                 message: 'Add rule failed: ' + r.body.error,
+                    //                 duration: 0,
+                    //                 showClose: true,
+                    //             });
+                    //         }
+
+                    //     }, r => {
+                    //         let status = 'testTask failed, Bad request (' + r.status + ') :' + r
+                    //             .statusText
+                    //         this.$message.error({
+                    //             message: 'Add rule failed: ' + r.status,
+                    //             duration: 0,
+                    //             showClose: true,
+                    //         });
+                    //     }
+                    // )
+                },
             },
             watch: {},
             computed: {

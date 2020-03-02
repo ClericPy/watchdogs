@@ -49,21 +49,8 @@ def setup_db(db_url=None):
 
 
 def setup_uniparser():
-    from orjson import JSONDecodeError, dumps, loads
     from uniparser.config import GlobalConfig
-    from uniparser.parsers import JsonSerializable
 
-    def default(obj):
-        if isinstance(obj, JsonSerializable):
-            return dict(obj)
-
-    def compatible_orjson_dumps(*args, **kwargs):
-        result = dumps(default=default, *args, **kwargs)
-        return result.decode('utf-8')
-
-    GlobalConfig.JSONDecodeError = JSONDecodeError
-    GlobalConfig.json_dumps = compatible_orjson_dumps
-    GlobalConfig.json_loads = loads
     GlobalConfig.GLOBAL_TIMEOUT = 30
 
 
@@ -86,7 +73,6 @@ async def setup_app(app):
         await db.connect()
         from .models import tasks, create_tables
         create_tables(str(db.url))
-        # TODO async start crawler loop
         # crawler_loop
         ensure_future(crawler_loop(tasks, db))
         try:
@@ -102,11 +88,9 @@ async def setup_app(app):
             # print(e.__class__.__name__, 1111111)IntegrityError
         from .models import CrawlerRule
         try:
-            crawler_rule = CrawlerRule.loads(
-                '{"name":"HelloWorld","request_args":{"method":"get","url":"http://httpbin.org/forms/post","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[{"name":"result","chain_rules":[["css","p","$text"],["python","getitem","[0]"]],"childs":""}],"regex":"","encoding":""}'
-            )
+
             try:
-                await Config.rule_db.add_crawler_rule(crawler_rule)
+                await Config.rule_db.add_crawler_rule('{"name":"HelloWorld","request_args":{"method":"get","url":"http://httpbin.org/forms/post","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[{"name":"text","chain_rules":[["css","p","$text"],["python","getitem","[0]"]],"childs":""}],"regex":"","encoding":""}')
             except:
                 import traceback
                 traceback.print_exc()

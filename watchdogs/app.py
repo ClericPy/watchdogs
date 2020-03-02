@@ -1,9 +1,11 @@
+from pathlib import Path
+
 from fastapi import FastAPI
 from starlette.requests import Request
 from starlette.templating import Jinja2Templates
 from uniparser.fastapi_ui import app as sub_app
-from pathlib import Path
-from .settings import release_app, setup_app
+
+from .settings import release_app, setup_app, Config
 
 app = FastAPI()
 
@@ -24,6 +26,20 @@ async def index(request: Request):
     kwargs: dict = {'request': request}
     kwargs['cdn_urls'] = cdn_urls
     return templates.TemplateResponse("index.html", context=kwargs)
+
+
+@app.post("/add_crawler_rule")
+async def add_crawler_rule(request: Request):
+    JSON = (await request.body()).decode('u8')
+    try:
+        result = await Config.rule_db.add_crawler_rule(JSON)
+        print(result)
+        if result:
+            return {'ok': 'success'}
+        else:
+            return {'ok': 'no change'}
+    except Exception as e:
+        return {'error': str(e)}
 
 
 @app.on_event("startup")

@@ -1,32 +1,52 @@
 import datetime
 import re
 from asyncio import ensure_future, sleep, wait
+from json import dumps, loads
 
+from torequests.utils import ttime
 from uniparser.crawler import Crawler
-
-from orjson import dumps, loads
 
 from .config import Config
 
 
-def get_result(item: dict):
-    if 'result' in item:
-        return item['result']
-    elif '__result__' in item:
-        return get_result(item['__result__'])
-    return ''
+def chain_result(item: dict):
+    """
+    print(
+    chain_result({
+        '__request__': 'https://www.python.org/dev/peps/pep-0001',
+        '__result__': {
+            'detail': {
+                'title': 'PEP 1 -- PEP Purpose and Guidelines'
+            }
+        }
+    }))
+    # {'title': 'PEP 1 -- PEP Purpose and Guidelines'}
+    """
+    if not isinstance(item, dict):
+        return {}
+    __result__ = item.pop('__result__', None)
+    if __result__ and isinstance(__result__, dict):
+        item.pop('__request__', None)
+        item.update(chain_result(__result__.popitem()[1]))
+    return item
 
 
 async def crawl(task, crawler: Crawler, logger):
     logger.info(f'start crawling {task.name}')
-    result = await crawler.acrawl(task.request_args)
-    if result is None:
+    crawl_result = await crawler.acrawl(task.request_args)
+    if crawl_result is None:
         logger.warn(
-            f'{task.name} crawl result is None, maybe crawler rule is not found')
+            f'{task.name} crawl_result is None, maybe crawler rule is not found'
+        )
+        result = '{}'
     else:
-        result = str(get_result(list(result.values())[0]))
-
-    return task, result or ''
+        assert len(
+            crawl_result
+        ) == 1, 'Crawl result should be a dict as: {rule_name: result_dict}'
+        result = chain_result(crawl_result.popitem()[1])
+        result['time'] = ttime()
+        result = dumps(result)
+    return task, result
 
 
 class UpdateTaskQuery:
@@ -77,7 +97,7 @@ async def crawl_once(tasks, crawler, task_name=None):
                 if work_hours[0] == '[':
                     formated_work_hours = loads(work_hours)
                 else:
-                    nums = [int(num) for num in re.findall('\d+', work_hours)]
+                    nums = [int(num) for num in re.findall(r'\d+', work_hours)]
                     formated_work_hours = range(*nums)
                 if current_hour not in formated_work_hours:
                     continue
