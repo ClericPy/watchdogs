@@ -44,6 +44,10 @@
                     <el-button icon='el-icon-plus' type='primary' style="margin: 0;" @click="show_form_add_new_task"> 2.
                         Add
                         New Task</el-button>
+                    <span style="font-size: 0.6em;">
+                        WARNING: ParseRule names should have these keys to generate RSS: <b>text</b>,
+                        <b>url</b>(Optional, defaults to origin_url)
+                    </span>
                 </el-tab-pane>
                 <el-tab-pane label="Rules" name="rule">
 
@@ -55,28 +59,37 @@
 
         <el-dialog title="New Task" :visible.sync="dialogFormVisible">
             <el-form :model="new_task_form">
-                <el-form-item label="Task Name">
+                <el-form-item label="Task Name" title="Input one unique name">
                     <el-input v-model="new_task_form.name" autocomplete="off"></el-input>
                 </el-form-item>
-                <el-form-item label="Tags">
-                    <el-input v-model="new_task_form.tags" autocomplete="off" ></el-input>
+                <el-form-item label="">
+                    <el-switch active-text="Enable" inactive-text="Disable" v-model="new_task_form.enable"
+                        active-color="#13ce66" inactive-color="#ff4949">
+                    </el-switch>
                 </el-form-item>
-                <el-form-item label="request_args">
-                    <el-input v-model="new_task_form.request_args" autocomplete="off"></el-input>
+                <el-form-item title="Tags splited by ," label="Tags">
+                    <el-input v-model="new_task_form.tags" autocomplete="off"></el-input>
                 </el-form-item>
-                <el-form-item label="origin_url">
-                    <el-input v-model="new_task_form.origin_url" autocomplete="off"></el-input>
+                <el-form-item title="Input the url, or request_args JSON, or cURL string" label="request_args">
+                    <el-input type="textarea" :autosize="{ minRows: 2, maxRows: 4}" v-model="new_task_form.request_args"
+                        autocomplete="off"></el-input>
                 </el-form-item>
-                <el-form-item label="interval">
+                <el-form-item title="The url for tracing the source" label="origin_url">
+                    <el-input v-model="new_task_form.origin_url" hold autocomplete="off"
+                        placeholder='default to request_args.url'></el-input>
+                </el-form-item>
+                <el-form-item title="Crawling loop interval seconds." label="interval">
                     <el-input v-model="new_task_form.interval" autocomplete="off"></el-input>
                 </el-form-item>
-                <el-form-item label="work_hours">
-                    <el-input v-model="new_task_form.work_hours" autocomplete="off"></el-input>
+                <el-form-item title="Crawler only works at hour in work_hours" label="work_hours">
+                    <el-input v-model="new_task_form.work_hours" autocomplete="off"
+                        placeholder="time range: 0, 24. hours list: [20, 21, 22]"></el-input>
                 </el-form-item>
-                <el-form-item label="max_result_count">
+                <el-form-item title="Max length of the result list." label="max_result_count">
                     <el-input v-model="new_task_form.max_result_count" autocomplete="off"></el-input>
                 </el-form-item>
-                <el-form-item label="custom_info">
+                <el-form-item title="Maybe nonsense string, for special usage. Sometimes saved an email."
+                    label="custom_info">
                     <el-input v-model="new_task_form.custom_info" autocomplete="off"></el-input>
                 </el-form-item>
             </el-form>
@@ -96,21 +109,25 @@
                     dialogFormVisible: false,
                     new_task_form: {
                         name: '',
-                        enable: 1,
+                        enable: true,
                         tags: '',
                         request_args: '',
                         origin_url: '',
-                        interval: '',
+                        interval: 300,
                         work_hours: '0, 24',
-                        max_result_count: '',
+                        max_result_count: 10,
                         custom_info: '',
                     },
                 }
             },
             methods: {
+                load_rule(crawler_rule_json) {
+                    // crawler_rule_json = '{"name":"HelloWorld222","request_args":{"method":"get","url":"http://httpbin.org/forms/post","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[],"regex":"","encoding":""}'
+                    this.sub_app.new_rule_json = crawler_rule_json
+                    this.sub_app.load_rule()
+                },
                 add_crawler_rule() {
-                    let current_crawler_rule = JSON.parse(this.$refs.iframe.contentWindow.document.getElementById(
-                        'current_crawler_rule_json').value)
+                    let current_crawler_rule = JSON.parse(this.sub_app.current_crawler_rule_json)
                     let data = JSON.stringify(current_crawler_rule)
                     this.$http.post('add_crawler_rule', data).then(
                         r => {
@@ -139,9 +156,8 @@
                     )
                 },
                 show_form_add_new_task() {
-                    let current_crawler_rule = JSON.parse(this.$refs.iframe.contentWindow.document.getElementById(
-                        'current_crawler_rule_json').value)
-                    this.new_task_form.request_args = JSON.stringify(current_crawler_rule.request_args)
+                    let current_crawler_rule = JSON.parse(this.sub_app.current_crawler_rule_json)
+                    this.new_task_form.request_args = JSON.stringify(current_crawler_rule.request_args, null, 2)
                     this.dialogFormVisible = true
 
                     // this.$http.post('show_form_add_new_task', data).then(
@@ -173,6 +189,9 @@
             },
             watch: {},
             computed: {
+                sub_app() {
+                    return this.$refs.iframe.contentWindow.window.app
+                }
 
             }
         }
