@@ -1,4 +1,7 @@
+from datetime import datetime
+
 import sqlalchemy
+from pydantic import BaseModel
 from sqlalchemy.sql import text
 from uniparser import CrawlerRule, HostRule
 from uniparser.crawler import RuleStorage, get_host
@@ -6,7 +9,7 @@ from uniparser.crawler import RuleStorage, get_host
 from .config import Config
 
 metadata = sqlalchemy.MetaData()
-
+date0 = datetime.strptime('1970-01-01 08:00:00', '%Y-%m-%d %H:%M:%S')
 # server_default works instead of default, issue: https://github.com/encode/databases/issues/72
 tasks = sqlalchemy.Table(
     "tasks",
@@ -98,6 +101,8 @@ class RuleStorageDB(RuleStorage):
             return host_rule.find(url)
 
     async def add_crawler_rule(self, rule: CrawlerRule, commit=None):
+        if isinstance(rule, str):
+            rule = CrawlerRule.loads(rule)
         url = rule.get('request_args', {}).get('url')
         if not url:
             self.logger.error(f'rule {rule["name"]} not found url.')
@@ -172,3 +177,27 @@ class RuleStorageDB(RuleStorage):
             query = "delete FROM host_rules WHERE host = :host"
             await self.db.execute(query=query, values={'host': host})
         return host_rule
+
+
+class TaskController:
+
+    def __init__(self, db):
+        self.db = db
+        self.logger = Config.logger
+
+
+class Task(BaseModel):
+    name: str
+    enable: int = 0
+    tags: str = ''
+    request_args: str
+    origin_url: str = ''
+    interval: int = 300
+    work_hours: str = '0, 24'
+    max_result_count: int = 10
+    latest_result: str = '[]'
+    result_list = '[]'
+    last_check_time: datetime = date0
+    next_check_time: datetime = date0
+    last_change_time: datetime = date0
+    custom_info: str = ''
