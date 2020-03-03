@@ -95,7 +95,7 @@
             </el-form>
             <div slot="footer" class="dialog-footer">
                 <el-button @click="dialogFormVisible = false">Cancel</el-button>
-                <el-button type="primary" @click="dialogFormVisible = false">OK</el-button>
+                <el-button type="primary" @click="add_new_task">OK</el-button>
             </div>
         </el-dialog>
 
@@ -107,20 +107,38 @@
                 return {
                     activeName: 'new task',
                     dialogFormVisible: false,
-                    new_task_form: {
-                        name: '',
-                        enable: true,
-                        tags: '',
-                        request_args: '',
-                        origin_url: '',
-                        interval: 300,
-                        work_hours: '0, 24',
-                        max_result_count: 10,
-                        custom_info: '',
-                    },
+                    new_task_form: {},
                 }
             },
             methods: {
+                add_new_task() {
+                    this.dialogFormVisible = false
+                    // {"name":"get demo","request_args":{"method":"get","url":"http://httpbin.org/get","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[{"name":"text","chain_rules":[["css","p","$text"],["python","getitem","[0]"]],"childs":""}],"regex":"http://httpbin.org/get","encoding":""}
+                    let data = JSON.stringify(this.new_task_form)
+                    this.$http.post('add_new_task', data).then(
+                        r => {
+                            if (r.body.ok) {
+                                this.$message({
+                                    message: 'Add task success: ' + r.body.ok,
+                                    type: 'success'
+                                });
+                            } else {
+                                this.$message.error({
+                                    message: 'Add task failed: ' + r.body.error,
+                                    duration: 0,
+                                    showClose: true,
+                                });
+                            }
+                        }, r => {
+                            this.$message.error({
+                                message: 'Add task failed: ' + r.status,
+                                duration: 0,
+                                showClose: true,
+                            });
+                        }
+                    )
+
+                },
                 load_rule(crawler_rule_json) {
                     // crawler_rule_json = '{"name":"HelloWorld222","request_args":{"method":"get","url":"http://httpbin.org/forms/post","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[],"regex":"","encoding":""}'
                     this.sub_app.new_rule_json = crawler_rule_json
@@ -145,8 +163,6 @@
                             }
 
                         }, r => {
-                            let status = 'testTask failed, Bad request (' + r.status + ') :' + r
-                                .statusText
                             this.$message.error({
                                 message: 'Add rule failed: ' + r.status,
                                 duration: 0,
@@ -156,10 +172,21 @@
                     )
                 },
                 show_form_add_new_task() {
+                    this.new_task_form = {
+                        name: '',
+                        enable: true,
+                        tags: '',
+                        request_args: '',
+                        origin_url: '',
+                        interval: 300,
+                        work_hours: '0, 24',
+                        max_result_count: 10,
+                        custom_info: '',
+                    }
                     let current_crawler_rule = JSON.parse(this.sub_app.current_crawler_rule_json)
-                    this.new_task_form.request_args = JSON.stringify(current_crawler_rule.request_args, null, 2)
+                    this.new_task_form.request_args = JSON.stringify(current_crawler_rule.request_args)
+                    this.new_task_form.origin_url = current_crawler_rule.request_args.url || ''
                     this.dialogFormVisible = true
-
                     // this.$http.post('show_form_add_new_task', data).then(
                     //     r => {
                     //         if (r.body.ok) {
