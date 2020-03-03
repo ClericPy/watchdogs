@@ -38,7 +38,7 @@ async def crawl(task, crawler: Crawler, logger):
         logger.warn(
             f'{task.name} crawl_result is None, maybe crawler rule is not found'
         )
-        result = '{}'
+        result = None
     else:
         assert len(
             crawl_result
@@ -46,6 +46,7 @@ async def crawl(task, crawler: Crawler, logger):
         result = chain_result(crawl_result.popitem()[1])
         result['time'] = ttime()
         result = dumps(result)
+        logger.info(f'{task.name} crawl success: {result}')
     return task, result
 
 
@@ -119,7 +120,7 @@ async def crawl_once(tasks, crawler, task_name=None):
                 query.add('last_check_time', now)
                 query.add('next_check_time',
                           now + datetime.timedelta(seconds=task.interval))
-                if result != task.latest_result:
+                if result not in (None, task.latest_result):
                     logger.info(f'{task.name} updated.')
                     query.add('last_change_time', now)
                     query.add('latest_result', result)

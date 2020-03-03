@@ -103,6 +103,8 @@ class RuleStorageDB(RuleStorage):
     async def add_crawler_rule(self, rule: CrawlerRule, commit=None):
         if isinstance(rule, str):
             rule = CrawlerRule.loads(rule)
+        if not rule.get('regex'):
+            raise ValueError('regex should not be null')
         url = rule.get('request_args', {}).get('url')
         if not url:
             self.logger.error(f'rule {rule["name"]} not found url.')

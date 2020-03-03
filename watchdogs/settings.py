@@ -75,28 +75,30 @@ async def setup_app(app):
         create_tables(str(db.url))
         # crawler_loop
         ensure_future(crawler_loop(tasks, db))
-        try:
-            query = tasks.insert().prefix_with('OR IGNORE')
-            values = {
-                "name": "example1",
-                "request_args": '{"method":"get","url":"http://httpbin.org/forms/post","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}}',
-            }
-            print(await db.execute(query=query, values=values))
-        except Exception as e:
-            print(e)
-            pass
-            # print(e.__class__.__name__, 1111111)IntegrityError
-        from .models import CrawlerRule
-        try:
+        # # TODO
+        # try:
+        #     query = tasks.insert().prefix_with('OR IGNORE')
+        #     values = {
+        #         "name": "example1",
+        #         "request_args": '{"method":"get","url":"http://httpbin.org/forms/post","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}}',
+        #     }
+        #     print(await db.execute(query=query, values=values))
+        # except Exception as e:
+        #     print(e)
+        #     pass
+        #     # print(e.__class__.__name__, 1111111)IntegrityError
+        # from .models import CrawlerRule
+        # # TODO
+        # try:
 
-            try:
-                await Config.rule_db.add_crawler_rule('{"name":"HelloWorld","request_args":{"method":"get","url":"http://httpbin.org/forms/post","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[{"name":"text","chain_rules":[["css","p","$text"],["python","getitem","[0]"]],"childs":""}],"regex":"","encoding":""}')
-            except:
-                import traceback
-                traceback.print_exc()
-        except Exception as e:
-            print(e)
-            pass
+        #     try:
+        #         await Config.rule_db.add_crawler_rule('{"name":"HelloWorld","request_args":{"method":"get","url":"http://httpbin.org/forms/post","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[{"name":"text","chain_rules":[["css","p","$text"],["python","getitem","[0]"]],"childs":""}],"regex":"","encoding":""}')
+        #     except:
+        #         import traceback
+        #         traceback.print_exc()
+        # except Exception as e:
+        #     print(e)
+        #     pass
 
 
 async def release_app(app):

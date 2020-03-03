@@ -5,7 +5,8 @@ from starlette.requests import Request
 from starlette.templating import Jinja2Templates
 from uniparser.fastapi_ui import app as sub_app
 
-from .settings import release_app, setup_app, Config
+from .models import Task, tasks
+from .settings import Config, release_app, setup_app
 
 app = FastAPI()
 
@@ -33,7 +34,20 @@ async def add_crawler_rule(request: Request):
     JSON = (await request.body()).decode('u8')
     try:
         result = await Config.rule_db.add_crawler_rule(JSON)
-        print(result)
+        if result:
+            return {'ok': 'success'}
+        else:
+            return {'ok': 'no change'}
+    except Exception as e:
+        return {'error': str(e)}
+
+
+@app.post("/add_new_task")
+async def add_new_task(task: Task):
+    try:
+        query = tasks.insert()
+        values = dict(task)
+        result = await Config.db.execute(query=query, values=values)
         if result:
             return {'ok': 'success'}
         else:
