@@ -60,6 +60,22 @@ async def add_new_task(task: Task):
     return result
 
 
+# @app.post("/load_tasks")
+# async def load_tasks(order_by: str = 'last_change_time'):
+#     try:
+#         query = tasks.insert()
+#         values = dict(task)
+#         _result = await Config.db.execute(query=query, values=values)
+#         if _result:
+#             result = {'ok': 'success'}
+#         else:
+#             result = {'ok': 'no change'}
+#     except Exception as e:
+#         result = {'error': str(e)}
+#     Config.logger.info(f'add task {task}: {result}')
+#     return result
+
+
 @app.on_event("startup")
 async def startup():
     await setup_app(app)

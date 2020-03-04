@@ -2,9 +2,10 @@ import datetime
 import re
 from asyncio import ensure_future, sleep, wait
 from json import dumps, loads
+from typing import Optional, Tuple
 
 from torequests.utils import ttime
-from uniparser.crawler import Crawler
+from uniparser import Crawler
 
 from .config import Config
 
@@ -31,21 +32,27 @@ def chain_result(item: dict):
     return item
 
 
-async def crawl(task, crawler: Crawler, logger):
-    logger.info(f'start crawling {task.name}')
+async def crawl(task, crawler: Crawler, logger=None):
+    if logger:
+        logger.info(f'Start crawling: {task.name}')
     crawl_result = await crawler.acrawl(task.request_args)
     if crawl_result is None:
-        logger.warn(
-            f'{task.name} crawl_result is None, maybe crawler rule is not found'
-        )
+        if logger:
+            logger.warn(
+                f'{task.name} crawl_result is None, maybe crawler rule is not found'
+            )
         result = None
     else:
-        assert len(
-            crawl_result
-        ) == 1, 'Crawl result should be a dict as: {rule_name: result_dict}'
-        result = chain_result(crawl_result.popitem()[1])
-        result = dumps(result, sort_keys=True)
-        logger.info(f'{task.name} crawl success: {str(result)}')
+        if len(crawl_result) == 1:
+            # chain result for __request__ which fetch a new request
+            result = chain_result(crawl_result.popitem()[1])
+            result = dumps(result, sort_keys=True)
+            if logger:
+                logger.info(f'{task.name} Crawl success: {str(result)}')
+        else:
+            logger.error(
+                'Crawl result should be a dict as: {rule_name: result_dict}')
+            result = None
     return task, result
 
 
@@ -75,6 +82,37 @@ class UpdateTaskQuery:
         }
 
 
+def find_next_check_time(
+        work_hours: str,
+        interval: int,
+        now: Optional[datetime.datetime] = None,
+) -> Tuple[bool, datetime.datetime]:
+    if work_hours[0] == '[' and work_hours[-1] == ']':
+        work_hours_list = sorted(loads(work_hours))
+    else:
+        nums = [int(num) for num in re.findall(r'\d+', work_hours)]
+        work_hours_list = sorted(range(*nums))
+    # find the latest hour fit work_hours, if not exist, return next day 00:00
+    now = now or datetime.datetime.now()
+    current_hour = now.hour
+    if current_hour in work_hours_list:
+        # on work hour
+        ok = True
+        next_check_time = now + datetime.timedelta(seconds=interval)
+    else:
+        ok = False
+        # find the latest hour, or next day earlist hour
+        for hour in work_hours_list:
+            if hour >= current_hour:
+                next_check_time = now.replace(hour=hour)
+                break
+        else:
+            date = now + datetime.timedelta(days=1)
+            next_check_time = date.replace(
+                hour=work_hours_list[0], minute=0, second=0, microsecond=0)
+    return ok, next_check_time
+
+
 async def crawl_once(tasks, crawler, task_name=None):
     """task_name means force crawl"""
     db = crawler.storage.db
@@ -88,53 +126,62 @@ async def crawl_once(tasks, crawler, task_name=None):
         query = tasks.select().where(tasks.c.enable == 1).where(
             tasks.c.next_check_time < now)
     todo = []
-    current_hour = datetime.datetime.now().hour
-    async with Config.db_lock:
-        async for task in db.iterate(query=query):
-            if not task_name:
-                # check work hours
-                work_hours = task.work_hours or '0, 24'
-                if work_hours[0] == '[':
-                    formated_work_hours = loads(work_hours)
-                else:
-                    nums = [int(num) for num in re.findall(r'\d+', work_hours)]
-                    formated_work_hours = range(*nums)
-                if current_hour not in formated_work_hours:
-                    continue
+    now = datetime.datetime.now()
+    update_query = 'update tasks set `last_check_time`=:last_check_time,`next_check_time`=:next_check_time where task_id=:task_id'
+    update_values = []
+    async for task in db.iterate(query=query):
+        # check work hours
+        ok, next_check_time = find_next_check_time(task.work_hours or '0, 24',
+                                                   task.interval, now)
+        if task_name:
+            # always crawl for given task_name
+            ok = True
+        if ok:
             t = ensure_future(crawl(task, crawler, logger))
             # add task_name for logger
             t.task_name = task.name
             todo.append(t)
-    logger.info(f'{len(todo)} tasks crawling.')
+        # update next_check_time
+        values = {
+            'last_check_time': now,
+            'next_check_time': next_check_time,
+            'task_id': task.task_id
+        }
+        update_values.append(values)
+        if not ok:
+            logger.info(
+                f'Task [{task.name}] is not on work, next_check_time reset to {next_check_time}'
+            )
+    async with Config.db_lock:
+        await db.execute_many(query=update_query, values=update_values)
+    logger.info(f'Crawling{len(todo)} tasks.')
     if todo:
         done, pending = await wait(todo, timeout=Config.default_crawler_timeout)
         if pending:
             names = [t.name for t in pending]
             logger.error(f'crawl timeout: {names}')
-        async with Config.db_lock:
-            now = datetime.datetime.now()
-            ttime_now = ttime()
-            for t in done:
-                task, result = t.result()
+        ttime_now = ttime()
+        for t in done:
+            task, result = t.result()
+            if result not in (None, task.latest_result):
                 query = UpdateTaskQuery(task.task_id)
-                query.add('last_check_time', now)
-                query.add('next_check_time',
-                          now + datetime.timedelta(seconds=task.interval))
-                if result not in (None, task.latest_result):
-                    logger.info(f'{task.name} updated.')
-                    query.add('last_change_time', now)
-                    query.add('latest_result', result)
-                    results: list = loads(task.result_list or '[]')
-                    results.insert(0, {'result': result, 'time': ttime_now})
-                    query.add('result_list',
-                              dumps(results[:task.max_result_count]))
-                await db.execute(**query.kwargs)
+                logger.info(f'Updated {task.name}. +++')
+                query.add('last_change_time', now)
+                query.add('latest_result', result)
+                results: list = loads(task.result_list or '[]')
+                results.insert(0, {'result': result, 'time': ttime_now})
+                query.add('result_list', dumps(results[:task.max_result_count]))
+                async with Config.db_lock:
+                    await db.execute(**query.kwargs)
         logger.info(
-            f'crawl finished. done: {len(done)}, timeout: {len(pending)}')
+            f'Crawl finished. done: {len(done)}, timeout: {len(pending)}')
 
 
 async def crawler_loop(tasks, db):
     crawler = Crawler(storage=Config.rule_db)
+    Config.logger.info(
+        f'Downloader middleware installed: {crawler.uniparser.ensure_adapter(False).__class__.__name__}'
+    )
     while 1:
         await crawl_once(tasks, crawler)
         await sleep(Config.check_interval)

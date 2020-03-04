@@ -54,8 +54,12 @@
                 <el-tab-pane label="New Task" name="new task">
                     <iframe @load='init_iframe()' src="/uniparser" frameborder="0" ref="iframe"
                         style="width: 100%; height: 90%;"></iframe>
-                    <el-button icon='el-icon-upload' type='primary' style="margin: 0 0 0 20%;"
-                        @click="add_crawler_rule"> 1. Save Crawler Rule</el-button>
+                    <el-button icon='el-icon-refresh-right' style="margin: 0 0 0 20%;" @click="init_crawler_rule"> 0.
+                        Init
+                    </el-button>
+                    <el-button icon='el-icon-upload' type='primary' style="margin: 0;" @click="add_crawler_rule"> 1.
+                        Save Crawler Rule
+                    </el-button>
                     <el-button icon='el-icon-plus' type='primary' style="margin: 0;" @click="show_form_add_new_task"> 2.
                         Add
                         New Task</el-button>
@@ -66,6 +70,10 @@
                 </el-tab-pane>
                 <el-tab-pane label="Rules" name="rule">
 
+                </el-tab-pane>
+                <el-tab-pane label="API" name="apis">
+                    <iframe v-if="activeName=='apis'" src="/docs" frameborder="0" ref="iframe"
+                        style="width: 100%; height: 90%;"></iframe>
                 </el-tab-pane>
             </el-tabs>
         </template>
@@ -156,6 +164,12 @@
                     )
 
                 },
+                init_crawler_rule() {
+                    let name = 'C-' + new Date().getTime().toString().slice(0, -3)
+                    this.sub_app.new_rule_json = '{"name":"' + name +
+                        '","request_args":{"method":"get","url":"http://httpbin.org/html","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[{"name":"text","chain_rules":[["css","body h1","$text"],["python","getitem","[0]"]],"childs":""}],"regex":"","encoding":""}'
+                    this.sub_app.load_rule()
+                },
                 load_rule(crawler_rule_json) {
                     // crawler_rule_json = '{"name":"HelloWorld222","request_args":{"method":"get","url":"http://httpbin.org/forms/post","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[],"regex":"","encoding":""}'
                     this.sub_app.new_rule_json = crawler_rule_json
@@ -213,8 +227,7 @@
                 },
                 init_iframe() {
                     if (this.sub_app) {
-                        this.sub_app.crawler_rule.name = 'C-' + new Date().getTime().toString().slice(0, -3)
-
+                        this.init_crawler_rule()
                     }
                 },
                 handleClick(tab, event) {
