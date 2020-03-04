@@ -13,5 +13,6 @@ class Config(object):
     rule_db = None
     check_interval = 60
     default_interval = 5 * 60
-    default_crawler_timeout = 60
+    default_crawler_timeout = 30
+    downloader_timeout = 15
     db_lock = Lock()
