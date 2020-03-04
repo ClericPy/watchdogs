@@ -7,7 +7,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <link rel="shortcut icon" type="image/ico" href="/icon.png" />
     <title>Uniparser Test Console</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=0.3">
     <script src="{{cdn_urls['VUE_JS_CDN']}}"></script>
     <script src="{{cdn_urls['ELEMENT_JS_CDN']}}"></script>
     <script src="{{cdn_urls['VUE_RESOURCE_CDN']}}"></script>
@@ -27,18 +27,33 @@
             width: 90%;
             height: 90%;
         }
+
+        .el-tabs__item {
+            font-weight: bold;
+        }
     </style>
 </head>
 
 <body>
     <div id="app" class="full-screen">
         <template>
-            <el-tabs v-model="activeName" class="full-screen">
+            <el-tabs @tab-click="handleClick" v-model="activeName" class="full-screen" stretch='true'>
                 <el-tab-pane label="Tasks" name="tasks">
-
+                    <template>
+                        <!-- <el-table :data="tableData" style="width: 100%"
+                            :default-sort="{prop: 'date', order: 'descending'}">
+                            <el-table-column prop="date" label="日期" sortable width="180">
+                            </el-table-column>
+                            <el-table-column prop="name" label="姓名" sortable width="180">
+                            </el-table-column>
+                            <el-table-column prop="address" label="地址" :formatter="formatter">
+                            </el-table-column>
+                        </el-table> -->
+                    </template>
                 </el-tab-pane>
                 <el-tab-pane label="New Task" name="new task">
-                    <iframe src="/uniparser" frameborder="0" ref="iframe" style="width: 100%; height: 90%;"></iframe>
+                    <iframe @load='init_iframe()' src="/uniparser" frameborder="0" ref="iframe"
+                        style="width: 100%; height: 90%;"></iframe>
                     <el-button icon='el-icon-upload' type='primary' style="margin: 0 0 0 20%;"
                         @click="add_crawler_rule"> 1. Save Crawler Rule</el-button>
                     <el-button icon='el-icon-plus' type='primary' style="margin: 0;" @click="show_form_add_new_task"> 2.
@@ -54,10 +69,7 @@
                 </el-tab-pane>
             </el-tabs>
         </template>
-
-
-
-        <el-dialog title="New Task" :visible.sync="dialogFormVisible">
+        <el-dialog title="New Task" :visible.sync="dialogFormVisible" :close-on-click-modal="false">
             <el-form :model="new_task_form">
                 <el-form-item label="Task Name" title="Input one unique name">
                     <el-input v-model="new_task_form.name" autocomplete="off"></el-input>
@@ -105,9 +117,13 @@
         var Main = {
             data() {
                 return {
-                    activeName: 'new task',
+                    activeName: 'tasks',
                     dialogFormVisible: false,
                     new_task_form: {},
+                    query_tasks_args: {
+                        order_by: 'last_change_time',
+                        sort: 'desc',
+                    },
                 }
             },
             methods: {
@@ -129,6 +145,7 @@
                                     showClose: true,
                                 });
                             }
+                            this.reload_tasks()
                         }, r => {
                             this.$message.error({
                                 message: 'Add task failed: ' + r.status,
@@ -161,7 +178,7 @@
                                     showClose: true,
                                 });
                             }
-
+                            this.reload_rules()
                         }, r => {
                             this.$message.error({
                                 message: 'Add rule failed: ' + r.status,
@@ -187,32 +204,32 @@
                     this.new_task_form.request_args = JSON.stringify(current_crawler_rule.request_args)
                     this.new_task_form.origin_url = current_crawler_rule.request_args.url || ''
                     this.dialogFormVisible = true
-                    // this.$http.post('show_form_add_new_task', data).then(
-                    //     r => {
-                    //         if (r.body.ok) {
-                    //             this.$message({
-                    //                 message: 'Add rule success: ' + r.body.ok,
-                    //                 type: 'success'
-                    //             });
-                    //         } else {
-                    //             this.$message.error({
-                    //                 message: 'Add rule failed: ' + r.body.error,
-                    //                 duration: 0,
-                    //                 showClose: true,
-                    //             });
-                    //         }
-
-                    //     }, r => {
-                    //         let status = 'testTask failed, Bad request (' + r.status + ') :' + r
-                    //             .statusText
-                    //         this.$message.error({
-                    //             message: 'Add rule failed: ' + r.status,
-                    //             duration: 0,
-                    //             showClose: true,
-                    //         });
-                    //     }
-                    // )
                 },
+                reload_tasks() {
+                    // 
+                },
+                reload_rules() {
+                    // 
+                },
+                init_iframe() {
+                    if (this.sub_app) {
+                        this.sub_app.crawler_rule.name = 'C-' + new Date().getTime().toString().slice(0, -3)
+
+                    }
+                },
+                handleClick(tab, event) {
+                    if (tab.name == 'new task') {
+                        // for autosize bug in iframe if not seen
+                        setTimeout(() => {
+                            for (const text of this.$refs.iframe.contentWindow.window.document
+                                    .getElementsByTagName(
+                                        'textarea')) {
+                                text.style.height = 'auto';
+                                text.style.height = text.scrollHeight + 'px';
+                            };
+                        }, 0);
+                    }
+                }
             },
             watch: {},
             computed: {

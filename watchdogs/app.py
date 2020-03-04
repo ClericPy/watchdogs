@@ -33,13 +33,15 @@ async def index(request: Request):
 async def add_crawler_rule(request: Request):
     JSON = (await request.body()).decode('u8')
     try:
-        result = await Config.rule_db.add_crawler_rule(JSON)
-        if result:
-            return {'ok': 'success'}
+        _result = await Config.rule_db.add_crawler_rule(JSON)
+        if _result:
+            result = {'ok': 'success'}
         else:
-            return {'ok': 'no change'}
+            result = {'ok': 'no change'}
     except Exception as e:
-        return {'error': str(e)}
+        result = {'error': str(e)}
+    Config.logger.info(f'add crawler rule {JSON}: {result}')
+    return result
 
 
 @app.post("/add_new_task")
@@ -47,13 +49,15 @@ async def add_new_task(task: Task):
     try:
         query = tasks.insert()
         values = dict(task)
-        result = await Config.db.execute(query=query, values=values)
-        if result:
-            return {'ok': 'success'}
+        _result = await Config.db.execute(query=query, values=values)
+        if _result:
+            result = {'ok': 'success'}
         else:
-            return {'ok': 'no change'}
+            result = {'ok': 'no change'}
     except Exception as e:
-        return {'error': str(e)}
+        result = {'error': str(e)}
+    Config.logger.info(f'add task {task}: {result}')
+    return result
 
 
 @app.on_event("startup")
