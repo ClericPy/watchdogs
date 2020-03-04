@@ -44,9 +44,8 @@ async def crawl(task, crawler: Crawler, logger):
             crawl_result
         ) == 1, 'Crawl result should be a dict as: {rule_name: result_dict}'
         result = chain_result(crawl_result.popitem()[1])
-        result['time'] = ttime()
-        result = dumps(result)
-        logger.info(f'{task.name} crawl success: {result}')
+        result = dumps(result, sort_keys=True)
+        logger.info(f'{task.name} crawl success: {str(result)}')
     return task, result
 
 
@@ -114,6 +113,7 @@ async def crawl_once(tasks, crawler, task_name=None):
             logger.error(f'crawl timeout: {names}')
         async with Config.db_lock:
             now = datetime.datetime.now()
+            ttime_now = ttime()
             for t in done:
                 task, result = t.result()
                 query = UpdateTaskQuery(task.task_id)
@@ -125,7 +125,7 @@ async def crawl_once(tasks, crawler, task_name=None):
                     query.add('last_change_time', now)
                     query.add('latest_result', result)
                     results: list = loads(task.result_list or '[]')
-                    results.insert(0, result)
+                    results.insert(0, {'result': result, 'time': ttime_now})
                     query.add('result_list',
                               dumps(results[:task.max_result_count]))
                 await db.execute(**query.kwargs)
