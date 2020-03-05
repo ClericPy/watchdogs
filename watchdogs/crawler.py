@@ -45,7 +45,7 @@ async def crawl(task):
             logger.warn(
                 f'{task.name} crawl_result is None, maybe crawler rule is not found'
             )
-        result = None
+        result = '{"text": "Result is null, please ensure the crawler rule."}'
     else:
         if len(crawl_result) == 1:
             # chain result for __request__ which fetch a new request
@@ -54,9 +54,9 @@ async def crawl(task):
             if logger:
                 logger.info(f'{task.name} Crawl success: {str(result)}')
         else:
-            logger.error(
-                'Crawl result should be a dict as: {rule_name: result_dict}')
-            result = None
+            msg = 'Crawl result should be a single key dict like: {rule_name: result_dict}'
+            logger.error(msg)
+            result = msg
     return task, result
 
 
@@ -168,7 +168,7 @@ async def crawl_once(task_name=None):
         ttime_now = ttime()
         for t in done:
             task, result = t.result()
-            if result not in (None, task.latest_result):
+            if result != task.latest_result:
                 query = UpdateTaskQuery(task.task_id)
                 logger.info(f'Updated {task.name}. +++')
                 query.add('last_change_time', now)

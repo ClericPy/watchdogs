@@ -108,7 +108,7 @@ class RuleStorageDB(RuleStorage):
             raise ValueError('regex should not be null')
         url = rule.get('request_args', {}).get('url')
         if not url:
-            self.logger.error(f'rule {rule["name"]} not found url.')
+            self.logger.error(f'[Rule] {rule["name"]} not found url.')
             return False
         host = get_host(url)
         if not host:
@@ -234,5 +234,5 @@ async def query_tasks(
     has_more = len(_result) > page_size
     result = [dict(i) for i in _result][:page_size]
     Config.logger.info(
-        f'query {len(result)} tasks (has_more={has_more}): {query}')
+        f'[Query] {len(result)} tasks (has_more={has_more}): {query}')
     return result, has_more

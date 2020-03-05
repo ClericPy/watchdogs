@@ -43,7 +43,7 @@ async def add_crawler_rule(request: Request):
             result = {'ok': 'no change'}
     except Exception as e:
         result = {'error': str(e)}
-    Config.logger.info(f'add crawler rule {JSON}: {result}')
+    Config.logger.info(f'[Add] crawler rule {JSON}: {result}')
     return result
 
 
@@ -58,7 +58,7 @@ async def add_new_task(task: Task):
         query = tasks.select().where(tasks.c.name == task.name)
         exist = await db.fetch_one(query=query)
         if exist:
-            query = 'update tasks set `name`=:name,`enable`=:enable,`tags`=:tags,`request_args`=:request_args,`origin_url`=:origin_url,`interval`=:interval,`work_hours`=:work_hours,`max_result_count`=:max_result_count,`custom_info`=:custom_info where `name`=:name'
+            query = 'update tasks set `enable`=:enable,`tags`=:tags,`request_args`=:request_args,`origin_url`=:origin_url,`interval`=:interval,`work_hours`=:work_hours,`max_result_count`=:max_result_count,`custom_info`=:custom_info where `name`=:name'
             values = {
                 'name': task.name,
                 'enable': task.enable,
@@ -82,7 +82,7 @@ async def add_new_task(task: Task):
     except Exception as e:
         result = {'error': str(e)}
     Config.logger.info(
-        f'{"Update" if exist else "Add new"} task {task}: {result}')
+        f'{"[Update]" if exist else "[Add] new"} task {task}: {result}')
     return result
 
 
@@ -94,7 +94,7 @@ async def delete_task(task_id: int):
         result = {'msg': 'ok'}
     except Exception as e:
         result = {'msg': str(e)}
-    Config.logger.info(f'delete_task {task_id}: {result}')
+    Config.logger.info(f'[Delete] task {task_id}: {result}')
     return result
 
 
@@ -111,7 +111,7 @@ async def force_crawl(task_name: str):
         result = {'msg': 'ok', 'task': task}
     except Exception as e:
         result = {'msg': str(e)}
-    Config.logger.info(f'force_crawl {task_name}: {result}')
+    Config.logger.info(f'[Force] crawl {task_name}: {result}')
     return result
 
 
@@ -149,7 +149,6 @@ async def enable_task(task_id: int, enable: int = 1):
     query = 'update tasks set `enable`=:enable where `task_id`=:task_id'
     values = {'task_id': task_id, 'enable': enable}
     try:
-
         _result = await Config.db.execute(query, values)
         result = {'msg': 'ok', 'updated': _result}
     except Exception as e:
