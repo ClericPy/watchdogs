@@ -49,32 +49,37 @@
             <el-tabs @tab-click="handleClick" v-model="activeName" class="full-screen" stretch='true'>
                 <el-tab-pane label="Tasks" name="tasks">
                     <template>
-                        <el-table :data="task_list" style="width: 100%" height="90%">
-                            <el-table-column prop="task_id" label="ID" width="60">
+                        <el-table :default-sort="{prop: 'last_change_time', order: 'descending'}" :data="task_list"
+                            style="width: 100%" height="90%" @sort-change="sort_change">
+                            <el-table-column prop="task_id" label="task_id" sortable="custom" width="100">
                             </el-table-column>
-                            <el-table-column prop="name" label="name" width="180">
+                            <el-table-column prop="name" sortable="custom" label="name" width="180">
                             </el-table-column>
-                            <el-table-column prop="tags" label="tags" width="120"></el-table-column>
+                            <el-table-column prop="tags" sortable="custom" label="tags" width="120"></el-table-column>
                             <el-table-column label="request_args" width="160">
                                 <template slot-scope="scope">
                                     <el-popover trigger="hover" placement="right">
                                         <pre><code>${JSON.stringify(JSON.parse(scope.row.request_args), null, 2)}</code></pre>
                                         <div slot="reference" class="name-wrapper">
-                                            <el-tag size="medium">${ new URL(JSON.parse(scope.row.request_args).url).host }</el-tag>
+                                            <el-tag size="medium">${ new
+                                                URL(JSON.parse(scope.row.request_args).url).host }</el-tag>
                                         </div>
                                     </el-popover>
                                 </template>
                             </el-table-column>
-                            <el-table-column prop="interval" label="interval" width="80"></el-table-column>
+                            <el-table-column prop="interval" sortable="custom" label="interval" width="80">
+                            </el-table-column>
                             <el-table-column prop="work_hours" label="work_hours" width="120"></el-table-column>
-                            <el-table-column label="latest_result" width="180">
+                            <el-table-column prop="custom_info" label="custom_info" width="160"></el-table-column>
+                            <el-table-column label="origin_url" sortable="custom" width="220">
                                 <template slot-scope="scope">
-                                    <el-link @click="show_result_list(scope.row)" type="info" :underline="false">
-                                        ${(JSON.parse(scope.row.latest_result).text||'').slice(0, 40)}
+                                    <el-link :href="scope.row.origin_url" target="_blank" type="primary">
+                                        ${scope.row.origin_url}
                                     </el-link>
                                 </template>
                             </el-table-column>
-                            <el-table-column label="last_change_time" width="180">
+                            <el-table-column label="last_change_time" prop="last_change_time" sortable="custom"
+                                width="180">
                                 <template slot-scope="scope">
                                     <el-link @click="show_time(scope.row)" type="info" :underline="false">
                                         <b>${scope.row.timeago} ago</b><br>
@@ -82,40 +87,34 @@
                                     </el-link>
                                 </template>
                             </el-table-column>
-                            <el-table-column label="origin_url" width="180">
+                            <el-table-column label="latest_result" width="">
                                 <template slot-scope="scope">
-                                    <el-link :href="scope.row.origin_url" target="_blank" type="primary">
-                                        ${scope.row.origin_url}
+                                    <el-link @click="show_result_list(scope.row)" type="info" :underline="false">
+                                        ${(JSON.parse(scope.row.latest_result).text||'').slice(0, 40)}
                                     </el-link>
                                 </template>
                             </el-table-column>
-                            <el-table-column prop="custom_info" label="custom_info" width="120"></el-table-column>
-                            <el-table-column fixed="right" label="*" width="120">
+                            <el-table-column fixed="right" label="/" width="100">
                                 <template slot-scope="scope">
                                     <el-switch v-model="scope.row.enable" :active-value='1' :inactive-value='0'
-                                        active-color="#13ce66" inactive-color="#ff4949" style="margin: 0.5em;"
+                                        active-color="#13ce66" inactive-color="#ff4949"
                                         @change='change_enable(scope.row)' size="mini"
                                         title="Switch between enable/disable">
                                     </el-switch>
-                                    <br>
-                                    <el-button type="primary" icon="el-icon-edit"
-                                        @click="update_task(scope.$index, scope.row)" size='mini' circle
-                                        title="Edit Task"></el-button>
+                                    <el-button type="primary" icon="el-icon-caret-right"
+                                        @click="force_crawl(scope.$index, scope.row)" size='mini' style="margin: 0;"
+                                        circle title="Force Crawl"></el-button>
+                                    <el-button type="warn" icon="el-icon-edit"
+                                        @click="update_task(scope.$index, scope.row)" size='mini' style="margin: 0;"
+                                        circle title="Edit Task"></el-button>
                                     <el-button type="danger" icon="el-icon-delete" circle title="Delete Task"
-                                        size="mini" style="margin: 0.5em;"
-                                        @click="delete_task(scope.$index, scope.row)"></el-button>
-                                    <!-- <el-button @click.native.prevent="showAddTaskForm(scope.row)" type="warning" size="mini"
-                                        title="update task" icon="el-icon-edit-outline" circle>
+                                        size="mini" style="margin: 0;" @click="delete_task(scope.$index, scope.row)">
                                     </el-button>
-                                    <el-button @click.native.prevent="removeTask(scope.row.name)" type="danger" size="mini"
-                                        title="remove task" icon="el-icon-delete" circle>
-                                    </el-button> -->
                                 </template>
                             </el-table-column>
                         </el-table>
-                        <el-button type="success" style="margin-left: 40%;width: 20%;" :disabled="!has_more" plain>
-                            Page: ${task_list_page} - Load
-                            More</el-button>
+                        <el-button type="success" style="margin-left: 35%; width: 20%;" :disabled="!has_more" plain>
+                            Page: ${current_page} - Load More</el-button>
                     </template>
                 </el-tab-pane>
                 <el-tab-pane label="New Task" name="new task">
@@ -198,7 +197,7 @@
                     new_task_form: {},
                     has_more: true,
                     task_list: [],
-                    task_list_page: 0,
+                    current_page: 0,
                     query_tasks_args: {
                         order_by: 'last_change_time',
                         sort: 'desc',
@@ -217,6 +216,7 @@
                                     message: 'Add task success: ' + r.body.ok,
                                     type: 'success'
                                 });
+                                this.reload_tasks()
                             } else {
                                 this.$message.error({
                                     message: 'Add task failed: ' + r.body.error,
@@ -224,7 +224,6 @@
                                     showClose: true,
                                 });
                             }
-                            this.reload_tasks()
                         }, r => {
                             this.$message.error({
                                 message: 'Add task failed: ' + r.status,
@@ -313,8 +312,22 @@
                         }
                     )
                 },
+                sort_change(col) {
+                    this.query_tasks_args = {
+                        order_by: col.column.label,
+                        sort: (col.column.order || '').replace('ending', ''),
+                    }
+                    this.reload_tasks()
+                },
                 reload_tasks() {
-                    this.$http.get('load_tasks').then(
+                    this.task_list = []
+                    this.current_page = 1
+                    this.load_tasks()
+                },
+                load_tasks() {
+                    this.$http.get('load_tasks', {
+                        params: this.query_tasks_args
+                    }).then(
                         r => {
                             result = r.body
                             if (result.msg == 'ok') {
@@ -322,7 +335,7 @@
                                     this.task_list.push(item)
                                 });
                                 this.has_more = result.has_more
-                                this.task_list_page += 1
+                                this.current_page += 1
                             } else {
                                 this.$message.error({
                                     message: 'Loading tasks failed: ' + result.msg,
@@ -412,6 +425,31 @@
                         closeOnPressEscape: true
                     });
                 },
+                force_crawl(index, row) {
+                    this.$http.get('force_crawl', {
+                        params: {
+                            task_name: row.name,
+                        }
+                    }).then(
+                        r => {
+                            result = r.body
+                            if (result.msg == 'ok') {
+                                this.$message.success({
+                                    message: 'Crawl task success',
+                                });
+                                Vue.set(this.task_list, index, result.task)
+                            } else {
+                                this.$message.error({
+                                    message: 'Crawl task failed: ' + result.msg,
+                                });
+                            }
+                        }, r => {
+                            this.$message.error({
+                                message: 'Crawl task failed: ' + r.status,
+                            });
+                        }
+                    )
+                },
                 update_task(index, row) {
                     this.new_task_form = {
                         name: row.name,
@@ -476,7 +514,7 @@
         var app = new vue_app({
             delimiters: ['${', '}']
         }).$mount('#app')
-        app.reload_tasks()
+        app.load_tasks()
     </script>
 </body>
 

@@ -4,9 +4,10 @@ from typing import Optional
 from fastapi import FastAPI
 from starlette.requests import Request
 from starlette.templating import Jinja2Templates
-from torequests.utils import timeago, ptime
+from torequests.utils import ptime, timeago
 from uniparser.fastapi_ui import app as sub_app
 
+from .crawler import crawl_once
 from .models import Task, query_tasks, tasks
 from .settings import Config, release_app, setup_app
 
@@ -49,6 +50,9 @@ async def add_crawler_rule(request: Request):
 @app.post("/add_new_task")
 async def add_new_task(task: Task):
     try:
+        exist = 'unknown'
+        if task.interval < 60:
+            raise ValueError('interval should not less than 60 seconds.')
         db = Config.db
         # check exist
         query = tasks.select().where(tasks.c.name == task.name)
@@ -91,6 +95,23 @@ async def delete_task(task_id: int):
     except Exception as e:
         result = {'msg': str(e)}
     Config.logger.info(f'delete_task {task_id}: {result}')
+    return result
+
+
+@app.get("/force_crawl")
+async def force_crawl(task_name: str):
+    try:
+        task = await crawl_once(task_name=task_name)
+        task['timeago'] = timeago(
+            ptime() - ptime(
+                task['last_change_time'].strftime('%Y-%m-%d %H:%M:%S')),
+            1,
+            1,
+            short_name=True)
+        result = {'msg': 'ok', 'task': task}
+    except Exception as e:
+        result = {'msg': str(e)}
+    Config.logger.info(f'force_crawl {task_name}: {result}')
     return result
 
 

@@ -180,6 +180,10 @@ async def crawl_once(task_name=None):
                     await db.execute(**query.kwargs)
         logger.info(
             f'Crawl finished. done: {len(done)}, timeout: {len(pending)}')
+    if task_name:
+        query = tasks.select().where(tasks.c.name == task_name)
+        task = await db.fetch_one(query=query)
+        return dict(task)
 
 
 async def crawler_loop():
