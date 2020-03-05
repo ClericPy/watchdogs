@@ -6,8 +6,10 @@ from typing import Optional, Tuple
 
 from torequests.utils import ttime
 from uniparser import Crawler
+from uniparser.utils import TorequestsAsyncAdapter
 
 from .config import Config
+from .models import tasks
 
 
 def chain_result(item: dict):
@@ -32,7 +34,9 @@ def chain_result(item: dict):
     return item
 
 
-async def crawl(task, crawler: Crawler, logger=None):
+async def crawl(task):
+    crawler: Crawler = Config.crawler
+    logger = Config.logger
     if logger:
         logger.info(f'Start crawling: {task.name}')
     crawl_result = await crawler.acrawl(task.request_args)
@@ -113,8 +117,9 @@ def find_next_check_time(
     return ok, next_check_time
 
 
-async def crawl_once(tasks, crawler, task_name=None):
+async def crawl_once(task_name=None):
     """task_name means force crawl"""
+    crawler: Crawler = Config.crawler
     db = crawler.storage.db
     now = datetime.datetime.now()
     logger = Config.logger
@@ -137,7 +142,7 @@ async def crawl_once(tasks, crawler, task_name=None):
             # always crawl for given task_name
             ok = True
         if ok:
-            t = ensure_future(crawl(task, crawler, logger))
+            t = ensure_future(crawl(task))
             # add task_name for logger
             t.task_name = task.name
             todo.append(t)
@@ -154,7 +159,7 @@ async def crawl_once(tasks, crawler, task_name=None):
             )
     async with Config.db_lock:
         await db.execute_many(query=update_query, values=update_values)
-    logger.info(f'Crawling{len(todo)} tasks.')
+    logger.info(f'Crawling {len(todo)} tasks.')
     if todo:
         done, pending = await wait(todo, timeout=Config.default_crawler_timeout)
         if pending:
@@ -177,11 +182,14 @@ async def crawl_once(tasks, crawler, task_name=None):
             f'Crawl finished. done: {len(done)}, timeout: {len(pending)}')
 
 
-async def crawler_loop(tasks, db):
+async def crawler_loop():
     crawler = Crawler(storage=Config.rule_db)
+    crawler.uniparser.request_adapter = TorequestsAsyncAdapter(
+        default_host_frequency=Config.default_host_frequency)
     Config.logger.info(
-        f'Downloader middleware installed: {crawler.uniparser.ensure_adapter(False).__class__.__name__}'
+        f'Downloader middleware installed: {crawler.uniparser.request_adapter.__class__.__name__}'
     )
+    Config.crawler = crawler
     while 1:
-        await crawl_once(tasks, crawler)
+        await crawl_once()
         await sleep(Config.check_interval)
