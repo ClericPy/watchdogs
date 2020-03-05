@@ -71,10 +71,10 @@ async def setup_app(app):
     db = Config.db
     if db:
         await db.connect()
-        from .models import tasks, create_tables
+        from .models import create_tables
         create_tables(str(db.url))
         # crawler_loop
-        ensure_future(crawler_loop(tasks, db))
+        ensure_future(crawler_loop())
 
 
 async def release_app(app):

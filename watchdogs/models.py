@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 
 import sqlalchemy
 from pydantic import BaseModel
@@ -203,3 +204,34 @@ class Task(BaseModel):
     next_check_time: datetime = date0
     last_change_time: datetime = date0
     custom_info: str = ''
+
+
+async def query_tasks(
+        task_name: Optional[str] = None,
+        page: int = 1,
+        page_size: int = 30,
+        order_by: str = 'last_change_time',
+        sort: str = 'desc',
+):
+    offset = page_size * (page - 1)
+    query = tasks.select()
+    if task_name:
+        query = query.where(tasks.c.name == task_name)
+    ob = getattr(tasks.c, order_by, None)
+    if ob is None:
+        raise ValueError(f'bad order_by {order_by}')
+    if sort.lower() == 'desc':
+        ob = sqlalchemy.desc(ob)
+    elif sort.lower() == 'asc':
+        ob = sqlalchemy.asc(ob)
+    else:
+        raise ValueError(
+            f"bad sort arg {sort} not in ('desc', 'asc', 'DESC', 'ASC')")
+    query = query.order_by(ob)
+    query = query.limit(page_size + 1).offset(offset)
+    _result = await Config.db.fetch_all(query=query)
+    has_more = len(_result) > page_size
+    result = [dict(i) for i in _result][:page_size]
+    Config.logger.info(
+        f'query {len(result)} tasks (has_more={has_more}): {query}')
+    return result, has_more

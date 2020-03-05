@@ -31,6 +31,15 @@
         .el-tabs__item {
             font-weight: bold;
         }
+
+        .el-message-box--center {
+            min-width: 50%;
+        }
+
+        .time-td {
+            min-width: 16em;
+            padding-left: 3em;
+        }
     </style>
 </head>
 
@@ -40,15 +49,73 @@
             <el-tabs @tab-click="handleClick" v-model="activeName" class="full-screen" stretch='true'>
                 <el-tab-pane label="Tasks" name="tasks">
                     <template>
-                        <!-- <el-table :data="tableData" style="width: 100%"
-                            :default-sort="{prop: 'date', order: 'descending'}">
-                            <el-table-column prop="date" label="日期" sortable width="180">
+                        <el-table :data="task_list" style="width: 100%" height="90%">
+                            <el-table-column prop="task_id" label="ID" width="60">
                             </el-table-column>
-                            <el-table-column prop="name" label="姓名" sortable width="180">
+                            <el-table-column prop="name" label="name" width="180">
                             </el-table-column>
-                            <el-table-column prop="address" label="地址" :formatter="formatter">
+                            <el-table-column prop="tags" label="tags" width="120"></el-table-column>
+                            <el-table-column label="request_args" width="160">
+                                <template slot-scope="scope">
+                                    <el-popover trigger="hover" placement="right">
+                                        <pre><code>${JSON.stringify(JSON.parse(scope.row.request_args), null, 2)}</code></pre>
+                                        <div slot="reference" class="name-wrapper">
+                                            <el-tag size="medium">${ new URL(JSON.parse(scope.row.request_args).url).host }</el-tag>
+                                        </div>
+                                    </el-popover>
+                                </template>
                             </el-table-column>
-                        </el-table> -->
+                            <el-table-column prop="interval" label="interval" width="80"></el-table-column>
+                            <el-table-column prop="work_hours" label="work_hours" width="120"></el-table-column>
+                            <el-table-column label="latest_result" width="180">
+                                <template slot-scope="scope">
+                                    <el-link @click="show_result_list(scope.row)" type="info" :underline="false">
+                                        ${(JSON.parse(scope.row.latest_result).text||'').slice(0, 40)}
+                                    </el-link>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="last_change_time" width="180">
+                                <template slot-scope="scope">
+                                    <el-link @click="show_time(scope.row)" type="info" :underline="false">
+                                        <b>${scope.row.timeago} ago</b><br>
+                                        <!-- ${scope.row.last_change_time.replace(/\..*/, '').replace('T', ' ')} -->
+                                    </el-link>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="origin_url" width="180">
+                                <template slot-scope="scope">
+                                    <el-link :href="scope.row.origin_url" target="_blank" type="primary">
+                                        ${scope.row.origin_url}
+                                    </el-link>
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="custom_info" label="custom_info" width="120"></el-table-column>
+                            <el-table-column fixed="right" label="*" width="120">
+                                <template slot-scope="scope">
+                                    <el-switch v-model="scope.row.enable" :active-value='1' :inactive-value='0'
+                                        active-color="#13ce66" inactive-color="#ff4949" style="margin: 0.5em;"
+                                        @change='change_enable(scope.row)' size="mini"
+                                        title="Switch between enable/disable">
+                                    </el-switch>
+                                    <br>
+                                    <el-button type="primary" icon="el-icon-edit"
+                                        @click="update_task(scope.$index, scope.row)" size='mini' circle
+                                        title="Edit Task"></el-button>
+                                    <el-button type="danger" icon="el-icon-delete" circle title="Delete Task"
+                                        size="mini" style="margin: 0.5em;"
+                                        @click="delete_task(scope.$index, scope.row)"></el-button>
+                                    <!-- <el-button @click.native.prevent="showAddTaskForm(scope.row)" type="warning" size="mini"
+                                        title="update task" icon="el-icon-edit-outline" circle>
+                                    </el-button>
+                                    <el-button @click.native.prevent="removeTask(scope.row.name)" type="danger" size="mini"
+                                        title="remove task" icon="el-icon-delete" circle>
+                                    </el-button> -->
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                        <el-button type="success" style="margin-left: 40%;width: 20%;" :disabled="!has_more" plain>
+                            Page: ${task_list_page} - Load
+                            More</el-button>
                     </template>
                 </el-tab-pane>
                 <el-tab-pane label="New Task" name="new task">
@@ -60,7 +127,8 @@
                     <el-button icon='el-icon-upload' type='primary' style="margin: 0;" @click="add_crawler_rule"> 1.
                         Save Crawler Rule
                     </el-button>
-                    <el-button icon='el-icon-plus' type='primary' style="margin: 0;" @click="show_form_add_new_task"> 2.
+                    <el-button icon='el-icon-plus' type='primary' style="margin: 0;"
+                        @click="show_form_add_new_task(true)"> 2.
                         Add
                         New Task</el-button>
                     <span style="font-size: 0.6em;">
@@ -72,19 +140,19 @@
 
                 </el-tab-pane>
                 <el-tab-pane label="API" name="apis">
-                    <iframe v-if="activeName=='apis'" src="/docs" frameborder="0" ref="iframe"
+                    <iframe v-if="activeName=='apis'" src="/docs" frameborder="0"
                         style="width: 100%; height: 90%;"></iframe>
                 </el-tab-pane>
             </el-tabs>
         </template>
-        <el-dialog title="New Task" :visible.sync="dialogFormVisible" :close-on-click-modal="false">
+        <el-dialog title="Task Info" :visible.sync="dialogFormVisible" :close-on-click-modal="false">
             <el-form :model="new_task_form">
                 <el-form-item label="Task Name" title="Input one unique name">
                     <el-input v-model="new_task_form.name" autocomplete="off"></el-input>
                 </el-form-item>
                 <el-form-item label="">
-                    <el-switch active-text="Enable" inactive-text="Disable" v-model="new_task_form.enable"
-                        active-color="#13ce66" inactive-color="#ff4949">
+                    <el-switch active-text="Enable" :active-value='1' :inactive-value='0' inactive-text="Disable"
+                        v-model="new_task_form.enable" active-color="#13ce66" inactive-color="#ff4949">
                     </el-switch>
                 </el-form-item>
                 <el-form-item title="Tags splited by ," label="Tags">
@@ -115,7 +183,7 @@
             </el-form>
             <div slot="footer" class="dialog-footer">
                 <el-button @click="dialogFormVisible = false">Cancel</el-button>
-                <el-button type="primary" @click="add_new_task">OK</el-button>
+                <el-button type="primary" @click="add_new_task">Submit</el-button>
             </div>
         </el-dialog>
 
@@ -128,6 +196,9 @@
                     activeName: 'tasks',
                     dialogFormVisible: false,
                     new_task_form: {},
+                    has_more: true,
+                    task_list: [],
+                    task_list_page: 0,
                     query_tasks_args: {
                         order_by: 'last_change_time',
                         sort: 'desc',
@@ -202,25 +273,69 @@
                         }
                     )
                 },
-                show_form_add_new_task() {
-                    this.new_task_form = {
-                        name: '',
-                        enable: true,
-                        tags: '',
-                        request_args: '',
-                        origin_url: '',
-                        interval: 300,
-                        work_hours: '0, 24',
-                        max_result_count: 10,
-                        custom_info: '',
+                show_form_add_new_task(init_form) {
+                    if (init_form) {
+                        this.new_task_form = {
+                            name: '',
+                            enable: true,
+                            tags: '',
+                            request_args: '',
+                            origin_url: '',
+                            interval: 300,
+                            work_hours: '0, 24',
+                            max_result_count: 10,
+                            custom_info: '',
+                        }
                     }
                     let current_crawler_rule = JSON.parse(this.sub_app.current_crawler_rule_json)
                     this.new_task_form.request_args = JSON.stringify(current_crawler_rule.request_args)
                     this.new_task_form.origin_url = current_crawler_rule.request_args.url || ''
                     this.dialogFormVisible = true
                 },
+                change_enable(row) {
+                    this.$http.get('enable_task', {
+                        params: {
+                            task_id: row.task_id,
+                            enable: row.enable
+                        }
+                    }).then(
+                        r => {
+                            result = r.body
+                            if (result.msg != 'ok') {
+                                this.$message.error({
+                                    message: 'Update enable failed: ' + result.msg,
+                                });
+                            }
+                        }, r => {
+                            this.$message.error({
+                                message: 'Update enable failed: ' + r.status,
+                            });
+                        }
+                    )
+                },
                 reload_tasks() {
-                    // 
+                    this.$http.get('load_tasks').then(
+                        r => {
+                            result = r.body
+                            if (result.msg == 'ok') {
+                                result.tasks.forEach(item => {
+                                    this.task_list.push(item)
+                                });
+                                this.has_more = result.has_more
+                                this.task_list_page += 1
+                            } else {
+                                this.$message.error({
+                                    message: 'Loading tasks failed: ' + result.msg,
+                                });
+                                this.has_more = result.has_more
+                            }
+
+                        }, r => {
+                            this.$message.error({
+                                message: 'Loading tasks failed: ' + r.status,
+                            });
+                        }
+                    )
                 },
                 reload_rules() {
                     // 
@@ -242,7 +357,112 @@
                             };
                         }, 0);
                     }
-                }
+                },
+                escape_html(string) {
+                    if (!string) {
+                        return ''
+                    }
+                    return string.replace(
+                        /[&<>'"]/g,
+                        tag =>
+                        ({
+                            '&': '&amp;',
+                            '<': '&lt;',
+                            '>': '&gt;',
+                            "'": '&#39;',
+                            '"': '&quot;'
+                        } [tag] || tag)
+                    )
+                },
+                show_time(row) {
+                    var text = '<table style="text-align: left;margin: 0 0 0 20%;">'
+                    var items = JSON.parse(row.result_list || '[]')
+                    text += '<tr><td>last_check_time</td><td class="time-td">' + row.last_check_time.replace(/\..*/,
+                            '').replace('T', ' ') +
+                        '</td></tr>'
+                    text += '<tr><td>next_check_time</td><td class="time-td">' + row.next_check_time.replace(/\..*/,
+                            '').replace('T', ' ') +
+                        '</td></tr>'
+                    text += '<tr style="font-weight: bold;"><td>last_change_time</td><td class="time-td">' + row
+                        .last_change_time.replace(
+                            /\..*/, '').replace('T', ' ') +
+                        '</td></tr>'
+                    text += '</table>'
+                    this.$alert(text, 'Task result list: ' + row.name, {
+                        confirmButtonText: 'OK',
+                        center: true,
+                        dangerouslyUseHTMLString: true,
+                        closeOnClickModal: true,
+                        closeOnPressEscape: true
+                    });
+                },
+                show_result_list(row) {
+                    var text = '<table>'
+                    var items = JSON.parse(row.result_list || '[]')
+                    items.forEach(item => {
+                        text += '<tr><td class="time-td">' + item.time + '</td><td>' + this.escape_html(JSON
+                            .parse(item.result).text) + '</td></tr>'
+                    });
+                    text += '</table>'
+                    this.$alert(text, 'Task result list: ' + row.name, {
+                        confirmButtonText: 'OK',
+                        center: true,
+                        dangerouslyUseHTMLString: true,
+                        closeOnClickModal: true,
+                        closeOnPressEscape: true
+                    });
+                },
+                update_task(index, row) {
+                    this.new_task_form = {
+                        name: row.name,
+                        enable: row.enable,
+                        tags: row.tags,
+                        request_args: row.request_args,
+                        origin_url: row.origin_url,
+                        interval: row.interval,
+                        work_hours: row.work_hours,
+                        max_result_count: row.max_result_count,
+                        custom_info: row.custom_info,
+                    }
+                    this.show_form_add_new_task(false)
+                },
+                delete_task(index, row) {
+                    this.$confirm('Are you sure?', 'Confirm', {
+                        confirmButtonText: 'Delete',
+                        cancelButtonText: 'Cancel',
+                        type: 'warning'
+                    }).then(() => {
+                        this.$http.get('delete_task', {
+                            params: {
+                                task_id: row.task_id,
+                            }
+                        }).then(
+                            r => {
+                                result = r.body
+                                if (result.msg == 'ok') {
+                                    this.$message.success({
+                                        message: 'Delete task success',
+                                    });
+                                    this.task_list.splice(index, 1)
+                                } else {
+                                    this.$message.error({
+                                        message: 'Delete task failed: ' + result.msg,
+                                    });
+                                }
+                            }, r => {
+                                this.$message.error({
+                                    message: 'Delete task failed: ' + r.status,
+                                });
+                            }
+                        )
+                    }).catch(() => {
+                        this.$message({
+                            type: 'info',
+                            message: 'Canceled'
+                        });
+                    });
+
+                },
             },
             watch: {},
             computed: {
@@ -256,6 +476,7 @@
         var app = new vue_app({
             delimiters: ['${', '}']
         }).$mount('#app')
+        app.reload_tasks()
     </script>
 </body>
 
