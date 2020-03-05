@@ -90,7 +90,7 @@
                             <el-table-column label="latest_result" width="">
                                 <template slot-scope="scope">
                                     <el-link @click="show_result_list(scope.row)" type="info" :underline="false">
-                                        ${(JSON.parse(scope.row.latest_result).text||'').slice(0, 40)}
+                                        ${(scope.row.latest_result||'').slice(0, 60)}
                                     </el-link>
                                 </template>
                             </el-table-column>
@@ -285,10 +285,10 @@
                             max_result_count: 10,
                             custom_info: '',
                         }
+                        let current_crawler_rule = JSON.parse(this.sub_app.current_crawler_rule_json)
+                        this.new_task_form.request_args = JSON.stringify(current_crawler_rule.request_args)
+                        this.new_task_form.origin_url = current_crawler_rule.request_args.url || ''
                     }
-                    let current_crawler_rule = JSON.parse(this.sub_app.current_crawler_rule_json)
-                    this.new_task_form.request_args = JSON.stringify(current_crawler_rule.request_args)
-                    this.new_task_form.origin_url = current_crawler_rule.request_args.url || ''
                     this.dialogFormVisible = true
                 },
                 change_enable(row) {
@@ -413,8 +413,16 @@
                     var text = '<table>'
                     var items = JSON.parse(row.result_list || '[]')
                     items.forEach(item => {
-                        text += '<tr><td class="time-td">' + item.time + '</td><td>' + this.escape_html(JSON
-                            .parse(item.result).text) + '</td></tr>'
+                        result = JSON.parse(item.result)
+                        if (result.url) {
+                            var href = 'href="' + (result.url || '') + '"'
+                        } else {
+                            var href = ''
+                        }
+                        text += '<tr><td class="time-td">' + item.time +
+                            '</td><td><a target="_blank" ' + href + '>' + this
+                            .escape_html(
+                                result.text) + '</a></td></tr>'
                     });
                     text += '</table>'
                     this.$alert(text, 'Task result list: ' + row.name, {
