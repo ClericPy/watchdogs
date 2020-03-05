@@ -217,17 +217,18 @@ async def query_tasks(
     query = tasks.select()
     if task_name:
         query = query.where(tasks.c.name == task_name)
-    ob = getattr(tasks.c, order_by, None)
-    if ob is None:
-        raise ValueError(f'bad order_by {order_by}')
-    if sort.lower() == 'desc':
-        ob = sqlalchemy.desc(ob)
-    elif sort.lower() == 'asc':
-        ob = sqlalchemy.asc(ob)
-    else:
-        raise ValueError(
-            f"bad sort arg {sort} not in ('desc', 'asc', 'DESC', 'ASC')")
-    query = query.order_by(ob)
+    if order_by and sort:
+        ob = getattr(tasks.c, order_by, None)
+        if ob is None:
+            raise ValueError(f'bad order_by {order_by}')
+        if sort.lower() == 'desc':
+            ob = sqlalchemy.desc(ob)
+        elif sort.lower() == 'asc':
+            ob = sqlalchemy.asc(ob)
+        else:
+            raise ValueError(
+                f"bad sort arg {sort} not in ('desc', 'asc', 'DESC', 'ASC')")
+        query = query.order_by(ob)
     query = query.limit(page_size + 1).offset(offset)
     _result = await Config.db.fetch_all(query=query)
     has_more = len(_result) > page_size
