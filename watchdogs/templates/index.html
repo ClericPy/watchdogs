@@ -5,8 +5,8 @@
     <meta charset="utf-8" />
     <meta name="referrer" content="never">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <link rel="shortcut icon" type="image/ico" href="/icon.png" />
-    <title>Uniparser Test Console</title>
+    <link rel="shortcut icon" href="/static/favicon.ico" type="image/icon" />
+    <title>Watchdogs v{{version}}</title>
     <meta name="viewport" content="width=device-width, initial-scale=0.3">
     <script src="{{cdn_urls['VUE_JS_CDN']}}"></script>
     <script src="{{cdn_urls['ELEMENT_JS_CDN']}}"></script>
@@ -49,13 +49,20 @@
             <el-tabs @tab-click="handleClick" v-model="activeName" class="full-screen" stretch='true'>
                 <el-tab-pane label="Tasks" name="tasks">
                     <template>
-                        <el-table :default-sort="{prop: 'last_change_time', order: 'descending'}" :data="task_list"
+                        <el-table @cell-dblclick="table_db_click"
+                            :default-sort="{prop: 'last_change_time', order: 'descending'}" :data="task_list"
                             style="width: 100%" height="90%" @sort-change="sort_change">
                             <el-table-column prop="task_id" label="task_id" sortable="custom" width="100">
                             </el-table-column>
                             <el-table-column prop="name" sortable="custom" label="name" width="180">
                             </el-table-column>
-                            <el-table-column prop="tags" sortable="custom" label="tags" width="120"></el-table-column>
+                            <el-table-column sortable="custom" label="tag" width="120">
+                                <template slot-scope="scope">
+                                    <el-link :href="'?tag='+scope.row.tag" target="_blank" type="primary">
+                                        ${scope.row.tag}
+                                    </el-link>
+                                </template>
+                            </el-table-column>
                             <el-table-column label="request_args" width="160">
                                 <template slot-scope="scope">
                                     <el-popover trigger="hover" placement="right">
@@ -104,23 +111,38 @@
                                     <el-button type="primary" icon="el-icon-caret-right"
                                         @click="force_crawl(scope.$index, scope.row)" size='mini' style="margin: 0;"
                                         circle title="Force Crawl"></el-button>
-                                    <el-button type="warn" icon="el-icon-edit"
-                                        @click="update_task(scope.$index, scope.row)" size='mini' style="margin: 0;"
-                                        circle title="Edit Task"></el-button>
+                                    <el-button type="warn" icon="el-icon-edit" @click="update_task(scope.row)"
+                                        size='mini' style="margin: 0;" circle title="Edit Task"></el-button>
                                     <el-button type="danger" icon="el-icon-delete" circle title="Delete Task"
                                         size="mini" style="margin: 0;" @click="delete_task(scope.$index, scope.row)">
                                     </el-button>
                                 </template>
                             </el-table-column>
                         </el-table>
-                        <el-button type="success" style="margin-left: 35%; width: 20%;" :disabled="!has_more" plain>
+                        <el-button type="success" style="margin-left: 30%; width: 20%;" :disabled="!has_more" plain>
                             Page: ${current_page} - Load More</el-button>
+                        <el-button type="primary" @click="reload_tasks" size="" style="margin: 0;"
+                            icon="el-icon-refresh-right"></el-button>
+                        <a href="/rss?tag=" target="_blank" rel="noopener noreferrer" style="margin: 0;">
+                            <el-button size="" style="margin: 0;" type="warning" icon="el-icon-star-off">
+                                RSS </el-button>
+                        </a>
                     </template>
                 </el-tab-pane>
                 <el-tab-pane label="New Task" name="new task">
                     <iframe @load='init_iframe()' src="/uniparser" frameborder="0" ref="iframe"
                         style="width: 100%; height: 90%;"></iframe>
-                    <el-button icon='el-icon-refresh-right' style="margin: 0 0 0 20%;" @click="init_crawler_rule"> 0.
+                    <el-popover style="margin: 0 0 0 20%;" placement="top-start" title="WARNING" width="200"
+                        trigger="hover" content=""><span style="font-size: 1em;">
+                            ParseRule's name should have the keys to generate RSS:
+                            <br>
+                            <b>text</b>
+                            <br>
+                            <b>url </b>[Optional]
+                        </span>
+                        <i slot="reference" class="el-icon-warning"></i>
+                    </el-popover>
+                    <el-button icon='el-icon-refresh-right' style="margin: 0;" @click="init_crawler_rule"> 0.
                         Init
                     </el-button>
                     <el-button icon='el-icon-upload' type='primary' style="margin: 0;" @click="add_crawler_rule"> 1.
@@ -130,13 +152,31 @@
                         @click="show_form_add_new_task(true)"> 2.
                         Add
                         New Task</el-button>
-                    <span style="font-size: 0.6em;">
-                        WARNING: ParseRule names should have these keys to generate RSS: <b>text</b>,
-                        <b>url</b>(Optional, defaults to origin_url)
-                    </span>
+
                 </el-tab-pane>
                 <el-tab-pane label="Rules" name="rule">
-
+                    <template>
+                        <el-table :data="rule_list" style="width: 100%">
+                            <el-table-column type="expand">
+                                <template slot-scope="props">
+                                    <el-form label-position="left" inline class="demo-table-expand">
+                                        <el-form-item label="商品名称">
+                                            <span>{{ props.row.name }}</span>
+                                        </el-form-item>
+                                        <el-form-item label="所属店铺">
+                                            <span>{{ props.row.shop }}</span>
+                                        </el-form-item>
+                                    </el-form>
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="商品 ID" prop="id">
+                            </el-table-column>
+                            <el-table-column label="商品名称" prop="name">
+                            </el-table-column>
+                            <el-table-column label="描述" prop="desc">
+                            </el-table-column>
+                        </el-table>
+                    </template>
                 </el-tab-pane>
                 <el-tab-pane label="API" name="apis">
                     <iframe v-if="activeName=='apis'" src="/docs" frameborder="0"
@@ -154,8 +194,8 @@
                         v-model="new_task_form.enable" active-color="#13ce66" inactive-color="#ff4949">
                     </el-switch>
                 </el-form-item>
-                <el-form-item title="Tags splited by ," label="Tags">
-                    <el-input v-model="new_task_form.tags" autocomplete="off"></el-input>
+                <el-form-item title="Tag for grouping" label="Tag">
+                    <el-input v-model="new_task_form.tag" autocomplete="off"></el-input>
                 </el-form-item>
                 <el-form-item title="Input the url, or request_args JSON, or cURL string" label="request_args">
                     <el-input type="textarea" :autosize="{ minRows: 2, maxRows: 4}" v-model="new_task_form.request_args"
@@ -198,9 +238,11 @@
                     has_more: true,
                     task_list: [],
                     current_page: 0,
+                    rule_list: [],
                     query_tasks_args: {
                         order_by: 'last_change_time',
                         sort: 'desc',
+                        tag: '',
                     },
                 }
             },
@@ -226,7 +268,7 @@
                             }
                         }, r => {
                             this.$message.error({
-                                message: 'Add task failed: ' + r.status,
+                                message: 'Add task connect failed: ' + r.status,
                                 duration: 0,
                                 showClose: true,
                             });
@@ -236,8 +278,13 @@
                 },
                 init_crawler_rule() {
                     let name = 'C-' + new Date().getTime().toString().slice(0, -3)
-                    this.sub_app.new_rule_json = '{"name":"' + name +
-                        '","request_args":{"method":"get","url":"http://httpbin.org/html","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[{"name":"text","chain_rules":[["css","body h1","$text"],["python","getitem","[0]"]],"childs":""}],"regex":"","encoding":""}'
+                    if (/xml/g.test(this.sub_app.new_rule_json)) {
+                        this.sub_app.new_rule_json = '{"name":"' + name +
+                            '","request_args":{"method":"get","url":"http://httpbin.org/html","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[{"name":"text","chain_rules":[["css","body h1","$text"],["python","getitem","[0]"]],"childs":""}],"regex":"^http://httpbin.org/html$","encoding":""}'
+                    } else {
+                        this.sub_app.new_rule_json = '{"name":"' + name +
+                            '","request_args":{"method":"get","url":"https://importpython.com/blog/feed/","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[{"name":"text","chain_rules":[["xml","channel>item>title","$text"],["python","getitem","[0]"]],"childs":""},{"name":"url","chain_rules":[["xml","channel>item>link","$text"],["python","getitem","[0]"]],"childs":""}],"regex":"^https?://importpython\.com/blog/feed/$","encoding":""}'
+                    }
                     this.sub_app.load_rule()
                 },
                 load_rule(crawler_rule_json) {
@@ -265,7 +312,7 @@
                             this.reload_rules()
                         }, r => {
                             this.$message.error({
-                                message: 'Add rule failed: ' + r.status,
+                                message: 'Add rule connect failed: ' + r.status,
                                 duration: 0,
                                 showClose: true,
                             });
@@ -277,7 +324,7 @@
                         this.new_task_form = {
                             name: '',
                             enable: true,
-                            tags: '',
+                            tag: 'default',
                             request_args: '',
                             origin_url: '',
                             interval: 300,
@@ -307,7 +354,7 @@
                             }
                         }, r => {
                             this.$message.error({
-                                message: 'Update enable failed: ' + r.status,
+                                message: 'Update enable connect failed: ' + r.status,
                             });
                         }
                     )
@@ -325,6 +372,12 @@
                     this.load_tasks()
                 },
                 load_tasks() {
+                    let tag = new URLSearchParams(window.location.search).get('tag')
+                    if (tag) {
+                        this.query_tasks_args['tag'] = tag
+                    } else {
+                        this.query_tasks_args['tag'] = ''
+                    }
                     this.$http.get('load_tasks', {
                         params: this.query_tasks_args
                     }).then(
@@ -345,7 +398,7 @@
 
                         }, r => {
                             this.$message.error({
-                                message: 'Loading tasks failed: ' + r.status,
+                                message: 'Loading tasks connect failed: ' + r.status,
                             });
                         }
                     )
@@ -453,16 +506,19 @@
                             }
                         }, r => {
                             this.$message.error({
-                                message: 'Crawl task failed: ' + r.status,
+                                message: 'Crawl task connect failed: ' + r.status,
                             });
                         }
                     )
                 },
-                update_task(index, row) {
+                table_db_click(row, col, cell, e) {
+                    this.update_task(row)
+                },
+                update_task(row) {
                     this.new_task_form = {
                         name: row.name,
                         enable: row.enable,
-                        tags: row.tags,
+                        tag: row.tag,
                         request_args: row.request_args,
                         origin_url: row.origin_url,
                         interval: row.interval,
@@ -497,7 +553,7 @@
                                 }
                             }, r => {
                                 this.$message.error({
-                                    message: 'Delete task failed: ' + r.status,
+                                    message: 'Delete task connect failed: ' + r.status,
                                 });
                             }
                         )
@@ -507,7 +563,6 @@
                             message: 'Canceled'
                         });
                     });
-
                 },
             },
             watch: {},
@@ -515,7 +570,6 @@
                 sub_app() {
                     return this.$refs.iframe.contentWindow.window.app
                 }
-
             }
         }
         var vue_app = Vue.extend(Main)
