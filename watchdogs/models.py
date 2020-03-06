@@ -22,7 +22,10 @@ tasks = sqlalchemy.Table(
     sqlalchemy.Column(
         "enable", sqlalchemy.Integer, server_default=text('1'), nullable=False),
     sqlalchemy.Column(
-        "tags", sqlalchemy.String(128), server_default="", nullable=False),
+        "tag",
+        sqlalchemy.String(128),
+        server_default="default",
+        nullable=False),
     sqlalchemy.Column("request_args", sqlalchemy.TEXT, nullable=False),
     sqlalchemy.Column(
         "origin_url",
@@ -192,7 +195,7 @@ class TaskController:
 class Task(BaseModel):
     name: str
     enable: int = 0
-    tags: str = ''
+    tag: str = 'default'
     request_args: str
     origin_url: str = ''
     interval: int = 300
@@ -212,11 +215,14 @@ async def query_tasks(
         page_size: int = 30,
         order_by: str = 'last_change_time',
         sort: str = 'desc',
+        tag: str = '',
 ):
     offset = page_size * (page - 1)
     query = tasks.select()
     if task_name:
         query = query.where(tasks.c.name == task_name)
+    if tag:
+        query = query.where(tasks.c.tag == tag)
     if order_by and sort:
         ob = getattr(tasks.c, order_by, None)
         if ob is None:

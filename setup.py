@@ -4,7 +4,6 @@ import re
 import sys
 
 from setuptools import find_packages, setup
-
 """
 linux:
 rm -rf "dist/*";rm -rf "build/*";python3 setup.py bdist_wheel;twine upload "dist/*;rm -rf "dist/*";rm -rf "build/*""
@@ -41,7 +40,7 @@ setup(
     license="MIT License",
     install_requires=install_requires,
     py_modules=["watchdogs"],
-    package_data={'watchdogs': ['templates/*.html']},
+    package_data={'watchdogs': ['templates/*.html', 'static/*.ico']},
     extras_require={},
     classifiers=[
         "License :: OSI Approved :: MIT License",

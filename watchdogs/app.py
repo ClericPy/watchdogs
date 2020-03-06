@@ -2,11 +2,13 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from starlette.requests import Request
 from starlette.templating import Jinja2Templates
 from torequests.utils import ptime, timeago
 from uniparser.fastapi_ui import app as sub_app
 
+from . import __version__
 from .crawler import crawl_once
 from .models import Task, query_tasks, tasks
 from .settings import Config, release_app, setup_app
@@ -14,21 +16,20 @@ from .settings import Config, release_app, setup_app
 app = FastAPI()
 
 app.mount("/uniparser", sub_app)
+app.mount(
+    "/static",
+    StaticFiles(directory=str((Path(__file__).parent / 'static').absolute())),
+    name="static")
+
 templates = Jinja2Templates(
     directory=str((Path(__file__).parent / 'templates').absolute()))
-cdn_urls = {
-    'VUE_JS_CDN': 'https://cdn.staticfile.org/vue/2.6.11/vue.min.js',
-    'ELEMENT_CSS_CDN': 'https://cdn.staticfile.org/element-ui/2.13.0/theme-chalk/index.css',
-    'ELEMENT_JS_CDN': 'https://cdn.staticfile.org/element-ui/2.13.0/index.js',
-    'VUE_RESOURCE_CDN': 'https://cdn.staticfile.org/vue-resource/1.5.1/vue-resource.min.js',
-    'CLIPBOARDJS_CDN': 'https://cdn.staticfile.org/clipboard.js/2.0.4/clipboard.min.js',
-}
 
 
 @app.get("/")
 async def index(request: Request):
     kwargs: dict = {'request': request}
-    kwargs['cdn_urls'] = cdn_urls
+    kwargs['cdn_urls'] = Config.cdn_urls
+    kwargs['version'] = __version__
     return templates.TemplateResponse("index.html", context=kwargs)
 
 
@@ -58,11 +59,11 @@ async def add_new_task(task: Task):
         query = tasks.select().where(tasks.c.name == task.name)
         exist = await db.fetch_one(query=query)
         if exist:
-            query = 'update tasks set `enable`=:enable,`tags`=:tags,`request_args`=:request_args,`origin_url`=:origin_url,`interval`=:interval,`work_hours`=:work_hours,`max_result_count`=:max_result_count,`custom_info`=:custom_info where `name`=:name'
+            query = 'update tasks set `enable`=:enable,`tag`=:tag,`request_args`=:request_args,`origin_url`=:origin_url,`interval`=:interval,`work_hours`=:work_hours,`max_result_count`=:max_result_count,`custom_info`=:custom_info where `name`=:name'
             values = {
                 'name': task.name,
                 'enable': task.enable,
-                'tags': task.tags,
+                'tag': task.tag,
                 'request_args': task.request_args,
                 'origin_url': task.origin_url,
                 'interval': task.interval,
@@ -122,6 +123,7 @@ async def load_tasks(
         page_size: int = 30,
         order_by: str = 'last_change_time',
         sort: str = 'desc',
+        tag: str = '',
 ):
     try:
         _result, has_more = await query_tasks(
@@ -129,7 +131,9 @@ async def load_tasks(
             page=page,
             page_size=page_size,
             order_by=order_by,
-            sort=sort)
+            sort=sort,
+            tag=tag,
+        )
         now_ts = ptime()
         for item in _result:
             item['timeago'] = timeago(
@@ -140,6 +144,8 @@ async def load_tasks(
                 short_name=True)
         result = {'msg': 'ok', 'tasks': _result, 'has_more': has_more}
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         result = {'msg': str(e), 'tasks': [], 'has_more': False}
     return result
 
