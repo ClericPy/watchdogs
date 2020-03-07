@@ -139,7 +139,7 @@
                     </template>
                 </el-tab-pane>
                 <el-tab-pane label="New Task" name="new">
-                    <iframe @load='init_iframe()' src="/uniparser" frameborder="0" ref="iframe"
+                    <iframe v-if="iframe_loaded||activeName=='new'" @load='init_iframe()' src="/uniparser" frameborder="0" ref="iframe"
                         style="width: 100%; height: 90%;"></iframe>
                     <el-popover style="margin: 0 0 0 20%;" placement="top-start" title="WARNING" width="200"
                         trigger="hover" content=""><span style="font-size: 1em;">
@@ -274,6 +274,7 @@
                 return {
                     activeName: 'tasks',
                     // activeName: 'rules',
+                    iframe_loaded: false,
                     task_info_visible: false,
                     rule_info_visible: false,
                     current_host_rule: {},
@@ -298,15 +299,16 @@
                     let data = JSON.stringify(this.new_task_form)
                     this.$http.post('add_new_task', data).then(
                         r => {
-                            if (r.body.ok) {
+                            var result = r.body
+                            if (result.msg == 'ok') {
                                 this.$message({
-                                    message: 'Add task success: ' + r.body.ok,
+                                    message: 'Add task success: ' + result.result,
                                     type: 'success'
                                 });
                                 this.reload_tasks()
                             } else {
                                 this.$message.error({
-                                    message: 'Add task failed: ' + r.body.error,
+                                    message: 'Add task failed: ' + result.msg,
                                     duration: 0,
                                     showClose: true,
                                 });
@@ -377,8 +379,8 @@
                     let data = JSON.stringify(current_crawler_rule)
                     this.$http.post('crawler_rule.' + method, data).then(
                         r => {
-                            result = r.body
-                            if (result.ok) {
+                            var result = r.body
+                            if (result.msg == 'ok') {
                                 this.$message({
                                     message: method + ' rule success: ' + result.result.name || result
                                         .result,
@@ -389,7 +391,7 @@
                                 }
                             } else {
                                 this.$message.error({
-                                    message: method + ' rule failed: ' + result.error,
+                                    message: method + ' rule failed: ' + result.msg,
                                     duration: 0,
                                     showClose: true,
                                 });
@@ -407,7 +409,7 @@
                     if (init_form) {
                         this.new_task_form = {
                             name: '',
-                            enable: true,
+                            enable: 1,
                             tag: 'default',
                             request_args: '',
                             origin_url: '',
@@ -430,7 +432,7 @@
                         }
                     }).then(
                         r => {
-                            result = r.body
+                            var result = r.body
                             if (result.msg != 'ok') {
                                 this.$message.error({
                                     message: 'Update enable failed: ' + result.msg,
@@ -466,7 +468,7 @@
                         params: this.query_tasks_args
                     }).then(
                         r => {
-                            result = r.body
+                            var result = r.body
                             if (result.msg == 'ok') {
                                 result.tasks.forEach(item => {
                                     this.task_list.push(item)
@@ -495,7 +497,7 @@
                         }
                     }).then(
                         r => {
-                            result = r.body
+                            var result = r.body
                             this.current_host = result.host || ''
                             this.host_list = result.hosts
                         }, r => {
@@ -511,16 +513,17 @@
                     }
                 },
                 handleClick(tab, event) {
-                    if (tab.name == 'new task') {
+                    if (tab.name == 'new') {
                         // for autosize bug in iframe if not seen
-                        setTimeout(() => {
-                            for (const text of this.$refs.iframe.contentWindow.window.document
-                                    .getElementsByTagName(
-                                        'textarea')) {
-                                text.style.height = 'auto';
-                                text.style.height = text.scrollHeight + 'px';
-                            };
-                        }, 0);
+                        this.iframe_loaded = true
+                        // setTimeout(() => {
+                        //     for (const text of this.$refs.iframe.contentWindow.window.document
+                        //             .getElementsByTagName(
+                        //                 'textarea')) {
+                        //         text.style.height = 'auto';
+                        //         text.style.height = text.scrollHeight + 'px';
+                        //     };
+                        // }, 0);
                     }
                     if (tab.name == 'rules') {
                         this.load_hosts()
@@ -595,7 +598,7 @@
                         }
                     }).then(
                         r => {
-                            result = r.body
+                            var result = r.body
                             if (result.msg == 'ok') {
                                 this.$message.success({
                                     message: 'Crawl task success',
@@ -642,7 +645,7 @@
                             }
                         }).then(
                             r => {
-                                result = r.body
+                                var result = r.body
                                 if (result.msg == 'ok') {
                                     this.$message.success({
                                         message: 'Delete task success',
@@ -678,8 +681,8 @@
                             }
                         }).then(
                             r => {
-                                result = r.body
-                                if (result.ok) {
+                                var result = r.body
+                                if (result.msg == 'ok') {
                                     this.$message.success({
                                         message: 'Delete host rule success',
                                     });
@@ -713,7 +716,7 @@
                         }
                     }).then(
                         r => {
-                            result = r.body
+                            var result = r.body
                             if (result.msg == 'ok') {
                                 this.current_host_rule = JSON.parse(result.host_rule)
                                 this.rule_info_visible = true

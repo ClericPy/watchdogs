@@ -41,7 +41,7 @@ async def crawl(task):
     crawl_result = await crawler.acrawl(task.request_args)
     if crawl_result is None:
         if logger:
-            logger.warn(
+            logger.error(
                 f'{task.name} crawl_result is None, maybe crawler rule is not found'
             )
         result = '{"text": "Result is null, please ensure the crawler rule."}'
