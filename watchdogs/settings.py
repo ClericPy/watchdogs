@@ -1,5 +1,5 @@
 import logging
-from asyncio import ensure_future
+from asyncio import Lock, ensure_future
 from logging.handlers import RotatingFileHandler
 
 from databases import Database
@@ -49,9 +49,12 @@ def setup_db(db_url=None):
 
 
 def setup_uniparser():
+    from uniparser.parsers import Uniparser, AsyncFrequency
     from uniparser.config import GlobalConfig
 
     GlobalConfig.GLOBAL_TIMEOUT = Config.downloader_timeout
+    Uniparser._DEFAULT_ASYNC_FREQUENCY = AsyncFrequency(
+        *Config.DEFAULT_HOST_FREQUENCY)
 
 
 def setup(db_url=None,
@@ -63,17 +66,28 @@ def setup(db_url=None,
     Config.password = password
     Config.logger = init_logger(
         ignore_stdout_log=ignore_stdout_log, ignore_file_log=ignore_file_log)
-    setup_uniparser()
     setup_db(db_url)
 
 
+async def setup_crawler():
+    from uniparser import Crawler
+
+    crawler = Crawler(storage=Config.rule_db)
+    Config.logger.info(
+        f'Downloader middleware installed: {crawler.uniparser.ensure_adapter(False).__class__.__name__}'
+    )
+    Config.crawler = crawler
+
+
 async def setup_app(app):
+    setup_uniparser()
     db = Config.db
     if db:
         await db.connect()
         from .models import create_tables
         create_tables(str(db.url))
         # crawler_loop
+        await setup_crawler()
         ensure_future(crawler_loop())
 
 
