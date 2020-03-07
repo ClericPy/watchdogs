@@ -40,6 +40,15 @@
             min-width: 16em;
             padding-left: 3em;
         }
+
+        #input_host_form>.el-form-item:first-child .el-form-item__content,
+        #input_host_form>.el-form-item:first-child {
+            width: 100%;
+        }
+
+        [aria-label="Edit Crawler JSON"] .el-textarea__inner {
+            height: 10em;
+        }
     </style>
 </head>
 
@@ -129,7 +138,7 @@
                         </a>
                     </template>
                 </el-tab-pane>
-                <el-tab-pane label="New Task" name="new task">
+                <el-tab-pane label="New Task" name="new">
                     <iframe @load='init_iframe()' src="/uniparser" frameborder="0" ref="iframe"
                         style="width: 100%; height: 90%;"></iframe>
                     <el-popover style="margin: 0 0 0 20%;" placement="top-start" title="WARNING" width="200"
@@ -143,30 +152,37 @@
                         <i slot="reference" class="el-icon-warning"></i>
                     </el-popover>
                     <el-button icon='el-icon-refresh-right' style="margin: 0;"
-                        title="Init rules between xml and css demo" @click="init_crawler_rule"> 0.
+                        title="Init rules between xml and css demo" @click="init_iframe_crawler_rule(null)"> 0.
                         Init
                     </el-button>
-                    <el-button icon='el-icon-upload' type='primary' style="margin: 0;" @click="add_crawler_rule"> 1.
+                    <el-button icon='el-icon-upload' type='warning' style="margin: 0;"
+                        @click="process_crawler_rule('add', null)">
+                        1.
                         Save Crawler Rule
                     </el-button>
-                    <el-button icon='el-icon-plus' type='primary' style="margin: 0;"
+                    <el-button icon='el-icon-plus' type='success' style="margin: 0;"
                         @click="show_form_add_new_task(true)"> 2.
                         Add
                         New Task</el-button>
 
                 </el-tab-pane>
-                <el-tab-pane label="Rules" name="rule">
-                    <el-form @submit.prevent.native="load_rules" label-position="left" inline>
-                        <el-form-item label="Host" inline>
-                            <el-input v-model="current_host_name" title="Press enter for submit"
-                                placeholder="Host or URL for filter">
-                            </el-input>
-                        </el-form-item>
-                        <el-form-item inline>
-                            <el-button @click="load_rules">Submit</el-button>
-                        </el-form-item>
+                <el-tab-pane label="Rules" name="rules">
+                    <div style="width: 70%;margin: 0 auto;">
+                        <el-form @submit.prevent.native="load_hosts" id="input_host_form" label-position="left" inline>
+                            <el-form-item>
+                                <el-input v-model="current_host" title="Press enter for submit"
+                                    placeholder="Host or URL for filter, null to fetch all.">
+                                    <template slot="prepend">Host</template>
+                                    <el-button @click="load_hosts" slot="append" icon="el-icon-search"></el-button>
+                                </el-input>
+                            </el-form-item>
+                        </el-form>
+                        <el-tag style="margin-right: 1em;" v-for="(host,index) in host_list" :key="host"
+                            @click="show_host_rule(host)" effect="dark" :type="tag_types[index%4]">
+                            ${ host }
+                        </el-tag>
+                    </div>
 
-                    </el-form>
                 </el-tab-pane>
                 <el-tab-pane label="API" name="apis">
                     <iframe v-if="activeName=='apis'" src="/docs" frameborder="0"
@@ -174,7 +190,7 @@
                 </el-tab-pane>
             </el-tabs>
         </template>
-        <el-dialog title="Task Info" :visible.sync="dialogFormVisible" :close-on-click-modal="false">
+        <el-dialog title="Task Info" :visible.sync="task_info_visible" :close-on-click-modal="false">
             <el-form :model="new_task_form">
                 <el-form-item label="Task Name" title="Input one unique name">
                     <el-input v-model="new_task_form.name" autocomplete="off"></el-input>
@@ -211,26 +227,63 @@
                 </el-form-item>
             </el-form>
             <div slot="footer" class="dialog-footer">
-                <el-button @click="dialogFormVisible = false">Cancel</el-button>
+                <el-button @click="task_info_visible = false">Cancel</el-button>
                 <el-button type="primary" @click="add_new_task">Submit</el-button>
             </div>
         </el-dialog>
+        <el-dialog :title="'Rule Info: '+current_host_rule.host||''" :close-on-click-modal="true"
+            :visible.sync="rule_info_visible" :close-on-click-modal="false">
+            <el-button type="danger" icon="el-icon-delete" @click="delete_host_rule(current_host_rule.host)">Delete
+            </el-button>
+            <el-row :gutter="20">
+                <el-col :span="8">
+                    <h4>Name</h4>
+                </el-col>
+                <el-col :span="12">
+                    <h4>Regex</h4>
+                </el-col>
+                <el-col :span="4">
+                    <h4>/</h4>
+                </el-col>
+            </el-row>
+            <div v-for="rule in current_host_rule.crawler_rules">
+                <el-row :gutter="20">
+                    <el-col :span="8">
+                        ${rule.name}
+                    </el-col>
+                    <el-col :span="12">
+                        ${rule.regex}
+                    </el-col>
+                    <el-col :span="4">
+                        <i title="View & Test" @click="view_crawler_rule(rule)"
+                            style="zoom: 1.5;cursor: pointer;margin-right: 1em;" class="el-icon-view"></i>
+                        <i title="Edit JSON" @click="edit_crawler_rule(rule)"
+                            style="zoom: 1.5;cursor: pointer;margin-right: 1em;" class="el-icon-edit-outline"></i>
+                        <i title="Delete" @click="process_crawler_rule('pop', rule)"
+                            style="zoom: 1.5;cursor: pointer;margin-right: 1em;" class="el-icon-delete"></i>
+                    </el-col>
+                </el-row>
+            </div>
 
+        </el-dialog>
 
     </div>
     <script>
         var Main = {
             data() {
                 return {
-                    // activeName: 'tasks',
-                    activeName: 'rule',
-                    dialogFormVisible: false,
+                    activeName: 'tasks',
+                    // activeName: 'rules',
+                    task_info_visible: false,
+                    rule_info_visible: false,
+                    current_host_rule: {},
                     new_task_form: {},
                     has_more: true,
                     task_list: [],
                     current_page: 0,
                     host_list: [],
-                    current_host_name: '',
+                    current_host: '',
+                    tag_types: ['success', 'info', 'warning', 'danger'],
                     query_tasks_args: {
                         order_by: 'last_change_time',
                         sort: 'desc',
@@ -240,7 +293,7 @@
             },
             methods: {
                 add_new_task() {
-                    this.dialogFormVisible = false
+                    this.task_info_visible = false
                     // {"name":"get demo","request_args":{"method":"get","url":"http://httpbin.org/get","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[{"name":"text","chain_rules":[["css","p","$text"],["python","getitem","[0]"]],"childs":""}],"regex":"http://httpbin.org/get","encoding":""}
                     let data = JSON.stringify(this.new_task_form)
                     this.$http.post('add_new_task', data).then(
@@ -260,7 +313,7 @@
                             }
                         }, r => {
                             this.$message.error({
-                                message: 'Add task connect failed: ' + r.status,
+                                message: 'connect failed: ' + r.status,
                                 duration: 0,
                                 showClose: true,
                             });
@@ -268,15 +321,20 @@
                     )
 
                 },
-                init_crawler_rule() {
-                    let name = 'C-' + new Date().getTime().toString().slice(0, -3)
-                    if (/xml/g.test(this.sub_app.new_rule_json)) {
-                        this.sub_app.new_rule_json = '{"name":"' + name +
-                            '","request_args":{"method":"get","url":"http://httpbin.org/html","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[{"name":"text","chain_rules":[["css","body h1","$text"],["python","getitem","[0]"]],"childs":""}],"regex":"^http://httpbin.org/html$","encoding":""}'
+                init_iframe_crawler_rule(rule_json) {
+                    if (rule_json) {
+                        this.sub_app.new_rule_json = rule_json
                     } else {
-                        this.sub_app.new_rule_json = '{"name":"' + name +
-                            '","request_args":{"method":"get","url":"https://importpython.com/blog/feed/","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[{"name":"text","chain_rules":[["xml","channel>item>title","$text"],["python","getitem","[0]"]],"childs":""},{"name":"url","chain_rules":[["xml","channel>item>link","$text"],["python","getitem","[0]"]],"childs":""}],"regex":"^https?://importpython\.com/blog/feed/$","encoding":""}'
+                        let name = 'C-' + new Date().getTime().toString().slice(0, -3)
+                        if (/xml/g.test(this.sub_app.new_rule_json)) {
+                            this.sub_app.new_rule_json = '{"name":"' + name +
+                                '","request_args":{"method":"get","url":"http://httpbin.org/html","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[{"name":"text","chain_rules":[["css","body h1","$text"],["python","getitem","[0]"]],"childs":""}],"regex":"^http://httpbin.org/html$","encoding":""}'
+                        } else {
+                            this.sub_app.new_rule_json = '{"name":"' + name +
+                                '","request_args":{"method":"get","url":"https://importpython.com/blog/feed/","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[{"name":"text","chain_rules":[["xml","channel>item>title","$text"],["python","getitem","[0]"]],"childs":""},{"name":"url","chain_rules":[["xml","channel>item>link","$text"],["python","getitem","[0]"]],"childs":""}],"regex":"^https?://importpython\.com/blog/feed/$","encoding":""}'
+                        }
                     }
+
                     this.sub_app.load_rule()
                 },
                 load_rule(crawler_rule_json) {
@@ -284,27 +342,61 @@
                     this.sub_app.new_rule_json = crawler_rule_json
                     this.sub_app.load_rule()
                 },
-                add_crawler_rule() {
-                    let current_crawler_rule = JSON.parse(this.sub_app.current_crawler_rule_json)
+                view_crawler_rule(rule) {
+                    this.init_iframe_crawler_rule(JSON.stringify(rule))
+                    this.$message.success({
+                        message: 'Rule loaded.',
+                    });
+                    this.rule_info_visible = false
+                    this.activeName = 'new'
+                    this.sub_app.input_object = ''
+                    this.sub_app.request_status = ''
+                },
+                edit_crawler_rule(rule) {
+                    this.$prompt('', 'Edit Crawler JSON', {
+                        confirmButtonText: 'OK',
+                        cancelButtonText: 'Cancel',
+                        center: true,
+                        inputType: 'textarea',
+                        closeOnClickModal: false,
+                        inputValue: JSON.stringify(rule, null, 2)
+                    }).then(({
+                        value
+                    }) => {
+                        this.process_crawler_rule('add', JSON.parse(value))
+                    }).catch(() => {
+                        this.$message({
+                            type: 'info',
+                            message: 'Cancel'
+                        });
+                    });
+                },
+                process_crawler_rule(method, rule) {
+                    let current_crawler_rule = rule || JSON.parse(this.sub_app
+                        .current_crawler_rule_json)
                     let data = JSON.stringify(current_crawler_rule)
-                    this.$http.post('add_crawler_rule', data).then(
+                    this.$http.post('crawler_rule.' + method, data).then(
                         r => {
-                            if (r.body.ok) {
+                            result = r.body
+                            if (result.ok) {
                                 this.$message({
-                                    message: 'Add rule success: ' + r.body.ok,
+                                    message: method + ' rule success: ' + result.result.name || result
+                                        .result,
                                     type: 'success'
                                 });
+                                if (method == 'pop' && result.result) {
+                                    this.show_host_rule(this.current_host_rule.host)
+                                }
                             } else {
                                 this.$message.error({
-                                    message: 'Add rule failed: ' + r.body.error,
+                                    message: method + ' rule failed: ' + result.error,
                                     duration: 0,
                                     showClose: true,
                                 });
                             }
-                            this.reload_rules()
                         }, r => {
                             this.$message.error({
-                                message: 'Add rule connect failed: ' + r.status,
+                                message: 'connect failed: ' + r.status,
                                 duration: 0,
                                 showClose: true,
                             });
@@ -328,7 +420,7 @@
                         this.new_task_form.request_args = JSON.stringify(current_crawler_rule.request_args)
                         this.new_task_form.origin_url = current_crawler_rule.request_args.url || ''
                     }
-                    this.dialogFormVisible = true
+                    this.task_info_visible = true
                 },
                 change_enable(row) {
                     this.$http.get('enable_task', {
@@ -346,7 +438,7 @@
                             }
                         }, r => {
                             this.$message.error({
-                                message: 'Update enable connect failed: ' + r.status,
+                                message: 'connect failed: ' + r.status,
                             });
                         }
                     )
@@ -390,50 +482,32 @@
 
                         }, r => {
                             this.$message.error({
-                                message: 'Loading tasks connect failed: ' + r.status,
+                                message: 'connect failed: ' + r.status,
                             });
                         }
                     )
                 },
-                reload_rules() {
-                    // 
-                    this.rule_list = []
-                    this.rule_list_current_page = 1
-                    load_rules()
-                },
-                load_rules() {
-                    alert(this.current_host_name)
-                    // let tag = new URLSearchParams(window.location.search).get('tag')
-                    // this.$http.get('load_tasks', {
-                    //     params: {
-                    //         host: this.rule_host
-                    //     }
-                    // }).then(
-                    //     r => {
-                    //         result = r.body
-                    //         if (result.msg == 'ok') {
-                    //             result.tasks.forEach(item => {
-                    //                 this.task_list.push(item)
-                    //             });
-                    //             this.has_more = result.has_more
-                    //             this.current_page += 1
-                    //         } else {
-                    //             this.$message.error({
-                    //                 message: 'Loading tasks failed: ' + result.msg,
-                    //             });
-                    //             this.has_more = result.has_more
-                    //         }
-
-                    //     }, r => {
-                    //         this.$message.error({
-                    //             message: 'Loading tasks connect failed: ' + r.status,
-                    //         });
-                    //     }
-                    // )
+                load_hosts() {
+                    // (this.current_host)
+                    this.$http.get('load_hosts', {
+                        params: {
+                            host: this.current_host
+                        }
+                    }).then(
+                        r => {
+                            result = r.body
+                            this.current_host = result.host || ''
+                            this.host_list = result.hosts
+                        }, r => {
+                            this.$message.error({
+                                message: 'connect failed: ' + r.status,
+                            });
+                        }
+                    )
                 },
                 init_iframe() {
                     if (this.sub_app) {
-                        this.init_crawler_rule()
+                        this.init_iframe_crawler_rule(null)
                     }
                 },
                 handleClick(tab, event) {
@@ -447,6 +521,9 @@
                                 text.style.height = text.scrollHeight + 'px';
                             };
                         }, 0);
+                    }
+                    if (tab.name == 'rules') {
+                        this.load_hosts()
                     }
                 },
                 escape_html(string) {
@@ -531,7 +608,7 @@
                             }
                         }, r => {
                             this.$message.error({
-                                message: 'Crawl task connect failed: ' + r.status,
+                                message: 'connect failed: ' + r.status,
                             });
                         }
                     )
@@ -578,7 +655,7 @@
                                 }
                             }, r => {
                                 this.$message.error({
-                                    message: 'Delete task connect failed: ' + r.status,
+                                    message: 'connect failed: ' + r.status,
                                 });
                             }
                         )
@@ -589,6 +666,70 @@
                         });
                     });
                 },
+                delete_host_rule(host) {
+                    this.$confirm('Are you sure?', 'Confirm', {
+                        confirmButtonText: 'Delete',
+                        cancelButtonText: 'Cancel',
+                        type: 'warning'
+                    }).then(() => {
+                        this.$http.get('delete_host_rule', {
+                            params: {
+                                host: host,
+                            }
+                        }).then(
+                            r => {
+                                result = r.body
+                                if (result.ok) {
+                                    this.$message.success({
+                                        message: 'Delete host rule success',
+                                    });
+                                    this.current_host_rule = {}
+                                    this.rule_info_visible = false
+                                    this.load_hosts()
+                                } else {
+                                    this.$message.error({
+                                        message: 'Delete host rule failed: ' + JSON.stringify(
+                                            result),
+                                    });
+                                }
+                            }, r => {
+                                this.$message.error({
+                                    message: 'connect failed: ' + r.status,
+                                });
+                            }
+                        )
+                    }).catch(() => {
+                        this.$message({
+                            type: 'info',
+                            message: 'Canceled'
+                        });
+                    })
+
+                },
+                show_host_rule(host) {
+                    this.$http.get('get_host_rule', {
+                        params: {
+                            host: host,
+                        }
+                    }).then(
+                        r => {
+                            result = r.body
+                            if (result.msg == 'ok') {
+                                this.current_host_rule = JSON.parse(result.host_rule)
+                                this.rule_info_visible = true
+
+                            } else {
+                                this.$message.error({
+                                    message: 'get_host_rule failed: ' + JSON.stringify(result),
+                                });
+                            }
+                        }, r => {
+                            this.$message.error({
+                                message: 'connect failed: ' + r.status,
+                            });
+                        }
+                    )
+                }
             },
             watch: {},
             computed: {

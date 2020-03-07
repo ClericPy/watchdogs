@@ -105,6 +105,8 @@ class RuleStorageDB(RuleStorage):
     async def add_crawler_rule(self, rule: CrawlerRule, commit=None):
         if isinstance(rule, str):
             rule = CrawlerRule.loads(rule)
+        elif isinstance(rule, dict) and not isinstance(rule, CrawlerRule):
+            rule = CrawlerRule(**rule)
         if not rule.get('regex'):
             raise ValueError('regex should not be null')
         url = rule.get('request_args', {}).get('url')
@@ -119,34 +121,33 @@ class RuleStorageDB(RuleStorage):
             exist_host_rule.add_crawler_rule(rule)
             query = "update host_rules set host_rule=:host_rule_string WHERE host = :host"
             return await self.db.execute(
-                    query=query,
-                    values={
-                        'host_rule_string': exist_host_rule.dumps(),
-                        'host': host
-                    })
+                query=query,
+                values={
+                    'host_rule_string': exist_host_rule.dumps(),
+                    'host': host
+                })
         else:
             host_rule = HostRule(host)
             host_rule.add_crawler_rule(rule)
             query = "INSERT INTO host_rules (host, host_rule) values (:host, :host_rule_string)"
             return await self.db.execute(
-                    query=query,
-                    values={
-                        'host_rule_string': host_rule.dumps(),
-                        'host': host
-                    })
+                query=query,
+                values={
+                    'host_rule_string': host_rule.dumps(),
+                    'host': host
+                })
 
-    async def pop_crawler_rule(self,
-                               rule_name: str,
-                               host: str = None,
-                               commit=None):
+    async def pop_crawler_rule(self, rule: CrawlerRule, commit=False):
         query = "SELECT host_rule FROM host_rules"
+        host = get_host(rule['request_args'].get('url'))
         values = {}
         if host:
             query += ' WHERE host = :host'
             values['host'] = host
-        async for row in self.db.iterate(query=query):
+        rows = await self.db.fetch_all(query=query, values=values)
+        for row in rows:
             host_rule = HostRule.loads(row.host_rule)
-            crawler_rule = host_rule.pop(rule_name, None)
+            crawler_rule = host_rule.pop_crawler_rule(rule['name'])
             if crawler_rule:
                 # update host_rule
                 await self.add_host_rule(host_rule)
@@ -160,19 +161,19 @@ class RuleStorageDB(RuleStorage):
         if exist_host_rule:
             query = "update host_rules set host_rule=:host_rule_string WHERE host = :host"
             return await self.db.execute(
-                    query=query,
-                    values={
-                        'host_rule_string': rule.dumps(),
-                        'host': rule['host']
-                    })
+                query=query,
+                values={
+                    'host_rule_string': rule.dumps(),
+                    'host': rule['host']
+                })
         else:
             query = "INSERT INTO host_rules (host, host_rule) values (:host, :host_rule_string)"
             return await self.db.execute(
-                    query=query,
-                    values={
-                        'host_rule_string': rule.dumps(),
-                        'host': rule['host']
-                    })
+                query=query,
+                values={
+                    'host_rule_string': rule.dumps(),
+                    'host': rule['host']
+                })
 
     async def pop_host_rule(self, host: str, commit=None):
         exist_host_rule = await self.get_host_rule(host)
