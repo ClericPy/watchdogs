@@ -1,8 +1,7 @@
 from fire import Fire
 from uvicorn import run
 
-from .app import app
-from .settings import setup, Config
+from .settings import Config, setup
 
 
 def clear_dir(dir_path):
@@ -34,6 +33,7 @@ def start_server(db_url=None,
         password=password,
         ignore_stdout_log=ignore_stdout_log,
         ignore_file_log=ignore_file_log)
+    from .app import app
     run(app, **uvicorn_kwargs)
 
 

@@ -142,7 +142,8 @@
                         </span>
                         <i slot="reference" class="el-icon-warning"></i>
                     </el-popover>
-                    <el-button icon='el-icon-refresh-right' style="margin: 0;" @click="init_crawler_rule"> 0.
+                    <el-button icon='el-icon-refresh-right' style="margin: 0;"
+                        title="Init rules between xml and css demo" @click="init_crawler_rule"> 0.
                         Init
                     </el-button>
                     <el-button icon='el-icon-upload' type='primary' style="margin: 0;" @click="add_crawler_rule"> 1.
@@ -155,28 +156,17 @@
 
                 </el-tab-pane>
                 <el-tab-pane label="Rules" name="rule">
-                    <template>
-                        <el-table :data="rule_list" style="width: 100%">
-                            <el-table-column type="expand">
-                                <template slot-scope="props">
-                                    <el-form label-position="left" inline class="demo-table-expand">
-                                        <el-form-item label="商品名称">
-                                            <span>{{ props.row.name }}</span>
-                                        </el-form-item>
-                                        <el-form-item label="所属店铺">
-                                            <span>{{ props.row.shop }}</span>
-                                        </el-form-item>
-                                    </el-form>
-                                </template>
-                            </el-table-column>
-                            <el-table-column label="商品 ID" prop="id">
-                            </el-table-column>
-                            <el-table-column label="商品名称" prop="name">
-                            </el-table-column>
-                            <el-table-column label="描述" prop="desc">
-                            </el-table-column>
-                        </el-table>
-                    </template>
+                    <el-form @submit.prevent.native="load_rules" label-position="left" inline>
+                        <el-form-item label="Host" inline>
+                            <el-input v-model="current_host_name" title="Press enter for submit"
+                                placeholder="Host or URL for filter">
+                            </el-input>
+                        </el-form-item>
+                        <el-form-item inline>
+                            <el-button @click="load_rules">Submit</el-button>
+                        </el-form-item>
+
+                    </el-form>
                 </el-tab-pane>
                 <el-tab-pane label="API" name="apis">
                     <iframe v-if="activeName=='apis'" src="/docs" frameborder="0"
@@ -232,13 +222,15 @@
         var Main = {
             data() {
                 return {
-                    activeName: 'tasks',
+                    // activeName: 'tasks',
+                    activeName: 'rule',
                     dialogFormVisible: false,
                     new_task_form: {},
                     has_more: true,
                     task_list: [],
                     current_page: 0,
-                    rule_list: [],
+                    host_list: [],
+                    current_host_name: '',
                     query_tasks_args: {
                         order_by: 'last_change_time',
                         sort: 'desc',
@@ -405,6 +397,39 @@
                 },
                 reload_rules() {
                     // 
+                    this.rule_list = []
+                    this.rule_list_current_page = 1
+                    load_rules()
+                },
+                load_rules() {
+                    alert(this.current_host_name)
+                    // let tag = new URLSearchParams(window.location.search).get('tag')
+                    // this.$http.get('load_tasks', {
+                    //     params: {
+                    //         host: this.rule_host
+                    //     }
+                    // }).then(
+                    //     r => {
+                    //         result = r.body
+                    //         if (result.msg == 'ok') {
+                    //             result.tasks.forEach(item => {
+                    //                 this.task_list.push(item)
+                    //             });
+                    //             this.has_more = result.has_more
+                    //             this.current_page += 1
+                    //         } else {
+                    //             this.$message.error({
+                    //                 message: 'Loading tasks failed: ' + result.msg,
+                    //             });
+                    //             this.has_more = result.has_more
+                    //         }
+
+                    //     }, r => {
+                    //         this.$message.error({
+                    //             message: 'Loading tasks connect failed: ' + r.status,
+                    //         });
+                    //     }
+                    // )
                 },
                 init_iframe() {
                     if (this.sub_app) {

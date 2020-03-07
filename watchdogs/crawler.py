@@ -6,7 +6,6 @@ from typing import Optional, Tuple
 
 from torequests.utils import ttime
 from uniparser import Crawler
-from uniparser.utils import TorequestsAsyncAdapter
 
 from .config import Config
 from .models import tasks
@@ -157,8 +156,7 @@ async def crawl_once(task_name=None):
             logger.info(
                 f'Task [{task.name}] is not on work, next_check_time reset to {next_check_time}'
             )
-    async with Config.db_lock:
-        await db.execute_many(query=update_query, values=update_values)
+    await db.execute_many(query=update_query, values=update_values)
     logger.info(f'Crawling {len(todo)} tasks.')
     if todo:
         done, pending = await wait(todo, timeout=Config.default_crawler_timeout)
@@ -176,8 +174,7 @@ async def crawl_once(task_name=None):
                 results: list = loads(task.result_list or '[]')
                 results.insert(0, {'result': result, 'time': ttime_now})
                 query.add('result_list', dumps(results[:task.max_result_count]))
-                async with Config.db_lock:
-                    await db.execute(**query.kwargs)
+                await db.execute(**query.kwargs)
         logger.info(
             f'Crawl finished. done: {len(done)}, timeout: {len(pending)}')
     if task_name:
@@ -187,13 +184,6 @@ async def crawl_once(task_name=None):
 
 
 async def crawler_loop():
-    crawler = Crawler(storage=Config.rule_db)
-    crawler.uniparser.request_adapter = TorequestsAsyncAdapter(
-        default_host_frequency=Config.default_host_frequency)
-    Config.logger.info(
-        f'Downloader middleware installed: {crawler.uniparser.request_adapter.__class__.__name__}'
-    )
-    Config.crawler = crawler
     while 1:
         await crawl_once()
         await sleep(Config.check_interval)
