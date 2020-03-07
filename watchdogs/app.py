@@ -6,13 +6,13 @@ from fastapi.staticfiles import StaticFiles
 from starlette.requests import Request
 from starlette.templating import Jinja2Templates
 from torequests.utils import ptime, timeago
-from uniparser import CrawlerRule, HostRule
+from uniparser import CrawlerRule
 from uniparser.fastapi_ui import app as sub_app
 from uniparser.utils import get_host
 
 from . import __version__
 from .crawler import crawl_once
-from .models import Task, host_rules, query_tasks, tasks
+from .models import Task, query_tasks, tasks
 from .settings import Config, release_app, setup_app
 
 app = FastAPI()
@@ -25,6 +25,12 @@ app.mount(
 
 templates = Jinja2Templates(
     directory=str((Path(__file__).parent / 'templates').absolute()))
+
+# @app.middleware("http")
+# async def add_process_time_header(request: Request, call_next):
+#     print(request)
+#     response = await call_next(request)
+#     return response
 
 
 @app.get("/")
@@ -63,12 +69,9 @@ async def add_new_task(task: Task):
             query = tasks.insert()
             values = dict(task)
             _result = await db.execute(query=query, values=values)
-        if _result:
-            result = {'ok': 'success'}
-        else:
-            result = {'ok': 'no change'}
+        result = {'msg': 'ok', 'result': 'ok' if _result else 'no change'}
     except Exception as e:
-        result = {'error': str(e)}
+        result = {'msg': str(e)}
     Config.logger.info(
         f'{"[Update]" if exist else "[Add] new"} task {task}: {result}')
     return result
@@ -191,9 +194,9 @@ async def crawler_rule(method: str, rule: CrawlerRule):
             _result = await Config.rule_db.pop_crawler_rule(rule)
         else:
             raise ValueError(f'method only support add and pop')
-        result = {'ok': 'success', 'result': _result}
+        result = {'msg': 'ok', 'result': _result}
     except Exception as e:
-        result = {'error': str(e)}
+        result = {'msg': str(e)}
     Config.logger.info(f'[{method.title()}] crawler rule {rule}: {result}')
     return result
 
@@ -204,9 +207,9 @@ async def delete_host_rule(host: str):
         if not host:
             raise ValueError('host should not be null')
         _result = await Config.rule_db.pop_host_rule(host)
-        result = {'ok': 'success'}
+        result = {'msg': 'ok'}
     except Exception as e:
-        result = {'error': str(e)}
+        result = {'msg': str(e)}
     Config.logger.info(f'[Delete] host rule {host}: {result}')
     return result
 
