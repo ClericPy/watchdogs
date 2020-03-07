@@ -6,11 +6,13 @@ from fastapi.staticfiles import StaticFiles
 from starlette.requests import Request
 from starlette.templating import Jinja2Templates
 from torequests.utils import ptime, timeago
+from uniparser import CrawlerRule, HostRule
 from uniparser.fastapi_ui import app as sub_app
+from uniparser.utils import get_host
 
 from . import __version__
 from .crawler import crawl_once
-from .models import Task, query_tasks, tasks
+from .models import Task, host_rules, query_tasks, tasks
 from .settings import Config, release_app, setup_app
 
 app = FastAPI()
@@ -31,21 +33,6 @@ async def index(request: Request):
     kwargs['cdn_urls'] = Config.cdn_urls
     kwargs['version'] = __version__
     return templates.TemplateResponse("index.html", context=kwargs)
-
-
-@app.post("/add_crawler_rule")
-async def add_crawler_rule(request: Request):
-    JSON = (await request.body()).decode('u8')
-    try:
-        _result = await Config.rule_db.add_crawler_rule(JSON)
-        if _result:
-            result = {'ok': 'success'}
-        else:
-            result = {'ok': 'no change'}
-    except Exception as e:
-        result = {'error': str(e)}
-    Config.logger.info(f'[Add] crawler rule {JSON}: {result}')
-    return result
 
 
 @app.post("/add_new_task")
@@ -159,6 +146,68 @@ async def enable_task(task_id: int, enable: int = 1):
         result = {'msg': 'ok', 'updated': _result}
     except Exception as e:
         result = {'msg': str(e)}
+    return result
+
+
+@app.get('/load_hosts')
+async def load_hosts(host: str = ''):
+    host = get_host(host) or host
+    query = 'select `host` from host_rules'
+    if host:
+        query += ' where `host`=:host'
+        values = {'host': host}
+    else:
+        values = {}
+    query += ' order by `host` asc'
+    _result = await Config.db.fetch_all(query, values)
+    return {'hosts': [i.host for i in _result], 'host': host}
+
+
+@app.get("/get_host_rule")
+async def get_host_rule(host: str):
+    try:
+        if not host:
+            raise ValueError('host name should not be null')
+        query = 'select `host_rule` from host_rules where `host`=:host'
+        values = {'host': host}
+        _result = await Config.db.fetch_one(query, values)
+        result = {
+            'msg': 'ok',
+            'host_rule': _result.host_rule
+            if _result else '{"host": "%s"}' % host
+        }
+    except Exception as e:
+        result = {'msg': str(e)}
+    Config.logger.info(f'[Get] host_rule {host}: {result}')
+    return result
+
+
+@app.post("/crawler_rule.{method}")
+async def crawler_rule(method: str, rule: CrawlerRule):
+    try:
+        if method == 'add':
+            _result = await Config.rule_db.add_crawler_rule(rule)
+        elif method == 'pop':
+            _result = await Config.rule_db.pop_crawler_rule(rule)
+        else:
+            raise ValueError(f'method only support add and pop')
+        result = {'ok': 'success', 'result': _result}
+    except Exception as e:
+        result = {'error': str(e)}
+    Config.logger.info(f'[{method.title()}] crawler rule {rule}: {result}')
+    return result
+
+
+@app.get("/delete_host_rule")
+async def delete_host_rule(host: str):
+    try:
+        if not host:
+            raise ValueError('host should not be null')
+        _result = await Config.rule_db.pop_host_rule(host)
+        result = {'ok': 'success'}
+    except Exception as e:
+        result = {'error': str(e)}
+    Config.logger.info(f'[Delete] host rule {host}: {result}')
     return result
 
 
