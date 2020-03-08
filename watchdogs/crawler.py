@@ -2,7 +2,7 @@ import datetime
 import re
 from asyncio import ensure_future, sleep, wait
 from json import dumps, loads
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 from torequests.utils import ttime
 from uniparser import Crawler
@@ -11,52 +11,214 @@ from .config import Config
 from .models import tasks
 
 
-def chain_result(item: dict):
+def get_result(item):
     """
-    print(
-    chain_result({
+    Parse result format like:
+    {'text': 'xxx'}
+    {'text': 'xxx', 'url': 'xxx'}
+    {'rule_name': {'text': 'xxx'}}
+    {'__result__': {'rule_name': {'text': 'xxx'}}}
+
+def test_result_schema():
+    # standard result
+    result = get_result({
+        'url': 'https://www.python.org/dev/peps/pep-0001',
+        'text': 'text'
+    })
+    # print(result)
+    assert result == {
+        'url': 'https://www.python.org/dev/peps/pep-0001',
+        'text': 'text'
+    }
+    # only text
+    result = get_result('https://www.python.org/dev/peps/pep-0001')
+    # print(result)
+    assert result == {'text': 'text not found'}
+    # embed request
+    result = get_result({
         '__request__': 'https://www.python.org/dev/peps/pep-0001',
         '__result__': {
             'detail': {
-                'title': 'PEP 1 -- PEP Purpose and Guidelines'
+                'text': 'PEP 1 -- PEP Purpose and Guidelines'
             }
         }
-    }))
-    # {'title': 'PEP 1 -- PEP Purpose and Guidelines'}
+    })
+    # print(result)
+    assert result == {'text': 'PEP 1 -- PEP Purpose and Guidelines'}
+    # embed request list
+    result = get_result({
+        '__request__': 'https://www.python.org/dev/peps/pep-0001',
+        '__result__': {
+            'detail': [{
+                'text': 'PEP 1 -- PEP Purpose and Guidelines'
+            }]
+        }
+    })
+    # print(result)
+    assert result == [{'text': 'PEP 1 -- PEP Purpose and Guidelines'}]
+    # embed request list2
+    result = get_result({
+        '__request__': 'https://www.python.org/dev/peps/pep-0001',
+        '__result__': {
+            'rule_name': {
+                '__result__': {
+                    'detail': [{
+                        'text': 'PEP 1 -- PEP Purpose and Guidelines'
+                    }]
+                }
+            }
+        }
+    })
+    # print(result)
+    assert result == [{'text': 'PEP 1 -- PEP Purpose and Guidelines'}]
+    # child rule result
+    result = get_result({
+        'url': 'https://www.python.org/dev/peps/pep-0001',
+        'text': 'text'
+    })
+    # print(result)
+    assert result == {
+        'text': 'text',
+        'url': 'https://www.python.org/dev/peps/pep-0001'
+    }
+    result = get_result({
+        'list': {
+            'detail': [{
+                'text': 'Wake up to WonderWidgets!',
+                'url': 'all'
+            }, {
+                'text': 'Overview',
+                'url': 'all'
+            }]
+        }
+    })
+    # print(result)
+    assert result == [{
+        'text': 'Wake up to WonderWidgets!',
+        'url': 'all'
+    }, {
+        'text': 'Overview',
+        'url': 'all'
+    }]
+
     """
-    if not isinstance(item, dict):
-        return {}
-    __result__ = item.pop('__result__', None)
-    if __result__ and isinstance(__result__, dict):
-        item.pop('__request__', None)
-        item.update(chain_result(__result__.popitem()[1]))
-    return item
+    result = {'text': 'text not found'}
+    if isinstance(item, dict):
+        __result__ = item.pop('__result__', None)
+        if __result__:
+            return get_result(__result__.popitem()[1])
+        text = item.get('text')
+        if text is None:
+            return get_result(item.popitem()[1])
+        result = {'text': str(text)}
+        url = item.get('url')
+        if url:
+            result['url'] = url
+    elif isinstance(item, (list, tuple)):
+        result = [get_result(i) for i in item]
+    return result
 
 
 async def crawl(task):
     crawler: Crawler = Config.crawler
     logger = Config.logger
-    if logger:
-        logger.info(f'Start crawling: {task.name}')
+    logger.info(f'Start crawling: {task.name}')
     crawl_result = await crawler.acrawl(task.request_args)
     if crawl_result is None:
-        if logger:
-            logger.error(
-                f'{task.name} crawl_result is None, maybe crawler rule is not found'
-            )
-        result = '{"text": "Result is null, please ensure the crawler rule."}'
+        logger.error(
+            f'{task.name} crawl_result is None, maybe crawler rule is not found'
+        )
+        result = [{"text": "crawl_result is None"}]
     else:
         if len(crawl_result) == 1:
             # chain result for __request__ which fetch a new request
-            result = chain_result(crawl_result.popitem()[1])
-            result = dumps(result, sort_keys=True)
-            if logger:
-                logger.info(f'{task.name} Crawl success: {str(result)}')
+            result = get_result(item=crawl_result.popitem()[1])
+            if not isinstance(result, list):
+                result = [result]
+            logger.info(f'{task.name} Crawl success: {result}')
         else:
-            msg = 'Crawl result should be a single key dict like: {rule_name: result_dict}'
+            msg = 'ERROR: crawl_result schema: {rule_name: {"text": "xxx", "url": "xxx"}} or {rule_name: [{"text": "xxx", "url": "xxx"}]}, but given %s' % crawl_result
             logger.error(msg)
-            result = msg
+            result = [msg]
     return task, result
+
+
+async def crawl_once(task_name=None):
+    """task_name means force crawl"""
+    crawler: Crawler = Config.crawler
+    db = crawler.storage.db
+    now = datetime.datetime.now()
+    logger = Config.logger
+    # sqlite do not has datediff...
+    if task_name:
+        query = tasks.select().where(tasks.c.enable == 1).where(
+            tasks.c.name == task_name)
+    else:
+        query = tasks.select().where(tasks.c.enable == 1).where(
+            tasks.c.next_check_time < now)
+    todo = []
+    now = datetime.datetime.now()
+    update_query = 'update tasks set `last_check_time`=:last_check_time,`next_check_time`=:next_check_time where task_id=:task_id'
+    update_values = []
+    async for task in db.iterate(query=query):
+        # check work hours
+        ok, next_check_time = find_next_check_time(task.work_hours or '0, 24',
+                                                   task.interval, now)
+        if task_name:
+            # always crawl for given task_name
+            ok = True
+        if ok:
+            t = ensure_future(crawl(task))
+            # add task_name for logger
+            t.task_name = task.name
+            todo.append(t)
+        # update next_check_time
+        values = {
+            'last_check_time': now,
+            'next_check_time': next_check_time,
+            'task_id': task.task_id
+        }
+        update_values.append(values)
+        if not ok:
+            logger.info(
+                f'Task [{task.name}] is not on work, next_check_time reset to {next_check_time}'
+            )
+    await db.execute_many(query=update_query, values=update_values)
+    logger.info(f'Crawling {len(todo)} tasks.')
+    if todo:
+        done, pending = await wait(todo, timeout=Config.default_crawler_timeout)
+        if pending:
+            names = [t.name for t in pending]
+            logger.error(f'crawl timeout: {names}')
+        ttime_now = ttime()
+        for t in done:
+            task, result_list = t.result()
+            # compare latest_result and new list
+            # later first, just like the saved result_list sortings
+            old_latest_result = task.latest_result
+            to_insert_result_list = []
+            for result in result_list:
+                result = dumps(result, sort_keys=True)
+                if result == old_latest_result:
+                    break
+                to_insert_result_list.append(result)
+            if to_insert_result_list:
+                query = UpdateTaskQuery(task.task_id)
+                query.add('latest_result', to_insert_result_list[0])
+                query.add('last_change_time', now)
+                old_result_list = loads(task.result_list or '[]')
+                # older insert first, keep the newer is on the top
+                for result in to_insert_result_list[::-1]:
+                    old_result_list.insert(0, {'result': result, 'time': ttime_now})
+                query.add('result_list', dumps(old_result_list[:task.max_result_count]))
+                logger.info(f'Updated {task.name}. +++')
+                await db.execute(**query.kwargs)
+        logger.info(
+            f'Crawl finished. done: {len(done)}, timeout: {len(pending)}')
+    if task_name:
+        query = tasks.select().where(tasks.c.name == task_name)
+        task = await db.fetch_one(query=query)
+        return dict(task)
 
 
 class UpdateTaskQuery:
@@ -114,73 +276,6 @@ def find_next_check_time(
             next_check_time = date.replace(
                 hour=work_hours_list[0], minute=0, second=0, microsecond=0)
     return ok, next_check_time
-
-
-async def crawl_once(task_name=None):
-    """task_name means force crawl"""
-    crawler: Crawler = Config.crawler
-    db = crawler.storage.db
-    now = datetime.datetime.now()
-    logger = Config.logger
-    # sqlite do not has datediff...
-    if task_name:
-        query = tasks.select().where(tasks.c.enable == 1).where(
-            tasks.c.name == task_name)
-    else:
-        query = tasks.select().where(tasks.c.enable == 1).where(
-            tasks.c.next_check_time < now)
-    todo = []
-    now = datetime.datetime.now()
-    update_query = 'update tasks set `last_check_time`=:last_check_time,`next_check_time`=:next_check_time where task_id=:task_id'
-    update_values = []
-    async for task in db.iterate(query=query):
-        # check work hours
-        ok, next_check_time = find_next_check_time(task.work_hours or '0, 24',
-                                                   task.interval, now)
-        if task_name:
-            # always crawl for given task_name
-            ok = True
-        if ok:
-            t = ensure_future(crawl(task))
-            # add task_name for logger
-            t.task_name = task.name
-            todo.append(t)
-        # update next_check_time
-        values = {
-            'last_check_time': now,
-            'next_check_time': next_check_time,
-            'task_id': task.task_id
-        }
-        update_values.append(values)
-        if not ok:
-            logger.info(
-                f'Task [{task.name}] is not on work, next_check_time reset to {next_check_time}'
-            )
-    await db.execute_many(query=update_query, values=update_values)
-    logger.info(f'Crawling {len(todo)} tasks.')
-    if todo:
-        done, pending = await wait(todo, timeout=Config.default_crawler_timeout)
-        if pending:
-            names = [t.name for t in pending]
-            logger.error(f'crawl timeout: {names}')
-        ttime_now = ttime()
-        for t in done:
-            task, result = t.result()
-            if result != task.latest_result:
-                query = UpdateTaskQuery(task.task_id)
-                logger.info(f'Updated {task.name}. +++')
-                query.add('last_change_time', now)
-                query.add('latest_result', result)
-                results: list = loads(task.result_list or '[]')
-                results.insert(0, {'result': result, 'time': ttime_now})
-                query.add('result_list', dumps(results[:task.max_result_count]))
-                await db.execute(**query.kwargs)
-        logger.info(
-            f'Crawl finished. done: {len(done)}, timeout: {len(pending)}')
-    if task_name:
-        query = tasks.select().where(tasks.c.name == task_name)
-        task = await db.fetch_one(query=query)
-        return dict(task)
 
 
 async def crawler_loop():

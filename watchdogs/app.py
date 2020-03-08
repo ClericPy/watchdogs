@@ -4,6 +4,7 @@ from typing import Optional
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.requests import Request
+from starlette.responses import RedirectResponse
 from starlette.templating import Jinja2Templates
 from torequests.utils import ptime, timeago
 from uniparser import CrawlerRule
@@ -26,11 +27,19 @@ app.mount(
 templates = Jinja2Templates(
     directory=str((Path(__file__).parent / 'templates').absolute()))
 
+
 # @app.middleware("http")
 # async def add_process_time_header(request: Request, call_next):
-#     print(request)
+#     valid = False
+#     if not valid and request.scope.get('raw_path') != b'/login':
+#         return RedirectResponse('/login', 302)
 #     response = await call_next(request)
 #     return response
+
+
+@app.get('/login')
+async def login():
+    return 'login'
 
 
 @app.get("/")
