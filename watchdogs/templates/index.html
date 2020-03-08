@@ -336,7 +336,8 @@
                                 '","request_args":{"method":"get","url":"https://importpython.com/blog/feed/","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[{"name":"text","chain_rules":[["xml","channel>item>title","$text"],["python","getitem","[0]"]],"childs":""},{"name":"url","chain_rules":[["xml","channel>item>link","$text"],["python","getitem","[0]"]],"childs":""}],"regex":"^https?://importpython\.com/blog/feed/$","encoding":""}'
                         }
                     }
-
+                    this.sub_app.input_object = ''
+                    this.sub_app.request_status = ''
                     this.sub_app.load_rule()
                 },
                 load_rule(crawler_rule_json) {
@@ -351,8 +352,6 @@
                     });
                     this.rule_info_visible = false
                     this.activeName = 'new'
-                    this.sub_app.input_object = ''
-                    this.sub_app.request_status = ''
                 },
                 edit_crawler_rule(rule) {
                     this.$prompt('', 'Edit Crawler JSON', {
