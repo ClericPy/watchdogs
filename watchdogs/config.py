@@ -1,6 +1,5 @@
 from pathlib import Path
-
-
+from torequests.utils import md5 as _md5
 
 
 class Config(object):
@@ -16,6 +15,7 @@ class Config(object):
     default_crawler_timeout = 30
     downloader_timeout = 15
     watchdog_auth: str = ''
+    md5_salt: str = ''
     # for anti-crawl frequency
     DEFAULT_HOST_FREQUENCY = (1, 1)
     cdn_urls = {
@@ -25,3 +25,12 @@ class Config(object):
         'VUE_RESOURCE_CDN': 'https://cdn.staticfile.org/vue-resource/1.5.1/vue-resource.min.js',
         'CLIPBOARDJS_CDN': 'https://cdn.staticfile.org/clipboard.js/2.0.4/clipboard.min.js',
     }
+
+
+def md5(obj, n=32, with_salt=True):
+    if not with_salt:
+        return _md5(obj, n=n)
+    salt = Config.md5_salt
+    if not salt:
+        raise ValueError('Config.md5_salt should not be null')
+    return _md5(f'{obj}{salt}', n=n)
