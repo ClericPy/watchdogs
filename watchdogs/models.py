@@ -72,11 +72,11 @@ host_rules = sqlalchemy.Table(
     sqlalchemy.Column('host', sqlalchemy.String(128), primary_key=True),
     sqlalchemy.Column('host_rule', sqlalchemy.TEXT),
 )
-auth = sqlalchemy.Table(
-    "auth",
+metas = sqlalchemy.Table(
+    "metas",
     metadata,
-    sqlalchemy.Column('user', sqlalchemy.String(32), primary_key=True),
-    sqlalchemy.Column('password', sqlalchemy.String(64)),
+    sqlalchemy.Column('key', sqlalchemy.String(64), primary_key=True),
+    sqlalchemy.Column('value', sqlalchemy.TEXT),
 )
 
 

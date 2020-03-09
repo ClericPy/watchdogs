@@ -23,6 +23,7 @@ def start_server(db_url=None,
                  uninstall=False,
                  ignore_stdout_log=False,
                  ignore_file_log=False,
+                 md5_salt=None,
                  **uvicorn_kwargs):
     if uninstall:
         return clear_dir(Config.CONFIG_DIR)
@@ -30,7 +31,8 @@ def start_server(db_url=None,
         db_url=db_url,
         password=password,
         ignore_stdout_log=ignore_stdout_log,
-        ignore_file_log=ignore_file_log)
+        ignore_file_log=ignore_file_log,
+        md5_salt=md5_salt)
     from .app import app
     if 'port' not in uvicorn_kwargs:
         uvicorn_kwargs['port'] = 9901
