@@ -1,19 +1,21 @@
 from pathlib import Path
 
 
+
+
 class Config(object):
     CONFIG_DIR = Path.home() / 'watchdogs'
     if not CONFIG_DIR.is_dir():
         CONFIG_DIR.mkdir()
     db = None
     logger = None
-    admin = None
-    password = None
+    password: str = ''
     rule_db = None
     check_interval = 60
     default_interval = 5 * 60
     default_crawler_timeout = 30
     downloader_timeout = 15
+    watchdog_auth: str = ''
     # for anti-crawl frequency
     DEFAULT_HOST_FREQUENCY = (1, 1)
     cdn_urls = {

@@ -3,9 +3,10 @@ from asyncio import Lock, ensure_future
 from logging.handlers import RotatingFileHandler
 
 from databases import Database
+from torequests.utils import md5
 
 from .config import Config
-from .crawler import crawler_loop
+from .crawler import background_loop
 from .models import RuleStorageDB
 
 
@@ -58,11 +59,9 @@ def setup_uniparser():
 
 
 def setup(db_url=None,
-          admin=None,
-          password=None,
+          password='',
           ignore_stdout_log=False,
           ignore_file_log=False):
-    Config.admin = admin
     Config.password = password
     Config.logger = init_logger(
         ignore_stdout_log=ignore_stdout_log, ignore_file_log=ignore_file_log)
@@ -79,6 +78,22 @@ async def setup_crawler():
     Config.crawler = crawler
 
 
+async def update_password(password=None):
+    if password is not None:
+        Config.password = password
+    query = 'replace into auth (`user`, `password`) values ("admin", :password)'
+    return await Config.db.execute(query, values={'password': Config.password})
+
+
+async def refresh_token():
+    if Config.password:
+        await update_password()
+    query = 'select `password` from auth where `user`="admin"'
+    auth = await Config.db.fetch_one(query)
+    if auth and auth.password:
+        Config.watchdog_auth = md5(auth.password)
+
+
 async def setup_app(app):
     setup_uniparser()
     db = Config.db
@@ -86,9 +101,10 @@ async def setup_app(app):
         await db.connect()
         from .models import create_tables
         create_tables(str(db.url))
-        # crawler_loop
+        # background_loop
         await setup_crawler()
-        ensure_future(crawler_loop())
+        await refresh_token()
+        ensure_future(background_loop())
 
 
 async def release_app(app):

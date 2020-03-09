@@ -72,6 +72,12 @@ host_rules = sqlalchemy.Table(
     sqlalchemy.Column('host', sqlalchemy.String(128), primary_key=True),
     sqlalchemy.Column('host_rule', sqlalchemy.TEXT),
 )
+auth = sqlalchemy.Table(
+    "auth",
+    metadata,
+    sqlalchemy.Column('user', sqlalchemy.String(32), primary_key=True),
+    sqlalchemy.Column('password', sqlalchemy.String(64)),
+)
 
 
 def create_tables(db_url):

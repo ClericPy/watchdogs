@@ -1,12 +1,12 @@
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI
+from fastapi import Cookie, FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.requests import Request
 from starlette.responses import RedirectResponse
 from starlette.templating import Jinja2Templates
-from torequests.utils import ptime, timeago
+from torequests.utils import md5, ptime, timeago
 from uniparser import CrawlerRule
 from uniparser.fastapi_ui import app as sub_app
 from uniparser.utils import get_host
@@ -14,7 +14,7 @@ from uniparser.utils import get_host
 from . import __version__
 from .crawler import crawl_once
 from .models import Task, query_tasks, tasks
-from .settings import Config, release_app, setup_app
+from .settings import Config, refresh_token, release_app, setup_app
 
 app = FastAPI()
 
@@ -28,18 +28,50 @@ templates = Jinja2Templates(
     directory=str((Path(__file__).parent / 'templates').absolute()))
 
 
-# @app.middleware("http")
-# async def add_process_time_header(request: Request, call_next):
-#     valid = False
-#     if not valid and request.scope.get('raw_path') != b'/login':
-#         return RedirectResponse('/login', 302)
-#     response = await call_next(request)
-#     return response
+@app.middleware("http")
+async def add_process_time_header(request: Request, call_next):
+    # print(request.scope)
+    # {'type': 'http', 'http_version': '1.1', 'server': ('127.0.0.1', 9901), 'client': ('127.0.0.1', 7037), 'scheme': 'http', 'method': 'GET', 'root_path': '', 'path': '/auth', 'raw_path': b'/auth', 'query_string': b'', 'headers': [(b'host', b'127.0.0.1:9901'), (b'connection', b'keep-alive'), (b'sec-fetch-dest', b'image'), (b'user-agent', b'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36'), (b'dnt', b'1'), (b'accept', b'image/webp,image/apng,image/*,*/*;q=0.8'), (b'sec-fetch-site', b'same-origin'), (b'sec-fetch-mode', b'no-cors'), (b'referer', b'http://127.0.0.1:9901/auth'), (b'accept-encoding', b'gzip, deflate, br'), (b'accept-language', b'zh-CN,zh;q=0.9'), (b'cookie', b'ads_id=lakdsjflakjdf; _ga=GA1.1.1550108461.1583462251')], 'fastapi_astack': <contextlib.AsyncExitStack object at 0x00000165BE69EEB8>, 'app': <fastapi.applications.FastAPI object at 0x00000165A7B738D0>}
+    watchdog_auth = request.cookies.get('watchdog_auth')
+    # if invalid token, or not set token
+    if request.scope[
+            'path'] != '/auth' and watchdog_auth != Config.watchdog_auth or Config.watchdog_auth is None:
+        return RedirectResponse('/auth', 302)
+    response = await call_next(request)
+    return response
 
 
-@app.get('/login')
-async def login():
-    return 'login'
+@app.get('/auth')
+async def auth(request: Request,
+               password: str = '',
+               watchdog_auth: str = Cookie('')):
+    # two scene for set new password, update new password if has password, else return the html
+    # 1. not set watchdog_auth; 2. already authenticated
+    auth_not_set = not Config.watchdog_auth
+    already_authed = watchdog_auth and watchdog_auth == Config.watchdog_auth
+    need_new_pwd = auth_not_set or already_authed
+    if password:
+        if need_new_pwd or md5(password) == Config.watchdog_auth:
+            if need_new_pwd:
+                Config.password = password
+                await refresh_token()
+            resp = RedirectResponse('/')
+            resp.set_cookie(
+                'watchdog_auth',
+                Config.watchdog_auth,
+                max_age=86400 * 3,
+                httponly=True)
+        else:
+            # invalid password, clear cookie
+            resp = RedirectResponse('/auth', 302)
+            resp.set_cookie('watchdog_auth', '')
+        return resp
+    else:
+        kwargs: dict = {'request': request}
+        kwargs['version'] = __version__
+        kwargs[
+            'prompt_title'] = 'Set a new password' if need_new_pwd else 'Input the password'
+        return templates.TemplateResponse("auth.html", context=kwargs)
 
 
 @app.get("/")

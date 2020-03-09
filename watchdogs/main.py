@@ -19,7 +19,6 @@ def clear_dir(dir_path):
 
 
 def start_server(db_url=None,
-                 admin=None,
                  password=None,
                  uninstall=False,
                  ignore_stdout_log=False,
@@ -29,11 +28,12 @@ def start_server(db_url=None,
         return clear_dir(Config.CONFIG_DIR)
     setup(
         db_url=db_url,
-        admin=admin,
         password=password,
         ignore_stdout_log=ignore_stdout_log,
         ignore_file_log=ignore_file_log)
     from .app import app
+    if 'port' not in uvicorn_kwargs:
+        uvicorn_kwargs['port'] = 9901
     run(app, **uvicorn_kwargs)
 
 
