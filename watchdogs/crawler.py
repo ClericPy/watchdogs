@@ -209,8 +209,12 @@ async def crawl_once(task_name=None):
                 old_result_list = loads(task.result_list or '[]')
                 # older insert first, keep the newer is on the top
                 for result in to_insert_result_list[::-1]:
-                    old_result_list.insert(0, {'result': result, 'time': ttime_now})
-                query.add('result_list', dumps(old_result_list[:task.max_result_count]))
+                    old_result_list.insert(0, {
+                        'result': result,
+                        'time': ttime_now
+                    })
+                query.add('result_list',
+                          dumps(old_result_list[:task.max_result_count]))
                 logger.info(f'Updated {task.name}. +++')
                 await db.execute(**query.kwargs)
         logger.info(
@@ -278,7 +282,7 @@ def find_next_check_time(
     return ok, next_check_time
 
 
-async def crawler_loop():
+async def background_loop():
     while 1:
         await crawl_once()
         await sleep(Config.check_interval)
