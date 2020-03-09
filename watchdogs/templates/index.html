@@ -106,7 +106,7 @@
                             <el-table-column label="latest_result" width="">
                                 <template slot-scope="scope">
                                     <el-link @click="show_result_list(scope.row)" type="info" :underline="false">
-                                        ${(scope.row.latest_result||'').slice(0, 60)}
+                                        ${get_latest_result(scope.row.latest_result, 80)}
                                     </el-link>
                                 </template>
                             </el-table-column>
@@ -139,8 +139,8 @@
                     </template>
                 </el-tab-pane>
                 <el-tab-pane label="New Task" name="new">
-                    <iframe v-if="iframe_loaded||activeName=='new'" @load='init_iframe()' src="/uniparser" frameborder="0" ref="iframe"
-                        style="width: 100%; height: 90%;"></iframe>
+                    <iframe v-if="iframe_loaded||activeName=='new'" @load='init_iframe()' src="/uniparser"
+                        frameborder="0" ref="iframe" style="width: 100%; height: 90%;"></iframe>
                     <el-popover style="margin: 0 0 0 20%;" placement="top-start" title="WARNING" width="200"
                         trigger="hover" content=""><span style="font-size: 1em;">
                             ParseRule's name should have the keys to generate RSS:
@@ -565,6 +565,13 @@
                         closeOnClickModal: true,
                         closeOnPressEscape: true
                     });
+                },
+                get_latest_result(latest_result, max_length = 80) {
+                    try {
+                        return JSON.parse(latest_result).text.slice(0, max_length)
+                    } catch (error) {
+                        return latest_result
+                    }
                 },
                 show_result_list(row) {
                     var text = '<table>'
