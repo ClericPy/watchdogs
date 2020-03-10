@@ -8,6 +8,7 @@
     <link rel="shortcut icon" href="/static/img/favicon.ico" type="image/icon" />
     <title>Watchdogs v{{version}}</title>
     <meta name="viewport" content="width=device-width, initial-scale=0.3">
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
     <script src="{{cdn_urls['VUE_JS_CDN']}}"></script>
     <script src="{{cdn_urls['ELEMENT_JS_CDN']}}"></script>
     <script src="{{cdn_urls['VUE_RESOURCE_CDN']}}"></script>
@@ -143,7 +144,7 @@
                     </template>
                 </el-tab-pane>
                 <el-tab-pane label="New Task" name="new">
-                    <iframe v-if="iframe_loaded||activeName=='new'" @load='init_iframe()' :src="window.location.origin + '/uniparser'"
+                    <iframe v-if="iframe_loaded||activeName=='new'" @load='init_iframe()' src="/uniparser"
                         frameborder="0" ref="iframe" style="width: 100%; height: 90%;"></iframe>
                     <el-popover style="margin: 0 0 0 20%;" placement="top-start" title="WARNING" width="200"
                         trigger="hover" content=""><span style="font-size: 1em;">

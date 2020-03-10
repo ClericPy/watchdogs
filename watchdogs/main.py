@@ -28,7 +28,7 @@ def start_server(db_url=None,
                  ignore_file_log=False,
                  md5_salt=None,
                  config_dir=None,
-                 use_default_cdn=True,
+                 use_default_cdn=False,
                  **uvicorn_kwargs):
     if config_dir:
         config_dir = Path(config_dir)
