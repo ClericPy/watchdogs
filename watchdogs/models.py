@@ -104,6 +104,8 @@ class RuleStorageDB(RuleStorage):
             return default
 
     async def find_crawler_rule(self, url, method='find') -> CrawlerRule:
+        if not url:
+            return None
         host = get_host(url)
         host_rule = await self.get_host_rule(host)
         if host_rule:
