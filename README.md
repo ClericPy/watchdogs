@@ -9,6 +9,7 @@ Watchdogs to keep an eye on the world's change.
     1. `app.mount("/uniparser", uniparser_app)`
 3. Quite simple to create new crawler with the Web UI.
 4. All the crawlers runs in the async environment.
+5. Almost all the buttons has a *title* attribute to describe the features in Web UI, so docs will not come very early.
 
 ## Usage
 
@@ -23,17 +24,17 @@ Watchdogs to keep an eye on the world's change.
 > python -m watchdogs -- -h
 
 - **db_url**:
-> sqlite / mysql / postgresql(not test) url, which [databases](https://github.com/encode/databases) support.
+> sqlite / mysql / postgresql(not test) url, which [databases](https://github.com/encode/databases) support. Defaults to 'sqlite:///{HOME_PATH}/watchdogs/storage.sqlite'
 - **password**:
 > init password, if null can be set on the first visit on web.
 - **ignore_stdout_log**:
 > remove stdout logging
 - **ignore_file_log**:
-> remove file logging
+> remove file logging located at {HOME_PATH}/watchdogs folder.
 - **md5_salt**:
 > md5_salt for custom md5(password) / md5(rss_tag)
 - **config_dir**:
-> config dir to save the logs and config files, if using sqlite include sqlite file. defaults to {HOME}/watchdogs
+> config dir to save the logs and config files, if using sqlite include sqlite file. defaults to {HOME_PATH}/watchdogs
 - **\*\*uvicorn_kwargs**:
 > uvicorn startup kwargs, such as port, host. Which can be set like: `python -m watchdogs --port=9999 --host=127.0.0.1`
 
