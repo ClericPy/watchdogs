@@ -285,6 +285,20 @@ async def crawler_rule(method: str, rule: CrawlerRule):
     return result
 
 
+@app.post("/find_crawler_rule")
+async def find_crawler_rule(request_args: dict):
+    try:
+        url = request_args.get('url')
+        rule: CrawlerRule = await Config.rule_db.find_crawler_rule(url)
+        if not rule:
+            raise ValueError(f'rule not found for given url: {url}')
+        result = {'msg': 'ok', 'result': rule.dumps()}
+    except Exception as e:
+        result = {'msg': str(e)}
+    Config.logger.info(f'[Find] crawler rule: {result}')
+    return result
+
+
 @app.get("/delete_host_rule")
 async def delete_host_rule(host: str):
     try:

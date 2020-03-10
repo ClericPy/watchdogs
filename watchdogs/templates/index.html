@@ -77,6 +77,8 @@
                                 <template slot-scope="scope">
                                     <el-popover trigger="hover" placement="right">
                                         <pre><code>${JSON.stringify(JSON.parse(scope.row.request_args), null, 2)}</code></pre>
+                                        <el-button @click="view_crawler_rule_by_req(scope.row.request_args)" size='mini'
+                                            icon="el-icon-view">View Rule</el-button>
                                         <div slot="reference" class="name-wrapper">
                                             <el-tag size="medium">${ new
                                                 URL(JSON.parse(scope.row.request_args).url).host }</el-tag>
@@ -236,6 +238,8 @@
                 </el-form-item>
             </el-form>
             <div slot="footer" class="dialog-footer">
+                <el-button @click="view_crawler_rule_by_req(new_task_form.request_args)" icon="el-icon-view">View Rule
+                </el-button>
                 <el-button @click="task_info_visible = false">Cancel</el-button>
                 <el-button type="primary" @click="add_new_task">Submit</el-button>
             </div>
@@ -258,13 +262,16 @@
             <div v-for="rule in current_host_rule.crawler_rules">
                 <el-row :gutter="20">
                     <el-col :span="8">
-                        ${rule.name}
+                        <el-link @click="view_crawler_rule(rule)" title="View the CrawlerRule in uniparser console"
+                            type="primary">
+                            ${rule.name}
+                        </el-link>
                     </el-col>
-                    <el-col :span="12">
+                    <el-col :span=" 12">
                         ${rule.regex}
                     </el-col>
                     <el-col :span="4">
-                        <i title="View & Test" @click="view_crawler_rule(rule)"
+                        <i title="View the CrawlerRule in uniparser console" @click="view_crawler_rule(rule)"
                             style="zoom: 1.5;cursor: pointer;margin-right: 1em;" class="el-icon-view"></i>
                         <i title="Edit JSON" @click="edit_crawler_rule(rule)"
                             style="zoom: 1.5;cursor: pointer;margin-right: 1em;" class="el-icon-edit-outline"></i>
@@ -353,6 +360,34 @@
                     // crawler_rule_json = '{"name":"HelloWorld222","request_args":{"method":"get","url":"http://httpbin.org/forms/post","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[],"regex":"","encoding":""}'
                     this.sub_app.new_rule_json = crawler_rule_json
                     this.sub_app.load_rule()
+                },
+                view_crawler_rule_by_req(request_args) {
+                    if (!request_args) {
+                        this.$alert('request_args should not be null')
+                        return
+                    }
+                    this.$http.post('find_crawler_rule', request_args).then(
+                        r => {
+                            var result = r.body
+                            if (result.msg == 'ok') {
+                                let rule = JSON.parse(result.result)
+                                this.view_crawler_rule(rule)
+                                this.task_info_visible = false
+                            } else {
+                                this.$message.error({
+                                    message: 'find rule failed: ' + result.msg,
+                                    duration: 0,
+                                    showClose: true,
+                                });
+                            }
+                        }, r => {
+                            this.$message.error({
+                                message: 'connect failed: ' + r.status,
+                                duration: 0,
+                                showClose: true,
+                            });
+                        }
+                    )
                 },
                 view_crawler_rule(rule) {
                     this.rule_info_visible = false
