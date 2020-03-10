@@ -150,7 +150,7 @@ async def add_new_task(task: Task):
             query = tasks.insert()
             values = dict(task)
             _result = await db.execute(query=query, values=values)
-        result = {'msg': 'ok', 'result': 'ok' if _result else 'no change'}
+        result = {'msg': 'ok'}
         query_tasks.cache_clear()
     except Exception as e:
         result = {'msg': str(e)}
