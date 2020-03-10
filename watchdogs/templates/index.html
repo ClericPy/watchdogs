@@ -8,7 +8,7 @@
     <link rel="shortcut icon" href="/static/img/favicon.ico" type="image/icon" />
     <title>Watchdogs v{{version}}</title>
     <meta name="viewport" content="width=device-width, initial-scale=0.3">
-    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <!-- <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests"> -->
     <script src="{{cdn_urls['VUE_JS_CDN']}}"></script>
     <script src="{{cdn_urls['ELEMENT_JS_CDN']}}"></script>
     <script src="{{cdn_urls['VUE_RESOURCE_CDN']}}"></script>
@@ -144,8 +144,8 @@
                     </template>
                 </el-tab-pane>
                 <el-tab-pane label="New Task" name="new">
-                    <iframe v-if="iframe_loaded||activeName=='new'" @load='init_iframe()' src="/uniparser"
-                        frameborder="0" ref="iframe" style="width: 100%; height: 90%;"></iframe>
+                    <iframe @load='init_iframe()' :src="window.location.origin + '/uniparser'" frameborder="0"
+                        ref="iframe" id="uni_iframe" style="width: 100%; height: 90%;"></iframe>
                     <el-popover style="margin: 0 0 0 20%;" placement="top-start" title="WARNING" width="200"
                         trigger="hover" content=""><span style="font-size: 1em;">
                             ParseRule's name should have the keys to generate RSS:
@@ -198,8 +198,8 @@
         <el-dialog title="Task Info" :visible.sync="task_info_visible" :close-on-click-modal="false">
             <el-form :model="new_task_form">
                 <el-form-item label="Task Name" title="Input one unique name">
-                    <el-input v-model="new_task_form.name" autocomplete="off" title="Press enter to submit" placeholder="Task name, Press enter to submit."
-                        @keyup.enter.native="add_new_task"></el-input>
+                    <el-input v-model="new_task_form.name" autocomplete="off" title="Press enter to submit"
+                        placeholder="Task name, Press enter to submit." @keyup.enter.native="add_new_task"></el-input>
                 </el-form-item>
                 <el-form-item label="">
                     <el-switch active-text="Enable" :active-value='1' :inactive-value='0' inactive-text="Disable"
@@ -308,7 +308,7 @@
                             var result = r.body
                             if (result.msg == 'ok') {
                                 this.$message({
-                                    message: 'Add task success: ' + result.result,
+                                    message: 'Add task success: ' + result.msg,
                                     type: 'success'
                                 });
                                 this.reload_tasks()
@@ -352,12 +352,12 @@
                     this.sub_app.load_rule()
                 },
                 view_crawler_rule(rule) {
+                    this.rule_info_visible = false
+                    document.getElementById('tab-new').click()
                     this.init_iframe_crawler_rule(JSON.stringify(rule))
                     this.$message.success({
                         message: 'Rule loaded.',
                     });
-                    this.rule_info_visible = false
-                    this.activeName = 'new'
                 },
                 edit_crawler_rule(rule) {
                     this.$prompt('', 'Edit Crawler JSON', {
@@ -519,16 +519,18 @@
                 },
                 handleClick(tab, event) {
                     if (tab.name == 'new') {
-                        // for autosize bug in iframe if not seen
-                        this.iframe_loaded = true
-                        // setTimeout(() => {
-                        //     for (const text of this.$refs.iframe.contentWindow.window.document
-                        //             .getElementsByTagName(
-                        //                 'textarea')) {
-                        //         text.style.height = 'auto';
-                        //         text.style.height = text.scrollHeight + 'px';
-                        //     };
-                        // }, 0);
+                        if (!this.iframe_loaded) {
+                            // for autosize bug in iframe if not seen
+                            setTimeout(() => {
+                                for (const text of this.uni_iframe.contentWindow.document
+                                        .getElementsByTagName(
+                                            'textarea')) {
+                                    text.style.height = 'auto';
+                                    text.style.height = text.scrollHeight + 'px';
+                                };
+                                this.iframe_loaded = true
+                            }, 0);
+                        }
                     }
                     if (tab.name == 'rules') {
                         this.load_hosts()
@@ -553,13 +555,16 @@
                 show_time(row) {
                     var text = '<table style="text-align: left;margin: 0 0 0 20%;">'
                     var items = JSON.parse(row.result_list || '[]')
-                    text += '<tr><td>last_check_time</td><td class="time-td">' + row.last_check_time.replace(/\..*/,
+                    text += '<tr><td>last_check_time</td><td class="time-td">' + row.last_check_time
+                        .replace(/\..*/,
                             '').replace('T', ' ') +
                         '</td></tr>'
-                    text += '<tr><td>next_check_time</td><td class="time-td">' + row.next_check_time.replace(/\..*/,
+                    text += '<tr><td>next_check_time</td><td class="time-td">' + row.next_check_time
+                        .replace(/\..*/,
                             '').replace('T', ' ') +
                         '</td></tr>'
-                    text += '<tr style="font-weight: bold;"><td>last_change_time</td><td class="time-td">' + row
+                    text += '<tr style="font-weight: bold;"><td>last_change_time</td><td class="time-td">' +
+                        row
                         .last_change_time.replace(
                             /\..*/, '').replace('T', ' ') +
                         '</td></tr>'
@@ -703,8 +708,9 @@
                                     this.load_hosts()
                                 } else {
                                     this.$message.error({
-                                        message: 'Delete host rule failed: ' + JSON.stringify(
-                                            result),
+                                        message: 'Delete host rule failed: ' + JSON
+                                            .stringify(
+                                                result),
                                     });
                                 }
                             }, r => {
@@ -748,8 +754,15 @@
             },
             watch: {},
             computed: {
+                uni_iframe() {
+                    return document.getElementById('uni_iframe')
+                },
                 sub_app() {
-                    return this.$refs.iframe.contentWindow.window.app
+                    // return this.$refs.iframe.contentWindow.window.app
+                    let uni = this.uni_iframe
+                    if (uni) {
+                        return uni.contentWindow.app
+                    }
                 }
             }
         }
