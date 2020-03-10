@@ -144,7 +144,7 @@
                     </template>
                 </el-tab-pane>
                 <el-tab-pane label="New Task" name="new">
-                    <iframe @load='init_iframe()'src="/uniparser/" frameborder="0" id="uni_iframe"
+                    <iframe @load='init_iframe()' src="/uniparser/" frameborder="0" id="uni_iframe"
                         style="width: 100%; height: 90%;"></iframe>
                     <el-popover style="margin: 0 0 0 20%;" placement="top-start" title="WARNING" width="200"
                         trigger="hover" content=""><span style="font-size: 1em;">
@@ -229,7 +229,10 @@
                 </el-form-item>
                 <el-form-item title="Maybe nonsense string, for special usage. Sometimes saved an email."
                     label="custom_info">
-                    <el-input v-model="new_task_form.custom_info" autocomplete="off"></el-input>
+                    <el-input v-model="new_task_form.custom_info"
+                        placeholder="custom_info for notes, or as callback's variable format like feature_name:text"
+                        title="custom_info for notes, or as callback's variable format like feature_name:text"
+                        autocomplete="off"></el-input>
                 </el-form-item>
             </el-form>
             <div slot="footer" class="dialog-footer">

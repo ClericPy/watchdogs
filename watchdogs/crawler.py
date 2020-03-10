@@ -2,10 +2,10 @@ import datetime
 import re
 from asyncio import ensure_future, sleep, wait
 from json import dumps, loads
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple
 
 from torequests.utils import ttime
-from uniparser import Crawler
+from uniparser import Crawler, InvalidSchemaError, RuleNotFoundError
 
 from .config import Config
 from .models import query_tasks, tasks
@@ -124,23 +124,26 @@ async def crawl(task):
     logger = Config.logger
     logger.info(f'Start crawling: {task.name}')
     crawl_result = await crawler.acrawl(task.request_args)
-    if crawl_result is None:
-        logger.error(
-            f'{task.name} crawl_result is None, maybe crawler rule is not found'
-        )
-        result = [{"text": "crawl_result is None"}]
+
+    if isinstance(crawl_result, RuleNotFoundError):
+        msg = f'RuleNotFoundError {task.name}: {crawl_result}'
+        logger.error(msg)
+        result_list = [{"text": msg}]
+    elif isinstance(crawl_result, BaseException):
+        logger.error(f'Crawl failed {task.name}: {crawl_result}')
+        result_list = None
     else:
         if len(crawl_result) == 1:
             # chain result for __request__ which fetch a new request
-            result = get_result(item=crawl_result.popitem()[1])
-            if not isinstance(result, list):
-                result = [result]
-            logger.info(f'{task.name} Crawl success: {result}')
+            result_list = get_result(item=crawl_result.popitem()[1])
+            if not isinstance(result_list, list):
+                result_list = [result_list]
+            logger.info(f'{task.name} Crawl success: {result_list}')
         else:
             msg = 'ERROR: crawl_result schema: {rule_name: {"text": "xxx", "url": "xxx"}} or {rule_name: [{"text": "xxx", "url": "xxx"}]}, but given %s' % crawl_result
             logger.error(msg)
-            result = [msg]
-    return task, result
+            result_list = [msg]
+    return task, result_list
 
 
 async def crawl_once(task_name=None):
@@ -194,6 +197,8 @@ async def crawl_once(task_name=None):
         ttime_now = ttime()
         for t in done:
             task, result_list = t.result()
+            if result_list is None:
+                continue
             # compare latest_result and new list
             # later first, just like the saved result_list sortings
             old_latest_result = task.latest_result
