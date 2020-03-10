@@ -147,6 +147,7 @@ async def add_new_task(task: Task):
             values = dict(task)
             _result = await db.execute(query=query, values=values)
         result = {'msg': 'ok', 'result': 'ok' if _result else 'no change'}
+        query_tasks.cache_clear()
     except Exception as e:
         result = {'msg': str(e)}
     Config.logger.info(
@@ -160,6 +161,7 @@ async def delete_task(task_id: int):
         query = tasks.delete().where(tasks.c.task_id == task_id)
         await Config.db.execute(query=query)
         result = {'msg': 'ok'}
+        query_tasks.cache_clear()
     except Exception as e:
         result = {'msg': str(e)}
     Config.logger.info(f'[Delete] task {task_id}: {result}')
@@ -224,6 +226,7 @@ async def enable_task(task_id: int, enable: int = 1):
     try:
         _result = await Config.db.execute(query, values)
         result = {'msg': 'ok', 'updated': _result}
+        query_tasks.cache_clear()
     except Exception as e:
         result = {'msg': str(e)}
     return result
