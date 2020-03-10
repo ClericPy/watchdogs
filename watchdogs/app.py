@@ -301,10 +301,6 @@ async def delete_host_rule(host: str):
 def gen_rss(data):
     nodes = []
     channel = data['channel']
-    channel_title = channel['title']
-    channel_desc = channel['description']
-    channel_link = channel['link']
-    channel_language = channel.get('language', 'zh-cn')
     item_keys = ['title', 'description', 'link', 'guid', 'pubDate']
     for item in data['items']:
         item_nodes = []
@@ -317,14 +313,13 @@ def gen_rss(data):
     return rf'''<?xml version="1.0" encoding="UTF-8" ?>
 <rss version="2.0">
 <channel>
-  <title>{channel_title}</title>
-  <link>{channel_link}</link>
-  <description>{channel_desc}</description>
-  <language>{channel_language}</language>
+  <title>{channel['title']}</title>
+  <link>{channel['link']}</link>
+  <description>{channel['description']}</description>
   <image>
-    <url>{channel_link}/icon.png</url>
-    <title>{channel_title}</title>
-    <link>{channel_link}</link>
+    <url>{channel['link']}/static/img/favicon.ico</url>
+    <title>{channel['title']}</title>
+    <link>{channel['link']}</link>
     <width>32</width>
     <height>32</height>
    </image>
@@ -343,7 +338,7 @@ async def rss(request: Request,
     if not valid:
         return PlainTextResponse('signature expired')
     tasks, _ = await query_tasks(tag=tag)
-    source_link = f'{request.scope["scheme"]}://{host}'
+    source_link = f'https://{host}'
     # print(source_link)
     xml_data: dict = {
         'channel': {
