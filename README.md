@@ -41,7 +41,7 @@ Watchdogs to keep an eye on the world's change.
 
 ## Screenshots
 
-![image](images/2.png)
-![image](images/3.png)
-![image](images/4.png)
-![image](images/5.png)
+![image](https://github.com/ClericPy/watchdogs/raw/master/images/2.png)
+![image](https://github.com/ClericPy/watchdogs/raw/master/images/3.png)
+![image](https://github.com/ClericPy/watchdogs/raw/master/images/4.png)
+![image](https://github.com/ClericPy/watchdogs/raw/master/images/5.png)
