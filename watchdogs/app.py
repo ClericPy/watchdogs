@@ -25,7 +25,7 @@ app = FastAPI(
     description=
     "Watchdogs to keep an eye on the world's change. Read more: https://github.com/ClericPy/watchdogs",
     version=__version__)
-
+sub_app.openapi_prefix = '/uniparser'
 app.mount("/uniparser", sub_app)
 app.mount(
     "/static",
@@ -48,7 +48,7 @@ async def shutdown():
 
 
 @app.middleware("http")
-async def add_process_time_header(request: Request, call_next):
+async def add_auth_checker(request: Request, call_next):
     # print(request.scope)
     # {'type': 'http', 'http_version': '1.1', 'server': ('127.0.0.1', 9901), 'client': ('127.0.0.1', 7037), 'scheme': 'http', 'method': 'GET', 'root_path': '', 'path': '/auth', 'raw_path': b'/auth', 'query_string': b'', 'headers': [(b'host', b'127.0.0.1:9901'), (b'connection', b'keep-alive'), (b'sec-fetch-dest', b'image'), (b'user-agent', b'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36'), (b'dnt', b'1'), (b'accept', b'image/webp,image/apng,image/*,*/*;q=0.8'), (b'sec-fetch-site', b'same-origin'), (b'sec-fetch-mode', b'no-cors'), (b'referer', b'http://127.0.0.1:9901/auth'), (b'accept-encoding', b'gzip, deflate, br'), (b'accept-language', b'zh-CN,zh;q=0.9'), (b'cookie', b'ads_id=lakdsjflakjdf; _ga=GA1.1.1550108461.1583462251')], 'fastapi_astack': <contextlib.AsyncExitStack object at 0x00000165BE69EEB8>, 'app': <fastapi.applications.FastAPI object at 0x00000165A7B738D0>}
     watchdog_auth = request.cookies.get('watchdog_auth')
