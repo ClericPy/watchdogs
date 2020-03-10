@@ -63,6 +63,9 @@ def setup(db_url=None,
           ignore_stdout_log=False,
           ignore_file_log=False,
           md5_salt=None):
+    from uniparser.fastapi_ui.views import cdn_urls
+
+    cdn_urls.update(Config.cdn_urls)
     Config.password = password
     Config.logger = init_logger(
         ignore_stdout_log=ignore_stdout_log, ignore_file_log=ignore_file_log)
@@ -80,7 +83,8 @@ async def setup_md5_salt():
             # create new salt
             from time import time
             from random import randint
-            Config.md5_salt = md5(time() + randint(1, 10000000000), with_salt=False)
+            Config.md5_salt = md5(
+                time() + randint(1, 10000000000), with_salt=False)
         else:
             # no need to update
             Config.md5_salt = exist_salt

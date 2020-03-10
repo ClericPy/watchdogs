@@ -18,12 +18,19 @@ class Config(object):
     md5_salt: str = ''
     # for anti-crawl frequency
     DEFAULT_HOST_FREQUENCY = (1, 1)
+    # cdn_urls = {
+    #     'VUE_JS_CDN': 'https://cdn.staticfile.org/vue/2.6.11/vue.min.js',
+    #     'ELEMENT_CSS_CDN': 'https://cdn.staticfile.org/element-ui/2.13.0/theme-chalk/index.css',
+    #     'ELEMENT_JS_CDN': 'https://cdn.staticfile.org/element-ui/2.13.0/index.js',
+    #     'VUE_RESOURCE_CDN': 'https://cdn.staticfile.org/vue-resource/1.5.1/vue-resource.min.js',
+    #     'CLIPBOARDJS_CDN': 'https://cdn.staticfile.org/clipboard.js/2.0.4/clipboard.min.js',
+    # }
     cdn_urls = {
-        'VUE_JS_CDN': 'https://cdn.staticfile.org/vue/2.6.11/vue.min.js',
-        'ELEMENT_CSS_CDN': 'https://cdn.staticfile.org/element-ui/2.13.0/theme-chalk/index.css',
-        'ELEMENT_JS_CDN': 'https://cdn.staticfile.org/element-ui/2.13.0/index.js',
-        'VUE_RESOURCE_CDN': 'https://cdn.staticfile.org/vue-resource/1.5.1/vue-resource.min.js',
-        'CLIPBOARDJS_CDN': 'https://cdn.staticfile.org/clipboard.js/2.0.4/clipboard.min.js',
+        'VUE_JS_CDN': '/static/js/vue.min.js',
+        'ELEMENT_CSS_CDN': '/static/css/index.css',
+        'ELEMENT_JS_CDN': '/static/js/index.js',
+        'VUE_RESOURCE_CDN': '/static/js/vue-resource.min.js',
+        'CLIPBOARDJS_CDN': '/static/js/clipboard.min.js',
     }
 
 
