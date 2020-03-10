@@ -1,4 +1,6 @@
 from pathlib import Path
+
+from frequency_controller import AsyncFrequency
 from torequests.utils import md5 as _md5
 
 
@@ -16,6 +18,8 @@ class Config(object):
     downloader_timeout = 15
     watchdog_auth: str = ''
     md5_salt: str = ''
+    # anti brute force attack
+    check_pwd_freq = AsyncFrequency(1, 3)
     # for anti-crawl frequency
     DEFAULT_HOST_FREQUENCY = (1, 1)
     # cdn_urls = {
@@ -41,3 +45,8 @@ def md5(obj, n=32, with_salt=True):
     if not salt:
         raise ValueError('Config.md5_salt should not be null')
     return _md5(f'{obj}{salt}', n=n)
+
+
+async def check_password(password):
+    async with Config.check_pwd_freq:
+        return md5(password) == Config.watchdog_auth
