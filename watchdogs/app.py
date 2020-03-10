@@ -358,8 +358,8 @@ async def rss(request: Request,
             format='%a, %d %b %Y %H:%M:%S')
         latest_result: dict = loads(task['latest_result'] or '{}')
         link: str = latest_result.get('url') or task['origin_url']
-        title: str = f'{task["name"]}#{pubDate}'
         description: str = latest_result.get('text') or ''
+        title: str = f'{task["name"]}#{description[:80]}'
         item: dict = {
             'title': title,
             'link': link,
