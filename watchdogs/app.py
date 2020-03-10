@@ -20,7 +20,9 @@ from .crawler import crawl_once
 from .models import Task, query_tasks, tasks
 from .settings import Config, refresh_token, release_app, setup_app
 
-app = FastAPI()
+app = FastAPI(
+    title="Watchdogs",
+    description="Watchdogs to keep an eye on the world's change. Read more: https://github.com/ClericPy/watchdogs", version=__version__)
 
 app.mount("/uniparser", sub_app)
 app.mount(

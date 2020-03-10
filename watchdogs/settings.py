@@ -82,9 +82,8 @@ async def setup_md5_salt():
         if exist_salt is None:
             # create new salt
             from time import time
-            from random import randint
-            Config.md5_salt = md5(
-                time() + randint(1, 10000000000), with_salt=False)
+            from random import random
+            Config.md5_salt = md5(time() * random(), with_salt=False)
         else:
             # no need to update
             Config.md5_salt = exist_salt
@@ -136,6 +135,7 @@ async def setup_app(app):
         await setup_crawler()
         await refresh_token()
         ensure_future(background_loop())
+    Config.logger.info(f'App start success, CONFIG_DIR: {Config.CONFIG_DIR}')
 
 
 async def release_app(app):
