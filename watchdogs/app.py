@@ -1,18 +1,21 @@
+from json import loads
 from pathlib import Path
 from typing import Optional
+from xml.sax.saxutils import escape
 
-from fastapi import Cookie, FastAPI
+from fastapi import Cookie, FastAPI, Header
 from fastapi.staticfiles import StaticFiles
 from starlette.requests import Request
-from starlette.responses import PlainTextResponse, RedirectResponse
+from starlette.responses import (HTMLResponse, PlainTextResponse,
+                                 RedirectResponse)
 from starlette.templating import Jinja2Templates
-from torequests.utils import ptime, timeago
+from torequests.utils import ptime, quote_plus, timeago, urlparse
 from uniparser import CrawlerRule
 from uniparser.fastapi_ui import app as sub_app
 from uniparser.utils import get_host
 
 from . import __version__
-from .config import check_password
+from .config import md5, md5_checker
 from .crawler import crawl_once
 from .models import Task, query_tasks, tasks
 from .settings import Config, refresh_token, release_app, setup_app
@@ -30,12 +33,25 @@ templates = Jinja2Templates(
 AUTH_PATH_WHITE_LIST = {'/auth', '/rss'}
 
 
+@app.on_event("startup")
+async def startup():
+    await setup_app(app)
+
+
+@app.on_event("shutdown")
+async def shutdown():
+    await release_app(app)
+
+
 @app.middleware("http")
 async def add_process_time_header(request: Request, call_next):
     # print(request.scope)
     # {'type': 'http', 'http_version': '1.1', 'server': ('127.0.0.1', 9901), 'client': ('127.0.0.1', 7037), 'scheme': 'http', 'method': 'GET', 'root_path': '', 'path': '/auth', 'raw_path': b'/auth', 'query_string': b'', 'headers': [(b'host', b'127.0.0.1:9901'), (b'connection', b'keep-alive'), (b'sec-fetch-dest', b'image'), (b'user-agent', b'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36'), (b'dnt', b'1'), (b'accept', b'image/webp,image/apng,image/*,*/*;q=0.8'), (b'sec-fetch-site', b'same-origin'), (b'sec-fetch-mode', b'no-cors'), (b'referer', b'http://127.0.0.1:9901/auth'), (b'accept-encoding', b'gzip, deflate, br'), (b'accept-language', b'zh-CN,zh;q=0.9'), (b'cookie', b'ads_id=lakdsjflakjdf; _ga=GA1.1.1550108461.1583462251')], 'fastapi_astack': <contextlib.AsyncExitStack object at 0x00000165BE69EEB8>, 'app': <fastapi.applications.FastAPI object at 0x00000165A7B738D0>}
     watchdog_auth = request.cookies.get('watchdog_auth')
     path = request.scope['path']
+    if not path.startswith('/'):
+        path = urlparse(request.scope['path']).path
+        request.scope['path'] = path
     if path in AUTH_PATH_WHITE_LIST or Config.watchdog_auth and watchdog_auth == Config.watchdog_auth:
         response = await call_next(request)
         return response
@@ -65,7 +81,7 @@ async def auth(request: Request,
                 max_age=86400 * 1,
                 httponly=True)
             return resp
-        valid = await check_password(password)
+        valid = await md5_checker(password, Config.watchdog_auth)
         if valid:
             resp = RedirectResponse('/')
             resp.set_cookie(
@@ -92,10 +108,11 @@ async def auth(request: Request,
 
 
 @app.get("/")
-async def index(request: Request):
+async def index(request: Request, tag: str = ''):
     kwargs: dict = {'request': request}
     kwargs['cdn_urls'] = Config.cdn_urls
     kwargs['version'] = __version__
+    kwargs['rss_url'] = f'/rss?tag={quote_plus(tag)}&sign={md5(tag)}'
     return templates.TemplateResponse("index.html", context=kwargs)
 
 
@@ -272,11 +289,78 @@ async def delete_host_rule(host: str):
     return result
 
 
-@app.on_event("startup")
-async def startup():
-    await setup_app(app)
+def gen_rss(data):
+    nodes = []
+    channel = data['channel']
+    channel_title = channel['title']
+    channel_desc = channel['description']
+    channel_link = channel['link']
+    channel_language = channel.get('language', 'zh-cn')
+    item_keys = ['title', 'description', 'link', 'guid', 'pubDate']
+    for item in data['items']:
+        item_nodes = []
+        for key in item_keys:
+            value = item.get(key)
+            if value:
+                item_nodes.append(f'<{key}>{escape(value)}</{key}>')
+        nodes.append(''.join(item_nodes))
+    items_string = ''.join((f'<item>{tmp}</item>' for tmp in nodes))
+    return rf'''<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+<channel>
+  <title>{channel_title}</title>
+  <link>{channel_link}</link>
+  <description>{channel_desc}</description>
+  <language>{channel_language}</language>
+  <image>
+    <url>{channel_link}/icon.png</url>
+    <title>{channel_title}</title>
+    <link>{channel_link}</link>
+    <width>32</width>
+    <height>32</height>
+   </image>
+  {items_string}
+</channel>
+</rss>
+'''
 
 
-@app.on_event("shutdown")
-async def shutdown():
-    await release_app(app)
+@app.get("/rss")
+async def rss(request: Request,
+              tag: str = '',
+              sign: str = '',
+              host: str = Header('', alias='Host')):
+    valid = await md5_checker(tag, sign)
+    if not valid:
+        return PlainTextResponse('signature expired')
+    tasks, _ = await query_tasks(tag=tag)
+    source_link = f'{request.scope["scheme"]}://{host}'
+    # print(source_link)
+    xml_data: dict = {
+        'channel': {
+            'title': f'Watchdogs',
+            'description': 'Watchdog on web change, v{__version__}.',
+            'link': source_link,
+        },
+        'items': []
+    }
+    for task in tasks:
+        pubDate: str = task['last_change_time'].strftime(
+            format='%a, %d %b %Y %H:%M:%S')
+        latest_result: dict = loads(task['latest_result'] or '{}')
+        link: str = latest_result.get('url') or task['origin_url']
+        title: str = f'{task["name"]}#{pubDate}'
+        description: str = latest_result.get('text') or ''
+        item: dict = {
+            'title': title,
+            'link': link,
+            'guid': title,
+            'description': description,
+            'pubDate': pubDate
+        }
+        xml_data['items'].append(item)
+    xml: str = gen_rss(xml_data)
+    response = HTMLResponse(
+        xml, headers={'Content-Type': 'text/xml; charset=utf-8'})
+    response.headers['Content-Type'] = 'text/xml; charset=utf-8'
+    return response

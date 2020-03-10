@@ -47,6 +47,6 @@ def md5(obj, n=32, with_salt=True):
     return _md5(f'{obj}{salt}', n=n)
 
 
-async def check_password(password):
+async def md5_checker(string, target):
     async with Config.check_pwd_freq:
-        return md5(password) == Config.watchdog_auth
+        return md5(string) == target
