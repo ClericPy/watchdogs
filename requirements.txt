@@ -1,4 +1,4 @@
-uniparser>=1.2.0
+uniparser>=1.2.3
 fastapi
 uvicorn
 databases
