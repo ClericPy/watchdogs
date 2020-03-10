@@ -143,7 +143,7 @@
                     </template>
                 </el-tab-pane>
                 <el-tab-pane label="New Task" name="new">
-                    <iframe v-if="iframe_loaded||activeName=='new'" @load='init_iframe()' src="/uniparser"
+                    <iframe v-if="iframe_loaded||activeName=='new'" @load='init_iframe()' :src="window.location.origin + '/uniparser'"
                         frameborder="0" ref="iframe" style="width: 100%; height: 90%;"></iframe>
                     <el-popover style="margin: 0 0 0 20%;" placement="top-start" title="WARNING" width="200"
                         trigger="hover" content=""><span style="font-size: 1em;">
