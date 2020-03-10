@@ -4,7 +4,7 @@ from typing import Optional
 from fastapi import Cookie, FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.requests import Request
-from starlette.responses import RedirectResponse
+from starlette.responses import PlainTextResponse, RedirectResponse
 from starlette.templating import Jinja2Templates
 from torequests.utils import ptime, timeago
 from uniparser import CrawlerRule
@@ -12,7 +12,7 @@ from uniparser.fastapi_ui import app as sub_app
 from uniparser.utils import get_host
 
 from . import __version__
-from .config import md5
+from .config import check_password
 from .crawler import crawl_once
 from .models import Task, query_tasks, tasks
 from .settings import Config, refresh_token, release_app, setup_app
@@ -55,21 +55,34 @@ async def auth(request: Request,
     already_authed = watchdog_auth and watchdog_auth == Config.watchdog_auth
     need_new_pwd = auth_not_set or already_authed
     if password:
-        if need_new_pwd or md5(password) == Config.watchdog_auth:
-            if need_new_pwd:
-                Config.password = password
-                await refresh_token()
+        if need_new_pwd:
+            Config.password = password
+            await refresh_token()
+            resp = RedirectResponse('/')
+            resp.set_cookie(
+                'watchdog_auth',
+                Config.watchdog_auth,
+                max_age=86400 * 1,
+                httponly=True)
+            return resp
+        valid = await check_password(password)
+        if valid:
             resp = RedirectResponse('/')
             resp.set_cookie(
                 'watchdog_auth',
                 Config.watchdog_auth,
                 max_age=86400 * 3,
                 httponly=True)
+            return resp
+        elif valid is None:
+            return PlainTextResponse('Check password too fast')
         else:
             # invalid password, clear cookie
             resp = RedirectResponse('/auth', 302)
-            resp.set_cookie('watchdog_auth', '')
-        return resp
+            # resp.set_cookie('watchdog_auth', '')
+            resp.delete_cookie('watchdog_auth')
+            return resp
+
     else:
         kwargs: dict = {'request': request}
         kwargs['version'] = __version__
