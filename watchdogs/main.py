@@ -28,6 +28,7 @@ def start_server(db_url=None,
                  ignore_file_log=False,
                  md5_salt=None,
                  config_dir=None,
+                 use_default_cdn=True,
                  **uvicorn_kwargs):
     if config_dir:
         config_dir = Path(config_dir)
@@ -41,7 +42,8 @@ def start_server(db_url=None,
         password=password,
         ignore_stdout_log=ignore_stdout_log,
         ignore_file_log=ignore_file_log,
-        md5_salt=md5_salt)
+        md5_salt=md5_salt,
+        use_default_cdn=use_default_cdn)
     from .app import app
     if 'port' not in uvicorn_kwargs:
         uvicorn_kwargs['port'] = 9901

@@ -35,6 +35,8 @@ Watchdogs to keep an eye on the world's change.
 > md5_salt for custom md5(password) / md5(rss_tag)
 - **config_dir**:
 > config dir to save the logs and config files, if using sqlite include sqlite file. defaults to {HOME_PATH}/watchdogs
+- **use_default_cdn**:
+> If Config.cdn_urls not set, and use_default_cdn is True, will use online js/css cdn from staticfile.org.
 - **\*\*uvicorn_kwargs**:
 > uvicorn startup kwargs, such as port, host. Which can be set like: `python -m watchdogs --port=9999 --host=127.0.0.1`
 
