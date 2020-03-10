@@ -28,7 +28,7 @@ with open(os.path.join(here, 'watchdogs', '__init__.py'), encoding="u8") as f:
         raise ValueError('Not find the __version__ info.')
     version = matched.group(1)
 
-description = "The whole thing is to keep some watchdogs to monitor the web's change. Read more: https://github.com/ClericPy/watchdogs."
+description = "Watchdogs to keep an eye on the world's change. Read more: https://github.com/ClericPy/watchdogs."
 
 setup(
     name="watchdogs",
@@ -40,7 +40,12 @@ setup(
     license="MIT License",
     install_requires=install_requires,
     py_modules=["watchdogs"],
-    package_data={'watchdogs': ['templates/*.html', 'static/*.ico']},
+    package_data={
+        'watchdogs': [
+            'templates/*.html', 'static/img/*.*', 'static/js/*.js',
+            'static/css/*.css', 'static/css/fonts/*.*'
+        ]
+    },
     extras_require={},
     classifiers=[
         "License :: OSI Approved :: MIT License",

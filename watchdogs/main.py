@@ -1,3 +1,6 @@
+import sys
+from pathlib import Path
+
 from fire import Fire
 from uvicorn import run
 
@@ -24,7 +27,13 @@ def start_server(db_url=None,
                  ignore_stdout_log=False,
                  ignore_file_log=False,
                  md5_salt=None,
+                 config_dir=None,
                  **uvicorn_kwargs):
+    if config_dir:
+        config_dir = Path(config_dir)
+        if not config_dir.is_dir():
+            config_dir.mkdir()
+        Config.CONFIG_DIR = config_dir
     if uninstall:
         return clear_dir(Config.CONFIG_DIR)
     setup(
@@ -40,6 +49,12 @@ def start_server(db_url=None,
 
 
 def main():
+    argv = sys.argv
+    if ('-h' in argv or '--help' in argv) and '--' not in argv:
+        print(
+            '"-h" and "--help" should be after "--", examples:\n > python -m watchdogs -- -h\n > python run_server.py -- -h'
+        )
+        return
     Fire(start_server)
 
 

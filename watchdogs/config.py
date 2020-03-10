@@ -4,7 +4,7 @@ from frequency_controller import AsyncFrequency
 from torequests.utils import md5 as _md5
 
 
-class Config(object):
+class Config:
     CONFIG_DIR = Path.home() / 'watchdogs'
     if not CONFIG_DIR.is_dir():
         CONFIG_DIR.mkdir()
@@ -22,6 +22,7 @@ class Config(object):
     check_pwd_freq = AsyncFrequency(1, 3)
     # for anti-crawl frequency
     DEFAULT_HOST_FREQUENCY = (1, 1)
+    # online cdns
     # cdn_urls = {
     #     'VUE_JS_CDN': 'https://cdn.staticfile.org/vue/2.6.11/vue.min.js',
     #     'ELEMENT_CSS_CDN': 'https://cdn.staticfile.org/element-ui/2.13.0/theme-chalk/index.css',
