@@ -1,0 +1,8 @@
+uniparser>=1.2.0
+fastapi
+uvicorn
+databases
+torequests
+fire
+jinja2
+aiofiles

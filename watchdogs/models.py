@@ -1,0 +1,249 @@
+from datetime import datetime
+from typing import Optional
+
+import sqlalchemy
+from pydantic import BaseModel
+from sqlalchemy.sql import text
+from uniparser import CrawlerRule, HostRule
+from uniparser.crawler import RuleStorage, get_host
+
+from .config import Config
+
+metadata = sqlalchemy.MetaData()
+date0 = datetime.strptime('1970-01-01 08:00:00', '%Y-%m-%d %H:%M:%S')
+# server_default works instead of default, issue: https://github.com/encode/databases/issues/72
+tasks = sqlalchemy.Table(
+    "tasks",
+    metadata,
+    sqlalchemy.Column(
+        'task_id', sqlalchemy.Integer, primary_key=True, autoincrement=True),
+    sqlalchemy.Column(
+        "name", sqlalchemy.String(64), nullable=False, index=True, unique=True),
+    sqlalchemy.Column(
+        "enable", sqlalchemy.Integer, server_default=text('1'), nullable=False),
+    sqlalchemy.Column(
+        "tag", sqlalchemy.String(128), server_default="default",
+        nullable=False),
+    sqlalchemy.Column("request_args", sqlalchemy.TEXT, nullable=False),
+    sqlalchemy.Column(
+        "origin_url",
+        sqlalchemy.String(1024),
+        nullable=False,
+        server_default=""),
+    sqlalchemy.Column(
+        "interval",
+        sqlalchemy.Integer,
+        server_default=text('300'),
+        nullable=False),
+    sqlalchemy.Column(
+        "work_hours",
+        sqlalchemy.String(32),
+        server_default='0, 24',
+        nullable=False),
+    sqlalchemy.Column(
+        "max_result_count",
+        sqlalchemy.Integer,
+        server_default=text('10'),
+        nullable=False),
+    sqlalchemy.Column("latest_result", sqlalchemy.TEXT),
+    sqlalchemy.Column(
+        "result_list", sqlalchemy.TEXT, nullable=False,
+        server_default='[]'),  # JSON list
+    sqlalchemy.Column(
+        "last_check_time",
+        sqlalchemy.TIMESTAMP,
+        server_default="1970-01-01 08:00:00",
+        nullable=False),
+    sqlalchemy.Column(
+        "next_check_time",
+        sqlalchemy.TIMESTAMP,
+        server_default="1970-01-01 08:00:00",
+        nullable=False),
+    sqlalchemy.Column(
+        "last_change_time",
+        sqlalchemy.TIMESTAMP,
+        server_default="1970-01-01 08:00:00",
+        nullable=False),
+    sqlalchemy.Column("custom_info", sqlalchemy.TEXT),
+)
+host_rules = sqlalchemy.Table(
+    "host_rules",
+    metadata,
+    sqlalchemy.Column('host', sqlalchemy.String(128), primary_key=True),
+    sqlalchemy.Column('host_rule', sqlalchemy.TEXT),
+)
+metas = sqlalchemy.Table(
+    "metas",
+    metadata,
+    sqlalchemy.Column('key', sqlalchemy.String(64), primary_key=True),
+    sqlalchemy.Column('value', sqlalchemy.TEXT),
+)
+
+
+def create_tables(db_url):
+    engine = sqlalchemy.create_engine(db_url)
+    metadata.create_all(engine)
+
+
+class RuleStorageDB(RuleStorage):
+
+    def __init__(self, db):
+        self.db = db
+        self.logger = Config.logger
+
+    async def commit(self):
+        pass
+
+    async def get_host_rule(self, host: str, default=None):
+        query = "SELECT host_rule FROM host_rules WHERE host = :host"
+        host_rule = await self.db.fetch_one(query=query, values={"host": host})
+        if host_rule:
+            return HostRule.loads(host_rule[0])
+        else:
+            return default
+
+    async def find_crawler_rule(self, url, method='find') -> CrawlerRule:
+        host = get_host(url)
+        host_rule = await self.get_host_rule(host)
+        if host_rule:
+            return host_rule.find(url)
+
+    async def add_crawler_rule(self, rule: CrawlerRule, commit=None):
+        if isinstance(rule, str):
+            rule = CrawlerRule.loads(rule)
+        elif isinstance(rule, dict) and not isinstance(rule, CrawlerRule):
+            rule = CrawlerRule(**rule)
+        if not rule.get('regex'):
+            raise ValueError('regex should not be null')
+        url = rule.get('request_args', {}).get('url')
+        if not url:
+            self.logger.error(f'[Rule] {rule["name"]} not found url.')
+            return False
+        host = get_host(url)
+        if not host:
+            return False
+        exist_host_rule = await self.get_host_rule(host)
+        if exist_host_rule:
+            exist_host_rule.add_crawler_rule(rule)
+            query = "update host_rules set host_rule=:host_rule_string WHERE host = :host"
+            return await self.db.execute(
+                query=query,
+                values={
+                    'host_rule_string': exist_host_rule.dumps(),
+                    'host': host
+                })
+        else:
+            host_rule = HostRule(host)
+            host_rule.add_crawler_rule(rule)
+            query = "INSERT INTO host_rules (host, host_rule) values (:host, :host_rule_string)"
+            return await self.db.execute(
+                query=query,
+                values={
+                    'host_rule_string': host_rule.dumps(),
+                    'host': host
+                })
+
+    async def pop_crawler_rule(self, rule: CrawlerRule, commit=False):
+        query = "SELECT host_rule FROM host_rules"
+        host = get_host(rule['request_args'].get('url'))
+        values = {}
+        if host:
+            query += ' WHERE host = :host'
+            values['host'] = host
+        rows = await self.db.fetch_all(query=query, values=values)
+        for row in rows:
+            host_rule = HostRule.loads(row.host_rule)
+            crawler_rule = host_rule.pop_crawler_rule(rule['name'])
+            if crawler_rule:
+                # update host_rule
+                await self.add_host_rule(host_rule)
+                return crawler_rule
+
+    async def add_host_rule(self, rule: HostRule, commit=None):
+        """insert or update HostRule"""
+        # some sql not support upsert: insert replace, replace into, on conflict
+        query = "SELECT host_rule FROM host_rules WHERE host = :host"
+        exist_host_rule = await self.get_host_rule(rule['host'])
+        if exist_host_rule:
+            query = "update host_rules set host_rule=:host_rule_string WHERE host = :host"
+            return await self.db.execute(
+                query=query,
+                values={
+                    'host_rule_string': rule.dumps(),
+                    'host': rule['host']
+                })
+        else:
+            query = "INSERT INTO host_rules (host, host_rule) values (:host, :host_rule_string)"
+            return await self.db.execute(
+                query=query,
+                values={
+                    'host_rule_string': rule.dumps(),
+                    'host': rule['host']
+                })
+
+    async def pop_host_rule(self, host: str, commit=None):
+        exist_host_rule = await self.get_host_rule(host)
+        host_rule = HostRule.loads(exist_host_rule) if exist_host_rule else None
+        if host_rule:
+            query = "delete FROM host_rules WHERE host = :host"
+            await self.db.execute(query=query, values={'host': host})
+        return host_rule
+
+
+class TaskController:
+
+    def __init__(self, db):
+        self.db = db
+        self.logger = Config.logger
+
+
+class Task(BaseModel):
+    name: str
+    enable: int = 0
+    tag: str = 'default'
+    request_args: str
+    origin_url: str = ''
+    interval: int = 300
+    work_hours: str = '0, 24'
+    max_result_count: int = 10
+    latest_result: str = '[]'
+    result_list = '[]'
+    last_check_time: datetime = date0
+    next_check_time: datetime = date0
+    last_change_time: datetime = date0
+    custom_info: str = ''
+
+
+async def query_tasks(
+        task_name: Optional[str] = None,
+        page: int = 1,
+        page_size: int = 30,
+        order_by: str = 'last_change_time',
+        sort: str = 'desc',
+        tag: str = '',
+):
+    offset = page_size * (page - 1)
+    query = tasks.select()
+    if task_name:
+        query = query.where(tasks.c.name == task_name)
+    if tag:
+        query = query.where(tasks.c.tag == tag)
+    if order_by and sort:
+        ob = getattr(tasks.c, order_by, None)
+        if ob is None:
+            raise ValueError(f'bad order_by {order_by}')
+        if sort.lower() == 'desc':
+            ob = sqlalchemy.desc(ob)
+        elif sort.lower() == 'asc':
+            ob = sqlalchemy.asc(ob)
+        else:
+            raise ValueError(
+                f"bad sort arg {sort} not in ('desc', 'asc', 'DESC', 'ASC')")
+        query = query.order_by(ob)
+    query = query.limit(page_size + 1).offset(offset)
+    _result = await Config.db.fetch_all(query=query)
+    has_more = len(_result) > page_size
+    result = [dict(i) for i in _result][:page_size]
+    Config.logger.info(
+        f'[Query] {len(result)} tasks (has_more={has_more}): {query}')
+    return result, has_more
