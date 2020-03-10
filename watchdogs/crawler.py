@@ -8,7 +8,7 @@ from torequests.utils import ttime
 from uniparser import Crawler
 
 from .config import Config
-from .models import tasks
+from .models import query_tasks, tasks
 
 
 def get_result(item):
@@ -160,6 +160,7 @@ async def crawl_once(task_name=None):
     now = datetime.datetime.now()
     update_query = 'update tasks set `last_check_time`=:last_check_time,`next_check_time`=:next_check_time where task_id=:task_id'
     update_values = []
+    CLEAR_CACHE_NEEDED = False
     async for task in db.iterate(query=query):
         # check work hours
         ok, next_check_time = find_next_check_time(task.work_hours or '0, 24',
@@ -203,6 +204,8 @@ async def crawl_once(task_name=None):
                     break
                 to_insert_result_list.append(result)
             if to_insert_result_list:
+                # new result updated
+                CLEAR_CACHE_NEEDED = True
                 query = UpdateTaskQuery(task.task_id)
                 query.add('latest_result', to_insert_result_list[0])
                 query.add('last_change_time', now)
@@ -219,6 +222,9 @@ async def crawl_once(task_name=None):
                 await db.execute(**query.kwargs)
         logger.info(
             f'Crawl finished. done: {len(done)}, timeout: {len(pending)}')
+    if CLEAR_CACHE_NEEDED:
+        logger.info('Clear cache for crawling new results.')
+        query_tasks.cache_clear()
     if task_name:
         query = tasks.select().where(tasks.c.name == task_name)
         task = await db.fetch_one(query=query)

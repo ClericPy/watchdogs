@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Optional
 
 import sqlalchemy
+from async_lru import alru_cache
 from pydantic import BaseModel
 from sqlalchemy.sql import text
 from uniparser import CrawlerRule, HostRule
@@ -214,6 +215,7 @@ class Task(BaseModel):
     custom_info: str = ''
 
 
+@alru_cache()
 async def query_tasks(
         task_name: Optional[str] = None,
         page: int = 1,

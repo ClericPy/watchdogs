@@ -21,6 +21,9 @@ with open('requirements.txt') as f:
 with open("README.md", encoding="u8") as f:
     long_description = f.read()
 
+if not re.search(r'postgresql|mysql|sqlite', str(sys.argv)):
+    install_requires.append('aiosqlite')
+
 here = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(here, 'watchdogs', '__init__.py'), encoding="u8") as f:
     matched = re.search(r'''__version__ = ['"](.*?)['"]''', f.read())
@@ -46,7 +49,11 @@ setup(
             'static/css/*.css', 'static/css/fonts/*.*'
         ]
     },
-    extras_require={},
+    extras_require={
+        "postgresql": ["asyncpg", "psycopg2-binary"],
+        "mysql": ["aiomysql", "pymysql"],
+        "sqlite": ["aiosqlite"]
+    },
     classifiers=[
         "License :: OSI Approved :: MIT License",
         'Programming Language :: Python',
