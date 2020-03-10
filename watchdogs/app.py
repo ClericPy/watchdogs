@@ -22,7 +22,9 @@ from .settings import Config, refresh_token, release_app, setup_app
 
 app = FastAPI(
     title="Watchdogs",
-    description="Watchdogs to keep an eye on the world's change. Read more: https://github.com/ClericPy/watchdogs", version=__version__)
+    description=
+    "Watchdogs to keep an eye on the world's change. Read more: https://github.com/ClericPy/watchdogs",
+    version=__version__)
 
 app.mount("/uniparser", sub_app)
 app.mount(
@@ -56,6 +58,8 @@ async def add_process_time_header(request: Request, call_next):
         request.scope['path'] = path
     if path in AUTH_PATH_WHITE_LIST or Config.watchdog_auth and watchdog_auth == Config.watchdog_auth:
         response = await call_next(request)
+        if path.startswith('/static/'):
+            response.headers['Cache-Control'] = 'max-age=86400'
         return response
     else:
         resp = RedirectResponse('/auth', 302)

@@ -64,7 +64,7 @@ def setup(
         ignore_stdout_log=False,
         ignore_file_log=False,
         md5_salt=None,
-        use_default_cdn=True,
+        use_default_cdn=False,
 ):
     from uniparser.fastapi_ui.views import cdn_urls
 
