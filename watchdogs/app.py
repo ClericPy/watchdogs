@@ -357,7 +357,7 @@ async def rss(request: Request,
     xml_data: dict = {
         'channel': {
             'title': f'Watchdogs',
-            'description': 'Watchdog on web change, v{__version__}.',
+            'description': f'Watchdog on web change, v{__version__}.',
             'link': source_link,
         },
         'items': []
@@ -366,6 +366,8 @@ async def rss(request: Request,
         pubDate: str = task['last_change_time'].strftime(
             format='%a, %d %b %Y %H:%M:%S')
         latest_result: dict = loads(task['latest_result'] or '{}')
+        if isinstance(latest_result, list):
+            Config.logger.error(f'latest_result is list: {latest_result}')
         link: str = latest_result.get('url') or task['origin_url']
         description: str = latest_result.get('text') or ''
         title: str = f'{task["name"]}#{description[:80]}'
@@ -382,3 +384,8 @@ async def rss(request: Request,
         xml, headers={'Content-Type': 'text/xml; charset=utf-8'})
     response.headers['Content-Type'] = 'text/xml; charset=utf-8'
     return response
+
+
+@app.get("/favicon.ico")
+async def favicon():
+    return RedirectResponse('/static/img/favicon.ico', 301)

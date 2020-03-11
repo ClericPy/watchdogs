@@ -2,10 +2,11 @@ import datetime
 import re
 from asyncio import ensure_future, sleep, wait
 from json import dumps, loads
+from traceback import format_exc
 from typing import Optional, Tuple
 
 from torequests.utils import ttime
-from uniparser import Crawler, InvalidSchemaError, RuleNotFoundError
+from uniparser import Crawler, RuleNotFoundError
 
 from .config import Config
 from .models import query_tasks, tasks
@@ -152,6 +153,7 @@ async def crawl_once(task_name=None):
     db = crawler.storage.db
     now = datetime.datetime.now()
     logger = Config.logger
+    logger.info(f'crawl_once task_name={task_name} start.')
     # sqlite do not has datediff...
     if task_name:
         query = tasks.select().where(tasks.c.enable == 1).where(
@@ -188,7 +190,7 @@ async def crawl_once(task_name=None):
                 f'Task [{task.name}] is not on work, next_check_time reset to {next_check_time}'
             )
     await db.execute_many(query=update_query, values=update_values)
-    logger.info(f'Crawling {len(todo)} tasks.')
+    logger.info(f'crawl_once crawling {len(todo)} valid tasks.')
     if todo:
         done, pending = await wait(todo, timeout=Config.default_crawler_timeout)
         if pending:
@@ -223,10 +225,15 @@ async def crawl_once(task_name=None):
                     })
                 query.add('result_list',
                           dumps(old_result_list[:task.max_result_count]))
-                logger.info(f'Updated {task.name}. +++')
+                logger.info(f'[Updated] {task.name}. +++')
                 await db.execute(**query.kwargs)
         logger.info(
-            f'Crawl finished. done: {len(done)}, timeout: {len(pending)}')
+            f'Crawl task_name={task_name} finished. done: {len(done)}, timeout: {len(pending)}'
+        )
+    else:
+        logger.info(
+            f'Crawl task_name={task_name} finished. 0 todo.'
+        )
     if CLEAR_CACHE_NEEDED:
         logger.info('Clear cache for crawling new results.')
         query_tasks.cache_clear()
@@ -295,5 +302,8 @@ def find_next_check_time(
 
 async def background_loop():
     while 1:
-        await crawl_once()
+        try:
+            await crawl_once()
+        except Exception:
+            Config.logger.error(f'Crawler crashed:\n{format_exc()}')
         await sleep(Config.check_interval)
