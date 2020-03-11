@@ -1,4 +1,4 @@
-# [watchdogs](https://github.com/ClericPy/watchdogs) [![PyPI](https://img.shields.io/pypi/v/watchdogs?style=plastic)](https://pypi.org/project/watchdogs/) ![PyPI - Wheel](https://img.shields.io/pypi/wheel/watchdogs?style=plastic) ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/watchdogs?style=plastic) ![PyPI - Downloads](https://img.shields.io/pypi/dm/watchdogs?style=plastic) ![PyPI - License](https://img.shields.io/pypi/l/watchdogs?style=plastic)
+# [watchdogs](https://github.com/ClericPy/watchdogs) [![PyPI](https://img.shields.io/pypi/v/watchdogs?style=plastic)](https://pypi.org/project/watchdogs/)![PyPI - Wheel](https://img.shields.io/pypi/wheel/watchdogs?style=plastic)![PyPI - Python Version](https://img.shields.io/pypi/pyversions/watchdogs?style=plastic)![PyPI - Downloads](https://img.shields.io/pypi/dm/watchdogs?style=plastic)![PyPI - License](https://img.shields.io/pypi/l/watchdogs?style=plastic)
 
 Watchdogs to keep an eye on the world's change.
 
