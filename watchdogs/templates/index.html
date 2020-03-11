@@ -450,8 +450,14 @@
                 },
                 show_form_add_new_task(init_form) {
                     if (init_form) {
+                        let init_name = ''
+                        try {
+                            init_name = this.sub_app.crawler_rule.name
+                        } catch (error) {
+                            console.log(error);
+                        }
                         this.new_task_form = {
-                            name: '',
+                            name: init_name,
                             enable: 1,
                             tag: 'default',
                             request_args: '',
