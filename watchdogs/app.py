@@ -25,7 +25,7 @@ from .settings import Config, refresh_token, release_app, setup_app
 app = FastAPI(
     title="Watchdogs",
     description=
-    "Watchdogs to keep an eye on the world's change. Read more: https://github.com/ClericPy/watchdogs",
+    f"Watchdogs to keep an eye on the world's change.\nRead more: [https://github.com/ClericPy/watchdogs](https://github.com/ClericPy/watchdogs)",
     version=__version__)
 sub_app.openapi_prefix = '/uniparser'
 app.mount("/uniparser", sub_app)
@@ -137,6 +137,8 @@ async def index(request: Request, tag: str = ''):
     kwargs['cdn_urls'] = Config.cdn_urls
     kwargs['version'] = __version__
     kwargs['rss_url'] = f'/rss?tag={quote_plus(tag)}&sign={md5(tag)}'
+    kwargs['callback_handler_workers'] = ', '.join(
+        Config.callback_handler.callback_objects.keys())
     return templates.TemplateResponse("index.html", context=kwargs)
 
 

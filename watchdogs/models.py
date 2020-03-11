@@ -201,6 +201,7 @@ class TaskController:
 
 
 class Task(BaseModel):
+    task_id: int = 0
     name: str
     enable: int = 0
     tag: str = 'default'

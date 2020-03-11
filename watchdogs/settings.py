@@ -1,6 +1,5 @@
 import logging
 from asyncio import ensure_future
-from logging import Logger
 from logging.handlers import RotatingFileHandler
 
 from databases import Database
@@ -8,6 +7,7 @@ from databases import Database
 from .config import Config, md5
 from .crawler import background_loop
 from .models import RuleStorageDB
+from .callbacks import CallbackHandler
 
 
 def init_logger(ignore_stdout_log=False, ignore_file_log=False):
@@ -97,7 +97,7 @@ def setup(
 
 
 async def setup_md5_salt():
-    logger: Logger = Config.logger
+    logger = Config.logger
     query = 'select `value` from metas where `key`="md5_salt"'
     result = await Config.db.fetch_one(query)
     exist_salt = result.value if result else None
@@ -128,6 +128,9 @@ async def setup_crawler():
         f'Downloader middleware installed: {crawler.uniparser.ensure_adapter(False).__class__.__name__}'
     )
     Config.crawler = crawler
+    callback_handler = CallbackHandler()
+    Config.callback_handler = callback_handler
+    Config.logger.info(f'Current online callbacks:\n{callback_handler.workers}')
 
 
 async def update_password(password=None):
