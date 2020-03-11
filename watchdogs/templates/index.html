@@ -232,11 +232,11 @@
                 <el-form-item title="Max length of the result list." label="max_result_count">
                     <el-input v-model="new_task_form.max_result_count" autocomplete="off"></el-input>
                 </el-form-item>
-                <el-form-item title="Maybe nonsense string, for special usage. Sometimes saved an email."
+                <el-form-item title="Maybe nonsense string, for change callback."
                     label="custom_info">
                     <el-input v-model="new_task_form.custom_info"
                         placeholder="custom_info for notes, or as callback's variable format like feature_name:text"
-                        title="custom_info for notes, or as callback's variable format like feature_name:text"
+                        title="Support: {{callback_handler_workers}}"
                         autocomplete="off"></el-input>
                 </el-form-item>
             </el-form>
