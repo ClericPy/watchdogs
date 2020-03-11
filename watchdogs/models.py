@@ -201,7 +201,7 @@ class TaskController:
 
 
 class Task(BaseModel):
-    task_id: int = 0
+    task_id: Optional[int] = None
     name: str
     enable: int = 0
     tag: str = 'default'
@@ -210,7 +210,7 @@ class Task(BaseModel):
     interval: int = 300
     work_hours: str = '0, 24'
     max_result_count: int = 10
-    latest_result: str = '[]'
+    latest_result: str = '{}'
     result_list = '[]'
     last_check_time: datetime = date0
     next_check_time: datetime = date0
@@ -226,7 +226,7 @@ async def query_tasks(
         order_by: str = 'last_change_time',
         sort: str = 'desc',
         tag: str = '',
-) -> Tuple[dict, bool]:
+) -> Tuple[list, bool]:
     offset = page_size * (page - 1)
     query = tasks.select()
     if task_name:
