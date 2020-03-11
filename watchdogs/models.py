@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Tuple
 
 import sqlalchemy
 from async_lru import alru_cache
@@ -226,7 +226,7 @@ async def query_tasks(
         order_by: str = 'last_change_time',
         sort: str = 'desc',
         tag: str = '',
-):
+) -> Tuple[dict, bool]:
     offset = page_size * (page - 1)
     query = tasks.select()
     if task_name:
