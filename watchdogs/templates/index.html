@@ -212,7 +212,8 @@
                     <el-input v-model="new_task_form.tag" autocomplete="off"></el-input>
                 </el-form-item>
                 <el-form-item title="Input the url, or request_args JSON, or cURL string" label="request_args">
-                    <el-button @click="view_crawler_rule_by_req(new_task_form.request_args)" size='mini' icon="el-icon-view"><b>View Rule</b>
+                    <el-button @click="view_crawler_rule_by_req(new_task_form.request_args)" size='mini'
+                        icon="el-icon-view"><b>View Rule</b>
                     </el-button>
                     <el-input type="textarea" :autosize="{ minRows: 2, maxRows: 4}" v-model="new_task_form.request_args"
                         autocomplete="off"></el-input>
@@ -425,8 +426,7 @@
                             var result = r.body
                             if (result.msg == 'ok') {
                                 this.$message({
-                                    message: method + ' rule success: ' + result.result.name || result
-                                        .result,
+                                    message: method + ' rule success',
                                     type: 'success'
                                 });
                                 if (method == 'pop' && result.result) {
