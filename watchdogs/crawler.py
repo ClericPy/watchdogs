@@ -9,7 +9,8 @@ from torequests.utils import ttime
 from uniparser import Crawler, RuleNotFoundError
 
 from .config import Config
-from .models import query_tasks, tasks
+from .models import query_tasks, tasks, Task
+from .callbacks import CallbackHandler
 
 
 def get_result(item):
@@ -167,6 +168,7 @@ async def crawl_once(task_name=None):
     update_values = []
     CLEAR_CACHE_NEEDED = False
     async for task in db.iterate(query=query):
+        task = Task(**dict(task))
         # check work hours
         ok, next_check_time = find_next_check_time(task.work_hours or '0, 24',
                                                    task.interval, now)
@@ -184,6 +186,8 @@ async def crawl_once(task_name=None):
             'next_check_time': next_check_time,
             'task_id': task.task_id
         }
+        # update task variable for callback
+        task.__dict__.update(values)
         update_values.append(values)
         if not ok:
             logger.info(
@@ -197,6 +201,7 @@ async def crawl_once(task_name=None):
             names = [t.name for t in pending]
             logger.error(f'crawl timeout: {names}')
         ttime_now = ttime()
+        changed_tasks = []
         for t in done:
             task, result_list = t.result()
             if result_list is None:
@@ -214,7 +219,8 @@ async def crawl_once(task_name=None):
                 # new result updated
                 CLEAR_CACHE_NEEDED = True
                 query = UpdateTaskQuery(task.task_id)
-                query.add('latest_result', to_insert_result_list[0])
+                new_latest_result = to_insert_result_list[0]
+                query.add('latest_result', new_latest_result)
                 query.add('last_change_time', now)
                 old_result_list = loads(task.result_list or '[]')
                 # older insert first, keep the newer is on the top
@@ -223,17 +229,21 @@ async def crawl_once(task_name=None):
                         'result': result,
                         'time': ttime_now
                     })
-                query.add('result_list',
-                          dumps(old_result_list[:task.max_result_count]))
+                new_result_list = dumps(old_result_list[:task.max_result_count])
+                query.add('result_list', new_result_list)
                 logger.info(f'[Updated] {task.name}. +++')
                 await db.execute(**query.kwargs)
+                task.latest_result = new_latest_result
+                task.last_change_time = now
+                task.result_list = new_result_list
+                changed_tasks.append(task)
         logger.info(
             f'Crawl task_name={task_name} finished. done: {len(done)}, timeout: {len(pending)}'
         )
+        for task in changed_tasks:
+            await Config.callback_handler.callback(task)
     else:
-        logger.info(
-            f'Crawl task_name={task_name} finished. 0 todo.'
-        )
+        logger.info(f'Crawl task_name={task_name} finished. 0 todo.')
     if CLEAR_CACHE_NEEDED:
         logger.info('Clear cache for crawling new results.')
         query_tasks.cache_clear()

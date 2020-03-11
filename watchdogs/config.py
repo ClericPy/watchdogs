@@ -1,21 +1,24 @@
+from logging import Logger
 from pathlib import Path
+from typing import Optional
 
+from databases import Database
 from frequency_controller import AsyncFrequency
 from torequests.utils import md5 as _md5
 
 
 class Config:
-    CONFIG_DIR = Path.home() / 'watchdogs'
+    CONFIG_DIR: Path = Path.home() / 'watchdogs'
     if not CONFIG_DIR.is_dir():
         CONFIG_DIR.mkdir()
-    db = None
-    logger = None
+    db: Optional[Database] = None
+    logger: Optional[Logger] = None
     password: str = ''
     rule_db = None
-    check_interval = 60
-    default_interval = 5 * 60
-    default_crawler_timeout = 30
-    downloader_timeout = 15
+    check_interval: int = 60
+    default_interval: int = 5 * 60
+    default_crawler_timeout: int = 30
+    downloader_timeout: int = 15
     watchdog_auth: str = ''
     md5_salt: str = ''
     # anti brute force attack
@@ -23,6 +26,7 @@ class Config:
     # for anti-crawl frequency
     DEFAULT_HOST_FREQUENCY = (1, 1)
     cdn_urls: dict = {}
+    callback_handler = None
 
 
 def md5(obj, n=32, with_salt=True):
