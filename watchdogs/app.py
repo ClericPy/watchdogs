@@ -1,12 +1,14 @@
 from json import loads
 from pathlib import Path
+from time import time
+from traceback import format_exc
 from typing import Optional
 from xml.sax.saxutils import escape
 
 from fastapi import Cookie, FastAPI, Header
 from fastapi.staticfiles import StaticFiles
 from starlette.requests import Request
-from starlette.responses import (HTMLResponse, PlainTextResponse,
+from starlette.responses import (HTMLResponse, JSONResponse, PlainTextResponse,
                                  RedirectResponse)
 from starlette.templating import Jinja2Templates
 from torequests.utils import ptime, quote_plus, timeago, urlparse
@@ -23,7 +25,7 @@ from .settings import Config, refresh_token, release_app, setup_app
 app = FastAPI(
     title="Watchdogs",
     description=
-    "Watchdogs to keep an eye on the world's change. Read more: https://github.com/ClericPy/watchdogs",
+    f"Watchdogs to keep an eye on the world's change.\nRead more: [https://github.com/ClericPy/watchdogs](https://github.com/ClericPy/watchdogs)",
     version=__version__)
 sub_app.openapi_prefix = '/uniparser'
 app.mount("/uniparser", sub_app)
@@ -65,6 +67,22 @@ async def add_auth_checker(request: Request, call_next):
         resp = RedirectResponse('/auth', 302)
         resp.set_cookie('watchdog_auth', '')
         return resp
+
+
+@app.exception_handler(Exception)
+async def unicorn_exception_handler(request: Request, exc: Exception):
+    trace_id = str(time())
+    err_name = exc.__class__.__name__
+    err_value = str(exc)
+    msg = f'{err_name}({err_value}) catched {trace_id}:\n{format_exc()}'
+    Config.logger.error(msg)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "message": f"Oops! {err_name}.",
+            "trace_id": trace_id
+        },
+    )
 
 
 @app.get('/auth')
@@ -119,6 +137,8 @@ async def index(request: Request, tag: str = ''):
     kwargs['cdn_urls'] = Config.cdn_urls
     kwargs['version'] = __version__
     kwargs['rss_url'] = f'/rss?tag={quote_plus(tag)}&sign={md5(tag)}'
+    kwargs['callback_handler_workers'] = ', '.join(
+        Config.callback_handler.callback_objects.keys())
     return templates.TemplateResponse("index.html", context=kwargs)
 
 
