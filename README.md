@@ -1,15 +1,14 @@
-# [watchdogs](https://github.com/ClericPy/watchdogs) [![PyPI](https://img.shields.io/pypi/v/watchdogs?style=plastic)](https://pypi.org/project/watchdogs/)![PyPI - Wheel](https://img.shields.io/pypi/wheel/watchdogs?style=plastic)![PyPI - Python Version](https://img.shields.io/pypi/pyversions/watchdogs?style=plastic)![PyPI - Downloads](https://img.shields.io/pypi/dm/watchdogs?style=plastic)![PyPI - License](https://img.shields.io/pypi/l/watchdogs?style=plastic)
+# [watchdogs](https://github.com/ClericPy/watchdogs) [![PyPI](https://img.shields.io/pypi/v/watchdogs?style=plastic)](https://pypi.org/project/watchdogs/) ![PyPI - Wheel](https://img.shields.io/pypi/wheel/watchdogs?style=plastic) ![PyPI - Python Version](https://img.shields.io/pypi/pyversions/watchdogs?style=plastic) ![PyPI - Downloads](https://img.shields.io/pypi/dm/watchdogs?style=plastic) ![PyPI - License](https://img.shields.io/pypi/l/watchdogs?style=plastic)
 
 Watchdogs to keep an eye on the world's change.
 
 ## Intro
 
-1. This is a web app based on [fastapi](https://github.com/tiangolo/fastapi), [databases](https://github.com/encode/databases), [uniparser](https://github.com/ClericPy/uniparser).
-2. The implementation of views is to be plug-in and portable, which means it can be mounted on other web apps as a [sub app](https://fastapi.tiangolo.com/advanced/sub-applications-proxy/#mount-the-sub-application):
-    1. `app.mount("/uniparser", uniparser_app)`
-3. Quite simple to create new crawler with the Web UI.
-4. All the crawlers runs in the async environment.
-5. Almost all the buttons has a *title* attribute to describe the features in Web UI, so docs will not come very early.
+1. This is a web app based on [fastapi](https://github.com/tiangolo/fastapi), [databases](https://github.com/encode/databases), [uniparser](https://github.com/ClericPy/uniparser), [torequests](https://github.com/ClericPy/torequests).
+2. Smoothly deploy by pip: `pip install -U watchdogs;python3 -m watchdogs`
+3. Simple to create new crawler with the Web UI, not like old ways to duplicate crawler code.
+4. All the crawlers run in the async environment.
+5. Almost all the buttons have the *title* attribute to describe the features in Web UI, which means doc lay on the UI.
 
 ## Usage
 
@@ -17,7 +16,7 @@ Watchdogs to keep an eye on the world's change.
 
 2. > python -m watchdogs
 
-3. > view the page on browser: http://127.0.0.1:9901
+3. > Open with a browser: http://127.0.0.1:9901
 
 ### Args
 
