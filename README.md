@@ -43,7 +43,6 @@ Watchdogs to keep an eye on the world's change.
 
 
 ## Screenshots
-<!-- https://github.com/ClericPy/watchdogs/raw/master/ -->
 
 1. Welcome Page (Tasks Page).
 > Here you can see all the tasks meta, goto RSS / Mobile Lite Page, and do some operations to the tasks.
