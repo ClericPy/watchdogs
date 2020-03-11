@@ -190,6 +190,7 @@ async def add_new_task(task: Task):
         else:
             query = tasks.insert()
             values = dict(task)
+            # insert with task_id is None
             _result = await db.execute(query=query, values=values)
         result = {'msg': 'ok'}
         query_tasks.cache_clear()

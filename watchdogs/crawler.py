@@ -10,7 +10,6 @@ from uniparser import Crawler, RuleNotFoundError
 
 from .config import Config
 from .models import query_tasks, tasks, Task
-from .callbacks import CallbackHandler
 
 
 def get_result(item):
