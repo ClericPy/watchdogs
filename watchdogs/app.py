@@ -1,3 +1,4 @@
+from datetime import datetime
 from json import loads
 from pathlib import Path
 from time import time
@@ -11,7 +12,7 @@ from starlette.requests import Request
 from starlette.responses import (HTMLResponse, JSONResponse, PlainTextResponse,
                                  RedirectResponse)
 from starlette.templating import Jinja2Templates
-from torequests.utils import ptime, quote_plus, timeago, urlparse
+from torequests.utils import quote_plus, timeago, urlparse
 from uniparser import CrawlerRule
 from uniparser.fastapi_ui import app as sub_app
 from uniparser.utils import get_host
@@ -36,7 +37,7 @@ app.mount(
 
 templates = Jinja2Templates(
     directory=str((Path(__file__).parent / 'templates').absolute()))
-AUTH_PATH_WHITE_LIST = {'/auth', '/rss'}
+AUTH_PATH_WHITE_LIST = {'/auth', '/rss', '/lite'}
 
 
 @app.on_event("startup")
@@ -137,9 +138,28 @@ async def index(request: Request, tag: str = ''):
     kwargs['cdn_urls'] = Config.cdn_urls
     kwargs['version'] = __version__
     kwargs['rss_url'] = f'/rss?tag={quote_plus(tag)}&sign={md5(tag)}'
+    kwargs['lite_url'] = f'/lite?tag={quote_plus(tag)}&sign={md5(tag)}'
     kwargs['callback_handler_workers'] = ', '.join(
         Config.callback_handler.callback_objects.keys())
     return templates.TemplateResponse("index.html", context=kwargs)
+
+
+@app.get("/lite")
+async def lite(request: Request, tag: str = '', sign: str = ''):
+    valid = await md5_checker(tag, sign, False)
+    if not valid:
+        return PlainTextResponse('signature expired')
+    tasks, _ = await query_tasks(tag=tag)
+    now = datetime.now()
+    for task in tasks:
+        result = loads(task['latest_result'] or '{}')
+        task['url'] = result.get('url') or task['origin_url']
+        task['text'] = result.get('text') or ''
+        task['timeago'] = timeago(
+            (now - task['last_change_time']).seconds, 1, 1, short_name=True)
+    kwargs = {'tasks': tasks, 'request': request}
+    kwargs['version'] = __version__
+    return templates.TemplateResponse("lite.html", context=kwargs)
 
 
 @app.post("/add_new_task")
@@ -197,8 +217,7 @@ async def force_crawl(task_name: str):
     try:
         task = await crawl_once(task_name=task_name)
         task['timeago'] = timeago(
-            ptime() - ptime(
-                task['last_change_time'].strftime('%Y-%m-%d %H:%M:%S')),
+            (datetime.now() - task['last_change_time']).seconds,
             1,
             1,
             short_name=True)
@@ -227,14 +246,11 @@ async def load_tasks(
             sort=sort,
             tag=tag,
         )
-        now_ts = ptime()
+        _result = [task for task in _result]
+        now = datetime.now()
         for item in _result:
             item['timeago'] = timeago(
-                now_ts - ptime(
-                    item['last_change_time'].strftime('%Y-%m-%d %H:%M:%S')),
-                1,
-                1,
-                short_name=True)
+                (now - item['last_change_time']).seconds, 1, 1, short_name=True)
         result = {'msg': 'ok', 'tasks': _result, 'has_more': has_more}
     except Exception as e:
         import traceback
@@ -368,7 +384,7 @@ async def rss(request: Request,
               tag: str = '',
               sign: str = '',
               host: str = Header('', alias='Host')):
-    valid = await md5_checker(tag, sign)
+    valid = await md5_checker(tag, sign, False)
     if not valid:
         return PlainTextResponse('signature expired')
     tasks, _ = await query_tasks(tag=tag)

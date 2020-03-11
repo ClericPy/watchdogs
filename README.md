@@ -44,7 +44,27 @@ Watchdogs to keep an eye on the world's change.
 
 ## Screenshots
 
+1. Welcome Page (Tasks Page).
+> Here you can see all the tasks meta, goto RSS / Mobile Lite Page, and do some operations to the tasks.
+
+![image](https://github.com/ClericPy/watchdogs/raw/master/images/1.png)
+
+2. New Task Page.
+> Here based on the latest [uniparser](https://github.com/ClericPy/uniparser) web app, to create new rules and also tasks.
+
 ![image](https://github.com/ClericPy/watchdogs/raw/master/images/2.png)
+
+3. Rules Page.
+> Do some operations for the rules.
+
 ![image](https://github.com/ClericPy/watchdogs/raw/master/images/3.png)
+
+4. API page.
+> Based on [fastapi](https://github.com/tiangolo/fastapi) `/docs` which is generated automatically.
+
 ![image](https://github.com/ClericPy/watchdogs/raw/master/images/4.png)
+
+5. Mobile Page (Lite View).
+> For mobile phone to glimpse the latest result for the current 30 tasks.
+
 ![image](https://github.com/ClericPy/watchdogs/raw/master/images/5.png)

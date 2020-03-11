@@ -140,7 +140,8 @@ async def crawl(task):
             result_list = get_result(item=crawl_result.popitem()[1])
             if not isinstance(result_list, list):
                 result_list = [result_list]
-            logger.info(f'{task.name} Crawl success: {result_list}')
+            # for more log? use force crawl one web UI
+            logger.info(f'{task.name} Crawl success: {result_list}' [:150])
         else:
             msg = 'ERROR: crawl_result schema: {rule_name: {"text": "xxx", "url": "xxx"}} or {rule_name: [{"text": "xxx", "url": "xxx"}]}, but given %s' % crawl_result
             logger.error(msg)
