@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="referrer" content="never">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <link rel="shortcut icon" href="/static/img/favicon.ico" type="image/icon" />
+    <title>Watchdogs lite v{{version}}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <style>
+        a[href^="http"]:empty::before {
+            content: attr(href);
+        }
+
+        html,
+        body {
+            margin: 0 0 0 0;
+            background-color: #f4f8fb;
+        }
+
+        input {
+            border-color: #ecf0f1;
+        }
+
+        a {
+            color: #2e3135;
+            text-decoration: none;
+        }
+
+        #params,
+        #params-toggle {
+            display: none;
+        }
+
+        div.main-body {
+            width: 55%;
+            margin: 0 auto;
+        }
+
+        #params-toggle:checked+#params {
+            display: block;
+        }
+
+        div.articles-main {
+            display: flex;
+            flex-direction: row-reverse;
+            flex-wrap: nowrap;
+            width: 100%;
+        }
+
+        div.articles {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            flex-wrap: nowrap;
+            justify-content: flex-start;
+            align-items: stretch;
+            align-content: stretch;
+        }
+
+
+        div.article {
+            background-color: white;
+            margin: 5px 0 5px 0;
+            padding: 0 1.5em 0px 1.5em;
+
+            border-radius: 2px;
+            box-shadow: 1px 5px 15px rgba(0, 0, 0, .1);
+        }
+
+        div.article .title {
+            margin-bottom: 0;
+        }
+
+        div.article .desc {
+            color: #999;
+            padding-left: 0.2em;
+            font-size: 0.8em;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+        }
+
+        div.article .article-source {
+            color: #999;
+            font-size: 0.7em;
+            padding: 8px 0 0 0;
+            border-top: 1px dotted rgba(0, 0, 0, .1);
+        }
+
+        div.head {
+            background-color: #18688d;
+            margin: auto;
+            padding: 2px;
+            text-align: center;
+        }
+
+        @media (max-width: 900px) {
+            div.articles-main {
+                flex-direction: column;
+            }
+
+            div.main-body {
+                width: 100%;
+                margin: 0 auto;
+            }
+
+            div.head {
+                background-color: #018574;
+                margin: auto;
+                padding: 2px;
+                text-align: center;
+            }
+
+            div.articles-main {
+                width: 100%;
+            }
+        }
+
+
+        div.head a {
+            color: #ecf0f1;
+            text-decoration: none;
+            text-shadow: black 8px 8px 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="main-body">
+        <div class="head">
+            <h1><a href="/">Watchdogs</a></h1>
+        </div>
+        <div class="articles-main">
+            <div class="articles">
+                {% for task in tasks %}
+                <div class="article">
+                    <h3 class="title"><a href="{{task.url}}" target="_blank">{{task.name}}</a></h3>
+                    <p class="desc">{{task.text}}</p>
+                    <p class="review"></p>
+                    <p class="article-source">
+                        <span class="ts_create">{{task.last_change_time.strftime('%Y-%m-%d %H:%M:%S')}}</span>
+                        <!-- <span class="source">{{task.name}}</span> -->
+                        <span class="source"> - {{task.timeago}} ago</span>
+                    </p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

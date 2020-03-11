@@ -50,6 +50,10 @@
         [aria-label="Edit Crawler JSON"] .el-textarea__inner {
             height: 10em;
         }
+        div.foot{
+            display: flex;
+            justify-content: center;
+        }
     </style>
 </head>
 
@@ -134,15 +138,20 @@
                                 </template>
                             </el-table-column>
                         </el-table>
-                        <el-button type="success" style="margin-left: 30%; width: 20%;" :disabled="!has_more" plain>
-                            Page: ${current_page} - Load More</el-button>
-                        <el-button type="primary" @click="reload_tasks" size="" style="margin: 0;"
-                            title="Refresh the page" icon="el-icon-refresh-right"></el-button>
-                        <a href="{{rss_url}}" target="_blank" rel="noopener noreferrer" style="margin: 0;">
-                            <el-button title="Subscribe this tag with RSS reader." size="" style="margin: 0;"
-                                type="warning" icon="el-icon-star-off">
-                                RSS </el-button>
-                        </a>
+                        <div class="foot">
+                            <el-button type="success" style="margin: 0; width: 20%;" :disabled="!has_more" plain>
+                                Page: ${current_page} - Load More</el-button>
+                            <el-button type="primary" @click="reload_tasks" size="" style="margin: 0;"
+                                title="Refresh the page" icon="el-icon-refresh-right"></el-button>
+                            <a href="{{rss_url}}" target="_blank" rel="noopener noreferrer" style="margin: 0;">
+                                <el-button title="Subscribe this tag with RSS reader." size="" style="margin: 0;"
+                                    type="warning" icon="el-icon-star-off"></el-button>
+                            </a>
+                            <a href="{{lite_url}}" target="_blank" rel="noopener noreferrer" style="margin: 0;">
+                                <el-button title="Lite view for mobile" size="" style="margin: 0;"
+                                    icon="el-icon-mobile-phone"></el-button>
+                            </a>
+                        </div>
                     </template>
                 </el-tab-pane>
                 <el-tab-pane label="New Task" name="new">
@@ -502,7 +511,7 @@
                 },
                 reload_tasks() {
                     this.task_list = []
-                    this.current_page = 1
+                    this.current_page = 0
                     this.load_tasks()
                 },
                 load_tasks() {
