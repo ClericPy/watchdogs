@@ -26,10 +26,10 @@ Watchdogs to keep an eye on the world's change.
 > sqlite / mysql / postgresql(not test) url, which [databases](https://github.com/encode/databases) support. Defaults to 'sqlite:///{HOME_PATH}/watchdogs/storage.sqlite'
 - **password**:
 > init password, if null can be set on the first visit on web.
-- **ignore_stdout_log**:
-> remove stdout logging
-- **ignore_file_log**:
-> remove file logging located at {HOME_PATH}/watchdogs folder.
+- **mute_std_log**:
+> remove stdout log for clean stream
+- **mute_file_log**:
+> ignore file log located at {HOME_PATH}/watchdogs folder.
 - **md5_salt**:
 > md5_salt for custom md5(password) / md5(rss_tag)
 - **config_dir**:

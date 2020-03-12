@@ -28,6 +28,10 @@ class Config:
     DEFAULT_HOST_FREQUENCY = (1, 1)
     cdn_urls: dict = {}
     callback_handler = None
+    access_log: bool = True
+    mute_std_log = False
+    mute_file_log = False
+    LOG_FILE_SIZE_MB = {'info': 5, 'error': 5, 'server': 5}
 
 
 def md5(obj, n=32, with_salt=True):
