@@ -7,7 +7,7 @@ from databases import Database
 from .callbacks import CallbackHandler
 from .config import Config, md5
 from .crawler import background_loop
-from .models import RuleStorageDB
+from .models import Metas, RuleStorageDB
 
 
 def init_logger(ignore_stdout_log=False, ignore_file_log=False):
@@ -47,6 +47,7 @@ def setup_db(db_url=None):
         db_url = f'sqlite:///{sqlite_path}'
     Config.db = Database(db_url)
     Config.rule_db = RuleStorageDB(Config.db)
+    Config.metas = Metas(Config.db)
 
 
 def setup_uniparser():
@@ -93,7 +94,7 @@ def setup(
         password='',
         ignore_stdout_log=False,
         ignore_file_log=False,
-        md5_salt=None,
+        md5_salt='',
         use_default_cdn=False,
 ):
     from uniparser.fastapi_ui.views import cdn_urls
@@ -128,26 +129,23 @@ def setup(
 
 async def setup_md5_salt():
     logger = Config.logger
-    query = 'select `value` from metas where `key`="md5_salt"'
-    result = await Config.db.fetch_one(query)
-    exist_salt = result.value if result else None
-    if Config.md5_salt is None:
-        if exist_salt is None:
+    exist_salt = await Config.metas.get('md5_salt', None)
+    if not Config.md5_salt:
+        if exist_salt:
+            # no need to update
+            Config.md5_salt = exist_salt
+            return
+        else:
             # create new salt
             from time import time
             from random import random
             Config.md5_salt = md5(time() * random(), with_salt=False)
-        else:
-            # no need to update
-            Config.md5_salt = exist_salt
-            return
     elif Config.md5_salt == exist_salt:
         # no need to update
         return
     # need to update: new md5_salt from settings, or no exist_salt
     logger.critical(f'Setting md5_salt as {Config.md5_salt}, replaced into db.')
-    query = 'replace into metas (`key`, `value`) values ("md5_salt", :md5_salt)'
-    return await Config.db.execute(query, values={'md5_salt': Config.md5_salt})
+    return await Config.metas.set('md5_salt', Config.md5_salt)
 
 
 async def setup_crawler():
@@ -166,17 +164,15 @@ async def setup_crawler():
 async def update_password(password=None):
     if password is not None:
         Config.password = password
-    query = 'replace into metas (`key`, `value`) values ("admin", :password)'
-    return await Config.db.execute(query, values={'password': Config.password})
+    return await Config.metas.set('admin', Config.password)
 
 
 async def refresh_token():
     if Config.password:
         await update_password()
-    query = 'select `value` from metas where `key`="admin"'
-    result = await Config.db.fetch_one(query)
-    if result and result.value:
-        Config.watchdog_auth = md5(result.value)
+    password = await Config.metas.get('admin', '')
+    if password:
+        Config.watchdog_auth = md5(password)
 
 
 async def setup_app(app):
