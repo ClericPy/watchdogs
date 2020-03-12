@@ -1,4 +1,4 @@
-from logging import Logger
+from logging import getLogger
 from pathlib import Path
 from typing import Optional
 
@@ -12,7 +12,7 @@ class Config:
     if not CONFIG_DIR.is_dir():
         CONFIG_DIR.mkdir()
     db: Optional[Database] = None
-    logger: Optional[Logger] = None
+    logger = getLogger('watchdogs')
     password: str = ''
     rule_db = None
     metas = None

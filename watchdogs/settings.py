@@ -10,8 +10,8 @@ from .crawler import background_loop
 from .models import Metas, RuleStorageDB
 
 
-def init_logger(ignore_stdout_log=False, ignore_file_log=False):
-    logger = logging.getLogger('watchdogs')
+def init_logger(name, ignore_stdout_log=False, ignore_file_log=False):
+    logger = logging.getLogger(name)
     formatter_str = "%(asctime)s %(levelname)-5s [%(name)s] %(filename)s(%(lineno)s): %(message)s"
     formatter = logging.Formatter(formatter_str, datefmt="%Y-%m-%d %H:%M:%S")
     logger.setLevel(logging.INFO)
@@ -101,8 +101,14 @@ def setup(
 
     cdn_urls.update(Config.cdn_urls)
     Config.password = password
-    Config.logger = init_logger(
-        ignore_stdout_log=ignore_stdout_log, ignore_file_log=ignore_file_log)
+    init_logger(
+        'watchdogs',
+        ignore_stdout_log=ignore_stdout_log,
+        ignore_file_log=ignore_file_log)
+    init_logger(
+        'uniparser',
+        ignore_stdout_log=ignore_stdout_log,
+        ignore_file_log=ignore_file_log)
     Config.md5_salt = md5_salt
     if not Config.cdn_urls:
         if use_default_cdn:
