@@ -56,6 +56,8 @@ def start_server(db_url=None,
         uvicorn_kwargs.setdefault('port', 9901)
         uvicorn_kwargs.setdefault('access_log', True)
         Config.access_log = uvicorn_kwargs['access_log']
+        from uvicorn.protocols.http.h11_impl import H11Protocol
+        uvicorn_kwargs.setdefault('http', H11Protocol)
         run(app, **uvicorn_kwargs)
     except Exception:
         logger.error(f'Start server error:\n{format_exc()}')
