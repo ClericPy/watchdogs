@@ -222,6 +222,7 @@ class Task(BaseModel):
 @alru_cache()
 async def query_tasks(
         task_name: Optional[str] = None,
+        task_id: Optional[int] = None,
         page: int = 1,
         page_size: int = 30,
         order_by: str = 'last_change_time',
@@ -232,6 +233,8 @@ async def query_tasks(
     query = tasks.select()
     if task_name:
         query = query.where(tasks.c.name == task_name)
+    if task_id:
+        query = query.where(tasks.c.task_id == task_id)
     if tag:
         query = query.where(tasks.c.tag == tag)
     if order_by and sort:

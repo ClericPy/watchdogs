@@ -10,6 +10,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <style>
+        .result-list a {
+            color: #0065b5;
+        }
+
         a[href^="http"]:empty::before {
             content: attr(href);
         }
@@ -43,14 +47,14 @@
             display: block;
         }
 
-        div.articles-main {
+        div.tasks-main {
             display: flex;
             flex-direction: row-reverse;
             flex-wrap: nowrap;
             width: 100%;
         }
 
-        div.articles {
+        div.tasks {
             width: 100%;
             display: flex;
             flex-direction: column;
@@ -61,7 +65,7 @@
         }
 
 
-        div.article {
+        div.task {
             background-color: white;
             margin: 5px 0 5px 0;
             padding: 0 1.5em 0px 1.5em;
@@ -70,11 +74,11 @@
             box-shadow: 1px 5px 15px rgba(0, 0, 0, .1);
         }
 
-        div.article .title {
+        div.task .title {
             margin-bottom: 0;
         }
 
-        div.article .desc {
+        div.task .desc {
             color: #999;
             padding-left: 0.2em;
             font-size: 0.8em;
@@ -85,7 +89,7 @@
             -webkit-line-clamp: 2;
         }
 
-        div.article .article-source {
+        div.task .task-time {
             color: #999;
             font-size: 0.7em;
             padding: 8px 0 0 0;
@@ -100,7 +104,7 @@
         }
 
         @media (max-width: 900px) {
-            div.articles-main {
+            div.tasks-main {
                 flex-direction: column;
             }
 
@@ -116,7 +120,7 @@
                 text-align: center;
             }
 
-            div.articles-main {
+            div.tasks-main {
                 width: 100%;
             }
         }
@@ -127,6 +131,14 @@
             text-decoration: none;
             text-shadow: black 8px 8px 8px;
         }
+
+        .view-more {
+            font-size: 0.5em;
+        }
+
+        .result-list>ol {
+            padding-left: 1em;
+        }
     </style>
 </head>
 
@@ -135,24 +147,60 @@
         <div class="head">
             <h1><a href="/">Watchdogs</a></h1>
         </div>
-        <div class="articles-main">
-            <div class="articles">
+        <div class="tasks-main">
+            <div class="tasks">
                 {% for task in tasks %}
-                <div class="article">
+                <div class="task" id="task-{{task.task_id}}">
                     <h3 class="title"><a href="{{task.url}}" target="_blank">{{task.name}}</a></h3>
                     <p class="desc">{{task.text}}</p>
-                    <p class="review"></p>
-                    <p class="article-source">
+                    <p title="Click to show more" class="task-time" onclick="show_more({{task.task_id}})">
                         <span class="ts_create">{{task.last_change_time.strftime('%Y-%m-%d %H:%M:%S')}}</span>
                         <!-- <span class="source">{{task.name}}</span> -->
                         <span class="source"> - {{task.timeago}} ago</span>
+                        <span class="emoji">📂</span>
+                        <span class="view-more">View More</span>
                     </p>
                 </div>
                 {% endfor %}
             </div>
         </div>
     </div>
-
+    <script>
+        async function show_more(task_id) {
+            let url = new URL(document.location)
+            url.searchParams.set('task_id', task_id)
+            let response = await fetch(url);
+            if (response.ok) {
+                let result_list = (await response.json()).result_list
+                let node = document.querySelector('#task-' + task_id + '>.task-time>.result-list')
+                if (!node) {
+                    node = document.createElement('p')
+                    node.className = 'result-list'
+                    document.querySelector('#task-' + task_id + '>.task-time').appendChild(node)
+                }
+                if (node.innerHTML) {
+                    node.innerHTML = ''
+                    return
+                }
+                let html = '<ol>'
+                result_list.forEach(item => {
+                    let text = item.result.text || ''
+                    let url = item.result.url || ''
+                    if (url) {
+                        url = 'href="' + url + '"'
+                    }
+                    let time = item.time || ''
+                    let line = '<li><a ' + url + ' target="_blank">' + time + ' - ' + unescape(
+                        text) + '</a></li>'
+                    html += line
+                });
+                html += '</ol>'
+                node.innerHTML = html
+            } else {
+                alert("HTTP-Error: " + response.status);
+            }
+        }
+    </script>
 </body>
 
 </html>
