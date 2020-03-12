@@ -208,10 +208,10 @@ async def crawl_once(task_name=None):
                 continue
             # compare latest_result and new list
             # later first, just like the saved result_list sortings
-            old_latest_result = task.latest_result
+            old_latest_result = loads(task.latest_result)
+            # list of dict
             to_insert_result_list = []
             for result in result_list:
-                result = dumps(result, sort_keys=True)
                 if result == old_latest_result:
                     break
                 to_insert_result_list.append(result)
@@ -219,12 +219,15 @@ async def crawl_once(task_name=None):
                 # new result updated
                 CLEAR_CACHE_NEEDED = True
                 query = UpdateTaskQuery(task.task_id)
-                new_latest_result = to_insert_result_list[0]
+                # JSON
+                new_latest_result = dumps(
+                    to_insert_result_list[0], sort_keys=True)
                 query.add('latest_result', new_latest_result)
                 query.add('last_change_time', now)
                 old_result_list = loads(task.result_list or '[]')
                 # older insert first, keep the newer is on the top
                 for result in to_insert_result_list[::-1]:
+                    # result is dict, not json string
                     old_result_list.insert(0, {
                         'result': result,
                         'time': ttime_now

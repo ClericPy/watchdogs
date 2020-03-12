@@ -31,43 +31,46 @@ def start_server(db_url=None,
                  config_dir=None,
                  use_default_cdn=False,
                  **uvicorn_kwargs):
-    if config_dir:
-        config_dir = Path(config_dir)
-        if not config_dir.is_dir():
-            config_dir.mkdir()
-        Config.CONFIG_DIR = config_dir
-    if uninstall:
-        return clear_dir(Config.CONFIG_DIR)
-    # backward compatibility
-    ignore_stdout_log = uvicorn_kwargs.pop('ignore_stdout_log', NotSet)
-    Config.mute_std_log = get_valid_value([ignore_stdout_log, mute_std_log], Config.mute_std_log)
-    ignore_file_log = uvicorn_kwargs.pop('ignore_file_log', NotSet)
-    Config.mute_file_log = get_valid_value([ignore_file_log, mute_file_log], Config.mute_file_log)
-    setup(
-        db_url=db_url,
-        password=password,
-        md5_salt=md5_salt,
-        use_default_cdn=use_default_cdn)
-    from .app import app
-    uvicorn_kwargs.setdefault('port', 9901)
-    uvicorn_kwargs.setdefault('access_log', True)
-    Config.access_log = uvicorn_kwargs['access_log']
-    run(app, **uvicorn_kwargs)
-
-
-def main():
-    logger = init_logger()
     try:
-        argv = sys.argv
-        if ('-h' in argv or '--help' in argv) and '--' not in argv:
-            print(
-                '"-h" and "--help" should be after "--", examples:\n > python -m watchdogs -- -h\n > python run_server.py -- -h'
-            )
-            return
-        Fire(start_server)
+        logger = init_logger()
+        if config_dir:
+            config_dir = Path(config_dir)
+            if not config_dir.is_dir():
+                config_dir.mkdir()
+            Config.CONFIG_DIR = config_dir
+        if uninstall:
+            return clear_dir(Config.CONFIG_DIR)
+        # backward compatibility
+        ignore_stdout_log = uvicorn_kwargs.pop('ignore_stdout_log', NotSet)
+        Config.mute_std_log = get_valid_value([ignore_stdout_log, mute_std_log],
+                                              Config.mute_std_log)
+        ignore_file_log = uvicorn_kwargs.pop('ignore_file_log', NotSet)
+        Config.mute_file_log = get_valid_value([ignore_file_log, mute_file_log],
+                                               Config.mute_file_log)
+        setup(
+            db_url=db_url,
+            password=password,
+            md5_salt=md5_salt,
+            use_default_cdn=use_default_cdn)
+        from .app import app
+        uvicorn_kwargs.setdefault('port', 9901)
+        uvicorn_kwargs.setdefault('access_log', True)
+        Config.access_log = uvicorn_kwargs['access_log']
+        from uvicorn.protocols.http.h11_impl import H11Protocol
+        uvicorn_kwargs.setdefault('http', H11Protocol)
+        run(app, **uvicorn_kwargs)
     except Exception:
         logger.error(f'Start server error:\n{format_exc()}')
 
+
+def main():
+    argv = sys.argv
+    if ('-h' in argv or '--help' in argv) and '--' not in argv:
+        print(
+            '"-h" and "--help" should be after "--", examples:\n > python -m watchdogs -- -h\n > python run_server.py -- -h'
+        )
+        return
+    Fire(start_server)
 
 
 if __name__ == "__main__":
