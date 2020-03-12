@@ -15,6 +15,7 @@ class Config:
     logger: Optional[Logger] = None
     password: str = ''
     rule_db = None
+    metas = None
     check_interval: int = 60
     default_interval: int = 5 * 60
     default_crawler_timeout: int = 30
