@@ -30,7 +30,7 @@ def init_logger():
     if not Config.mute_file_log:
         info_handler = RotatingFileHandler(
             Config.CONFIG_DIR / 'info.log',
-            maxBytes=1024 * 1024 * Config.LOG_FILE_SIZE_MB,
+            maxBytes=1024 * 1024 * Config.LOG_FILE_SIZE_MB['info'],
             backupCount=1)
         info_handler.setLevel(logging.INFO)
         info_handler.setFormatter(formatter)
@@ -39,7 +39,7 @@ def init_logger():
 
         error_handler = RotatingFileHandler(
             Config.CONFIG_DIR / 'error.log',
-            maxBytes=1024 * 1024 * Config.LOG_FILE_SIZE_MB,
+            maxBytes=1024 * 1024 * Config.LOG_FILE_SIZE_MB['error'],
             backupCount=1)
         error_handler.setLevel(logging.ERROR)
         error_handler.setFormatter(formatter)
@@ -48,7 +48,7 @@ def init_logger():
 
         server_handler = RotatingFileHandler(
             Config.CONFIG_DIR / 'server.log',
-            maxBytes=1024 * 1024 * Config.LOG_FILE_SIZE_MB,
+            maxBytes=1024 * 1024 * Config.LOG_FILE_SIZE_MB['server'],
             backupCount=1)
         server_handler.setLevel(logging.INFO)
         server_handler.setFormatter(formatter)
