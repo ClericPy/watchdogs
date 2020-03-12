@@ -34,7 +34,7 @@ app.mount(
     "/static",
     StaticFiles(directory=str((Path(__file__).parent / 'static').absolute())),
     name="static")
-
+logger = Config.logger
 templates = Jinja2Templates(
     directory=str((Path(__file__).parent / 'templates').absolute()))
 AUTH_PATH_WHITE_LIST = {'/auth', '/rss', '/lite'}
@@ -76,7 +76,7 @@ async def exception_handler(request: Request, exc: Exception):
     err_name = exc.__class__.__name__
     err_value = str(exc)
     msg = f'{err_name}({err_value}) trace_id: {trace_id}:\n{format_exc()}'
-    Config.logger.error(msg)
+    logger.error(msg)
     return JSONResponse(
         status_code=500,
         content={
@@ -95,7 +95,6 @@ async def auth(request: Request,
     auth_not_set = not Config.watchdog_auth
     already_authed = watchdog_auth and watchdog_auth == Config.watchdog_auth
     need_new_pwd = auth_not_set or already_authed
-    logger = Config.logger
     if password:
         if need_new_pwd:
             old_password = Config.password
@@ -150,22 +149,33 @@ async def index(request: Request, tag: str = ''):
 
 
 @app.get("/lite")
-async def lite(request: Request, tag: str = '', sign: str = ''):
+async def lite(request: Request,
+               tag: str = '',
+               sign: str = '',
+               task_id: Optional[int] = None):
     valid = await md5_checker(tag, sign, False)
     if not valid:
         return PlainTextResponse('signature expired')
-    tasks, _ = await query_tasks(tag=tag)
-    now = datetime.now()
-    for task in tasks:
-        result = loads(task['latest_result'] or '{}')
-        # for cache...
-        task['url'] = task.get('url') or result.get('url') or task['origin_url']
-        task['text'] = task.get('text') or result.get('text') or ''
-        task['timeago'] = task.get('timeago') or timeago(
-            (now - task['last_change_time']).seconds, 1, 1, short_name=True)
-    kwargs = {'tasks': tasks, 'request': request}
-    kwargs['version'] = __version__
-    return templates.TemplateResponse("lite.html", context=kwargs)
+    tasks, _ = await query_tasks(tag=tag, task_id=task_id)
+    if task_id:
+        if tasks:
+            task = tasks[0]
+            items = loads(task['result_list'] or '[]')
+            return {'result_list': items}
+        else:
+            return {'result_list': []}
+    else:
+        now = datetime.now()
+        for task in tasks:
+            result = loads(task['latest_result'] or '{}')
+            # for cache...
+            task['url'] = task.get('url') or result.get('url') or task['origin_url']
+            task['text'] = task.get('text') or result.get('text') or ''
+            task['timeago'] = task.get('timeago') or timeago(
+                (now - task['last_change_time']).seconds, 1, 1, short_name=True)
+        kwargs = {'tasks': tasks, 'request': request}
+        kwargs['version'] = __version__
+        return templates.TemplateResponse("lite.html", context=kwargs)
 
 
 @app.post("/add_new_task")
@@ -201,7 +211,7 @@ async def add_new_task(task: Task):
         query_tasks.cache_clear()
     except Exception as e:
         result = {'msg': str(e)}
-    Config.logger.info(
+    logger.info(
         f'{"[Update]" if exist else "[Add] new"} task {task}: {result}')
     return result
 
@@ -215,7 +225,7 @@ async def delete_task(task_id: int):
         query_tasks.cache_clear()
     except Exception as e:
         result = {'msg': str(e)}
-    Config.logger.info(f'[Delete] task {task_id}: {result}')
+    logger.info(f'[Delete] task {task_id}: {result}')
     return result
 
 
@@ -231,7 +241,7 @@ async def force_crawl(task_name: str):
         result = {'msg': 'ok', 'task': task}
     except Exception as e:
         result = {'msg': str(e)}
-    Config.logger.info(f'[Force] crawl {task_name}: {result}')
+    logger.info(f'[Force] crawl {task_name}: {result}')
     return result
 
 
@@ -308,7 +318,7 @@ async def get_host_rule(host: str):
         }
     except Exception as e:
         result = {'msg': str(e)}
-    Config.logger.info(f'[Get] host_rule {host}: {result}')
+    logger.info(f'[Get] host_rule {host}: {result}')
     return result
 
 
@@ -324,7 +334,7 @@ async def crawler_rule(method: str, rule: CrawlerRule):
         result = {'msg': 'ok', 'result': _result}
     except Exception as e:
         result = {'msg': str(e)}
-    Config.logger.info(f'[{method.title()}] crawler rule {rule}: {result}')
+    logger.info(f'[{method.title()}] crawler rule {rule}: {result}')
     return result
 
 
@@ -338,7 +348,7 @@ async def find_crawler_rule(request_args: dict):
         result = {'msg': 'ok', 'result': rule.dumps()}
     except Exception as e:
         result = {'msg': str(e)}
-    Config.logger.info(f'[Find] crawler rule: {result}')
+    logger.info(f'[Find] crawler rule: {result}')
     return result
 
 
@@ -351,7 +361,7 @@ async def delete_host_rule(host: str):
         result = {'msg': 'ok'}
     except Exception as e:
         result = {'msg': str(e)}
-    Config.logger.info(f'[Delete] host rule {host}: {result}')
+    logger.info(f'[Delete] host rule {host}: {result}')
     return result
 
 
@@ -410,7 +420,7 @@ async def rss(request: Request,
             format='%a, %d %b %Y %H:%M:%S')
         latest_result: dict = loads(task['latest_result'] or '{}')
         if isinstance(latest_result, list):
-            Config.logger.error(f'latest_result is list: {latest_result}')
+            logger.error(f'latest_result is list: {latest_result}')
         link: str = latest_result.get('url') or task['origin_url']
         description: str = latest_result.get('text') or ''
         title: str = f'{task["name"]}#{description[:80]}'
