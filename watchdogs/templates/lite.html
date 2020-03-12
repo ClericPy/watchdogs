@@ -133,7 +133,7 @@
         }
 
         .view-more {
-            font-size: 0.5em;
+            font-size: 0.6em;
         }
 
         .result-list>ol {
@@ -194,6 +194,9 @@
                         text) + '</a></li>'
                     html += line
                 });
+                if (result_list.length == 0) {
+                    html += 'No results.'
+                }
                 html += '</ol>'
                 node.innerHTML = html
             } else {
