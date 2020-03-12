@@ -95,16 +95,19 @@ async def auth(request: Request,
     auth_not_set = not Config.watchdog_auth
     already_authed = watchdog_auth and watchdog_auth == Config.watchdog_auth
     need_new_pwd = auth_not_set or already_authed
+    logger = Config.logger
     if password:
         if need_new_pwd:
+            old_password = Config.password
             Config.password = password
             await refresh_token()
             resp = RedirectResponse('/')
             resp.set_cookie(
                 'watchdog_auth',
                 Config.watchdog_auth,
-                max_age=86400 * 1,
+                max_age=86400 * 3,
                 httponly=True)
+            logger.warn(f'password changed {old_password}->{Config.password}.')
             return resp
         valid = await md5_checker(password, Config.watchdog_auth)
         if valid:
@@ -114,14 +117,16 @@ async def auth(request: Request,
                 Config.watchdog_auth,
                 max_age=86400 * 3,
                 httponly=True)
+            logger.info('correct password, login success.')
             return resp
-        elif valid is None:
-            return PlainTextResponse('Check password too fast')
+        # elif valid is None:
+        #     return PlainTextResponse('Check password too fast')
         else:
             # invalid password, clear cookie
             resp = RedirectResponse('/auth', 302)
             # resp.set_cookie('watchdog_auth', '')
             resp.delete_cookie('watchdog_auth')
+            logger.info(f'invalid password: {password}')
             return resp
 
     else:
