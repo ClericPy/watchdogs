@@ -3,6 +3,7 @@ from typing import Optional, Tuple
 
 import sqlalchemy
 from async_lru import alru_cache
+from databases import Database
 from pydantic import BaseModel
 from sqlalchemy.sql import text
 from uniparser import CrawlerRule, HostRule
@@ -252,3 +253,45 @@ async def query_tasks(
     Config.logger.info(
         f'[Query] {len(result)} tasks (has_more={has_more}): {query}')
     return result, has_more
+
+
+class Metas(object):
+    """Save & Load some variables with db"""
+
+    def __init__(self, db: Database):
+        self.db = db
+
+    async def set(self, key, value):
+        query = 'replace into metas (`key`, `value`) values (:key, :value)'
+        await Config.db.execute(query, values={'key': key, 'value': value})
+        self.clear_cache()
+        if (await self.get(key)) == value:
+            return True
+        else:
+            return False
+
+    async def remove(self, key):
+        query = 'delete from metas where `key`=:key'
+        await Config.db.execute(query, values={'key': key})
+        self.clear_cache()
+        if not (await self.get(key)):
+            return True
+        else:
+            return False
+
+    @alru_cache()
+    async def _get(self, key, default=None):
+        query = 'select `value` from metas where `key`=:key'
+        result = await self.db.fetch_one(query, values={'key': key})
+        if result:
+            return result.value
+        else:
+            return default
+
+    async def get(self, key, default=None, cache=True):
+        if not cache:
+            self.clear_cache()
+        return await self._get(key, default=default)
+
+    def clear_cache(self):
+        self._get.cache_clear()
