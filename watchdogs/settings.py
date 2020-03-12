@@ -9,35 +9,57 @@ from .config import Config, md5
 from .crawler import background_loop
 from .models import Metas, RuleStorageDB
 
+NotSet = type('NotSet', (object,), {})
 
-def init_logger(ignore_stdout_log=False, ignore_file_log=False):
+
+def get_valid_value(values: list, default=None, invalid=NotSet):
+    for value in values:
+        if value is not invalid:
+            return value
+    return default
+
+
+def init_logger():
     logger = logging.getLogger('watchdogs')
+    logger.addHandler(logging.NullHandler())
+    uniparser_logger = logging.getLogger('uniparser')
+    uvicorn_logger = logging.getLogger('uvicorn')
     formatter_str = "%(asctime)s %(levelname)-5s [%(name)s] %(filename)s(%(lineno)s): %(message)s"
     formatter = logging.Formatter(formatter_str, datefmt="%Y-%m-%d %H:%M:%S")
     logger.setLevel(logging.INFO)
-
-    if not ignore_file_log:
-        handler = RotatingFileHandler(
+    if not Config.mute_file_log:
+        info_handler = RotatingFileHandler(
             Config.CONFIG_DIR / 'info.log',
-            maxBytes=1024 * 1024 * 5,
+            maxBytes=1024 * 1024 * Config.LOG_FILE_SIZE_MB,
             backupCount=1)
-        handler.setLevel(logging.INFO)
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
+        info_handler.setLevel(logging.INFO)
+        info_handler.setFormatter(formatter)
+        logger.addHandler(info_handler)
+        uniparser_logger.addHandler(info_handler)
 
-        handler = RotatingFileHandler(
+        error_handler = RotatingFileHandler(
             Config.CONFIG_DIR / 'error.log',
-            maxBytes=1024 * 1024 * 1,
+            maxBytes=1024 * 1024 * Config.LOG_FILE_SIZE_MB,
             backupCount=1)
-        handler.setLevel(logging.ERROR)
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
+        error_handler.setLevel(logging.ERROR)
+        error_handler.setFormatter(formatter)
+        logger.addHandler(error_handler)
+        uniparser_logger.addHandler(error_handler)
 
-    if not ignore_stdout_log:
+        server_handler = RotatingFileHandler(
+            Config.CONFIG_DIR / 'server.log',
+            maxBytes=1024 * 1024 * Config.LOG_FILE_SIZE_MB,
+            backupCount=1)
+        server_handler.setLevel(logging.INFO)
+        server_handler.setFormatter(formatter)
+        uvicorn_logger.addHandler(server_handler)
+
+    if not Config.mute_std_log:
         handler = logging.StreamHandler()
         handler.setLevel(logging.INFO)
         handler.setFormatter(formatter)
         logger.addHandler(handler)
+        uniparser_logger.addHandler(handler)
     return logger
 
 
@@ -92,8 +114,6 @@ def setup_uniparser():
 def setup(
         db_url=None,
         password='',
-        ignore_stdout_log=False,
-        ignore_file_log=False,
         md5_salt='',
         use_default_cdn=False,
 ):
@@ -101,8 +121,6 @@ def setup(
 
     cdn_urls.update(Config.cdn_urls)
     Config.password = password
-    Config.logger = init_logger(
-        ignore_stdout_log=ignore_stdout_log, ignore_file_log=ignore_file_log)
     Config.md5_salt = md5_salt
     if not Config.cdn_urls:
         if use_default_cdn:
@@ -175,7 +193,26 @@ async def refresh_token():
         Config.watchdog_auth = md5(password)
 
 
+def mute_loggers():
+    names = ['', 'uvicorn', 'watchdogs', 'uniparser']
+    if Config.mute_std_log:
+        for name in names:
+            logger = logging.getLogger(name)
+            logger.handlers = [
+                i for i in logger.handlers
+                if not isinstance(i, logging.StreamHandler)
+            ]
+    if Config.mute_file_log:
+        for name in names:
+            logger = logging.getLogger(name)
+            logger.handlers = [
+                i for i in logger.handlers
+                if not isinstance(i, logging.FileHandler)
+            ]
+
+
 async def setup_app(app):
+    mute_loggers()
     setup_uniparser()
     db = Config.db
     if db:
@@ -183,7 +220,6 @@ async def setup_app(app):
         from .models import create_tables
         create_tables(str(db.url))
         await setup_md5_salt()
-        # background_loop
         await setup_crawler()
         await refresh_token()
         ensure_future(background_loop())
