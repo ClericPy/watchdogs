@@ -71,11 +71,11 @@ async def add_auth_checker(request: Request, call_next):
 
 
 @app.exception_handler(Exception)
-async def unicorn_exception_handler(request: Request, exc: Exception):
-    trace_id = str(time())
+async def exception_handler(request: Request, exc: Exception):
+    trace_id = str(int(time() * 1000))
     err_name = exc.__class__.__name__
     err_value = str(exc)
-    msg = f'{err_name}({err_value}) catched {trace_id}:\n{format_exc()}'
+    msg = f'{err_name}({err_value}) trace_id: {trace_id}:\n{format_exc()}'
     Config.logger.error(msg)
     return JSONResponse(
         status_code=500,

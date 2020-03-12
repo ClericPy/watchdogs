@@ -4,7 +4,7 @@ from pathlib import Path
 from fire import Fire
 from uvicorn import run
 
-from .settings import Config, setup
+from .settings import Config, NotSet, get_valid_value, setup
 
 
 def clear_dir(dir_path):
@@ -24,8 +24,8 @@ def clear_dir(dir_path):
 def start_server(db_url=None,
                  password=None,
                  uninstall=False,
-                 ignore_stdout_log=False,
-                 ignore_file_log=False,
+                 mute_std_log=NotSet,
+                 mute_file_log=NotSet,
                  md5_salt=None,
                  config_dir=None,
                  use_default_cdn=False,
@@ -37,16 +37,20 @@ def start_server(db_url=None,
         Config.CONFIG_DIR = config_dir
     if uninstall:
         return clear_dir(Config.CONFIG_DIR)
+    # backward compatibility
+    ignore_stdout_log = uvicorn_kwargs.pop('ignore_stdout_log', NotSet)
+    Config.mute_std_log = get_valid_value([ignore_stdout_log, mute_std_log], Config.mute_std_log)
+    ignore_file_log = uvicorn_kwargs.pop('ignore_file_log', NotSet)
+    Config.mute_file_log = get_valid_value([ignore_file_log, mute_file_log], Config.mute_file_log)
     setup(
         db_url=db_url,
         password=password,
-        ignore_stdout_log=ignore_stdout_log,
-        ignore_file_log=ignore_file_log,
         md5_salt=md5_salt,
         use_default_cdn=use_default_cdn)
     from .app import app
-    if 'port' not in uvicorn_kwargs:
-        uvicorn_kwargs['port'] = 9901
+    uvicorn_kwargs.setdefault('port', 9901)
+    uvicorn_kwargs.setdefault('access_log', True)
+    Config.access_log = uvicorn_kwargs['access_log']
     run(app, **uvicorn_kwargs)
 
 
