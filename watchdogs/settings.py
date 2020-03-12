@@ -4,10 +4,10 @@ from logging.handlers import RotatingFileHandler
 
 from databases import Database
 
+from .callbacks import CallbackHandler
 from .config import Config, md5
 from .crawler import background_loop
 from .models import RuleStorageDB
-from .callbacks import CallbackHandler
 
 
 def init_logger(ignore_stdout_log=False, ignore_file_log=False):
@@ -50,9 +50,39 @@ def setup_db(db_url=None):
 
 
 def setup_uniparser():
-    from uniparser.parsers import Uniparser, AsyncFrequency
+    from torequests.utils import (
+        curlparse, escape, guess_interval, itertools_chain, json, parse_qs,
+        parse_qsl, ptime, quote, quote_plus, slice_by_size, slice_into_pieces,
+        split_n, timeago, ttime, unescape, unique, unquote, unquote_plus,
+        urljoin, urlparse, urlsplit, urlunparse)
+    from uniparser.parsers import Uniparser, AsyncFrequency, UDFParser
     from uniparser.config import GlobalConfig
 
+    UDFParser._GLOBALS_ARGS.update({
+        'curlparse': curlparse,
+        'escape': escape,
+        'guess_interval': guess_interval,
+        'itertools_chain': itertools_chain,
+        'json': json,
+        'parse_qs': parse_qs,
+        'parse_qsl': parse_qsl,
+        'ptime': ptime,
+        'quote': quote,
+        'quote_plus': quote_plus,
+        'slice_by_size': slice_by_size,
+        'slice_into_pieces': slice_into_pieces,
+        'split_n': split_n,
+        'timeago': timeago,
+        'ttime': ttime,
+        'unescape': unescape,
+        'unique': unique,
+        'unquote': unquote,
+        'unquote_plus': unquote_plus,
+        'urljoin': urljoin,
+        'urlparse': urlparse,
+        'urlsplit': urlsplit,
+        'urlunparse': urlunparse,
+    })
     GlobalConfig.GLOBAL_TIMEOUT = Config.downloader_timeout
     Uniparser._DEFAULT_ASYNC_FREQUENCY = AsyncFrequency(
         *Config.DEFAULT_HOST_FREQUENCY)
