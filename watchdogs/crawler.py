@@ -208,7 +208,7 @@ async def crawl_once(task_name=None):
                 continue
             # compare latest_result and new list
             # later first, just like the saved result_list sortings
-            old_latest_result = task.latest_result
+            old_latest_result = loads(task.latest_result)
             # list of dict
             to_insert_result_list = []
             for result in result_list:
