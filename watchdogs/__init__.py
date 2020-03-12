@@ -1,4 +1,4 @@
 import logging
 
-__version__ = '1.2.3'
+__version__ = '1.2.4'
 logging.getLogger('watchdogs').addHandler(logging.NullHandler())
