@@ -21,7 +21,6 @@ def get_valid_value(values: list, default=None, invalid=NotSet):
 
 def init_logger():
     logger = logging.getLogger('watchdogs')
-    logger.addHandler(logging.NullHandler())
     uniparser_logger = logging.getLogger('uniparser')
     uvicorn_logger = logging.getLogger('uvicorn')
     formatter_str = "%(asctime)s %(levelname)-5s [%(name)s] %(filename)s(%(lineno)s): %(message)s"
@@ -195,20 +194,31 @@ async def refresh_token():
 
 def mute_loggers():
     names = ['', 'uvicorn', 'watchdogs', 'uniparser']
+    logger = Config.logger
     if Config.mute_std_log:
+        logger.info('Mute std logs')
         for name in names:
-            logger = logging.getLogger(name)
-            logger.handlers = [
-                i for i in logger.handlers
-                if not isinstance(i, logging.StreamHandler)
+            _logger = logging.getLogger(name)
+            old_handlers = _logger.handlers
+            _logger.handlers = [
+                i for i in old_handlers
+                if i.__class__ is not logging.StreamHandler
             ]
+            logger.info(
+                f'[MUTE] log {name or "root"}: {old_handlers} => {_logger.handlers}'
+            )
     if Config.mute_file_log:
+        logger.info('Mute std logs')
         for name in names:
-            logger = logging.getLogger(name)
-            logger.handlers = [
-                i for i in logger.handlers
-                if not isinstance(i, logging.FileHandler)
+            _logger = logging.getLogger(name)
+            old_handlers = _logger.handlers
+            _logger.handlers = [
+                i for i in old_handlers
+                if i.__class__ is not RotatingFileHandler
             ]
+            logger.info(
+                f'[MUTE] log {name or "root"}: {old_handlers} => {_logger.handlers}'
+            )
 
 
 async def setup_app(app):
