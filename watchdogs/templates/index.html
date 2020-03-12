@@ -640,7 +640,7 @@
                     var text = '<table>'
                     var items = JSON.parse(row.result_list || '[]')
                     items.forEach(item => {
-                        result = JSON.parse(item.result)
+                        result = item.result
                         if (result.url) {
                             var href = 'href="' + (result.url || '') + '"'
                         } else {
