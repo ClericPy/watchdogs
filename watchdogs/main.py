@@ -1,10 +1,11 @@
 import sys
 from pathlib import Path
+from traceback import format_exc
 
 from fire import Fire
 from uvicorn import run
 
-from .settings import Config, NotSet, get_valid_value, setup
+from .settings import Config, NotSet, get_valid_value, init_logger, setup
 
 
 def clear_dir(dir_path):
@@ -55,13 +56,18 @@ def start_server(db_url=None,
 
 
 def main():
-    argv = sys.argv
-    if ('-h' in argv or '--help' in argv) and '--' not in argv:
-        print(
-            '"-h" and "--help" should be after "--", examples:\n > python -m watchdogs -- -h\n > python run_server.py -- -h'
-        )
-        return
-    Fire(start_server)
+    logger = init_logger()
+    try:
+        argv = sys.argv
+        if ('-h' in argv or '--help' in argv) and '--' not in argv:
+            print(
+                '"-h" and "--help" should be after "--", examples:\n > python -m watchdogs -- -h\n > python run_server.py -- -h'
+            )
+            return
+        Fire(start_server)
+    except Exception:
+        logger.error(f'Start server error:\n{format_exc()}')
+
 
 
 if __name__ == "__main__":
