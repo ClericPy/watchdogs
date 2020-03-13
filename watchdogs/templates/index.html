@@ -50,7 +50,8 @@
         [aria-label="Edit Crawler JSON"] .el-textarea__inner {
             height: 10em;
         }
-        div.foot{
+
+        div.foot {
             display: flex;
             justify-content: center;
         }
@@ -208,6 +209,10 @@
         </template>
         <el-dialog title="Task Info" :visible.sync="task_info_visible" :close-on-click-modal="false">
             <el-form :model="new_task_form">
+                <el-form-item label="Task ID" title="Unique task id">
+                    <el-input v-model="new_task_form.task_id" disabled autocomplete="off"
+                        placeholder="Task ID, for new task is null" @keyup.enter.native="add_new_task"></el-input>
+                </el-form-item>
                 <el-form-item label="Task Name" title="Input one unique name">
                     <el-input v-model="new_task_form.name" autocomplete="off" title="Press enter to submit"
                         placeholder="Task name, Press enter to submit." @keyup.enter.native="add_new_task"></el-input>
@@ -456,8 +461,8 @@
                         }
                     )
                 },
-                show_form_add_new_task(init_form) {
-                    if (init_form) {
+                show_form_add_new_task(create_new_task) {
+                    if (create_new_task) {
                         let init_name = ''
                         try {
                             init_name = this.sub_app.crawler_rule.name
@@ -465,6 +470,7 @@
                             console.log(error);
                         }
                         this.new_task_form = {
+                            task_id: null,
                             name: init_name,
                             enable: 1,
                             tag: 'default',
@@ -690,6 +696,7 @@
                 },
                 update_task(row) {
                     this.new_task_form = {
+                        task_id: row.task_id,
                         name: row.name,
                         enable: row.enable,
                         tag: row.tag,
