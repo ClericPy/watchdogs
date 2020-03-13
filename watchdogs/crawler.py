@@ -1,6 +1,6 @@
-import datetime
 import re
 from asyncio import ensure_future, sleep, wait
+from datetime import datetime, timedelta
 from json import dumps, loads
 from traceback import format_exc
 from typing import Optional, Tuple
@@ -9,7 +9,7 @@ from torequests.utils import ttime
 from uniparser import Crawler, RuleNotFoundError
 
 from .config import Config
-from .models import query_tasks, tasks, Task
+from .models import Task, query_tasks, tasks
 
 
 def get_result(item):
@@ -152,7 +152,7 @@ async def crawl_once(task_name=None):
     """task_name means force crawl"""
     crawler: Crawler = Config.crawler
     db = crawler.storage.db
-    now = datetime.datetime.now()
+    now = datetime.now()
     logger = Config.logger
     logger.info(f'crawl_once task_name={task_name} start.')
     # sqlite do not has datediff...
@@ -161,9 +161,9 @@ async def crawl_once(task_name=None):
             tasks.c.name == task_name)
     else:
         query = tasks.select().where(tasks.c.enable == 1).where(
-            tasks.c.next_check_time < now)
+            tasks.c.next_check_time <= now)
     todo = []
-    now = datetime.datetime.now()
+    now = datetime.now()
     update_query = 'update tasks set `last_check_time`=:last_check_time,`next_check_time`=:next_check_time where task_id=:task_id'
     update_values = []
     CLEAR_CACHE_NEEDED = False
@@ -285,20 +285,47 @@ class UpdateTaskQuery:
 def find_next_check_time(
         work_hours: str,
         interval: int,
-        now: Optional[datetime.datetime] = None,
-) -> Tuple[bool, datetime.datetime]:
+        now: Optional[datetime] = None,
+) -> Tuple[bool, datetime]:
+    '''Three kinds of format:
+        1. Tow numbers splited by `, `:
+            0, 24   means from 00:00 ~ 23:59, for everyday
+        2. JSON list of int:
+            [1, 19]    means 01:00~01:59 a.m.  07:00~07:59 p.m. for everyday
+        3. Standard strftime format:
+            > Split work_hours by '==', then check
+                if datetime.now().strftime(wh[0]) == wh[1]
+            %A==Friday      means each Friday
+            %m-%d==03-13    means every year 03-13
+            %H==05          means everyday morning 05:00 ~ 05:59
+    '''
+    # find the latest hour fit work_hours, if not exist, return next day 00:00
+    now = now or datetime.now()
+    # 1. check strftime format
+    if '==' in work_hours:
+        fmt, target = work_hours.split('==')
+        current = now.strftime(fmt=fmt)
+        ok = current == target
+        # time machine, to find a later time
+        next_check_time = now
+        for _ in range(60):
+            # check next interval
+            next_check_time = next_check_time + timedelta(seconds=interval)
+            if next_check_time.strftime(fmt=fmt) == target:
+                # gotcha~
+                break
+        return ok, next_check_time
+    # 2. check other simple format
+    current_hour = now.hour
     if work_hours[0] == '[' and work_hours[-1] == ']':
         work_hours_list = sorted(loads(work_hours))
     else:
         nums = [int(num) for num in re.findall(r'\d+', work_hours)]
         work_hours_list = sorted(range(*nums))
-    # find the latest hour fit work_hours, if not exist, return next day 00:00
-    now = now or datetime.datetime.now()
-    current_hour = now.hour
     if current_hour in work_hours_list:
         # on work hour
         ok = True
-        next_check_time = now + datetime.timedelta(seconds=interval)
+        next_check_time = now + timedelta(seconds=interval)
     else:
         ok = False
         # find the latest hour, or next day earlist hour
@@ -307,8 +334,8 @@ def find_next_check_time(
                 next_check_time = now.replace(hour=hour)
                 break
         else:
-            date = now + datetime.timedelta(days=1)
-            next_check_time = date.replace(
+            tomorrow = now + timedelta(days=1)
+            next_check_time = tomorrow.replace(
                 hour=work_hours_list[0], minute=0, second=0, microsecond=0)
     return ok, next_check_time
 
