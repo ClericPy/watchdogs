@@ -116,7 +116,7 @@
                                 <template slot-scope="scope">
                                     <el-link :href="JSON.parse(scope.row.latest_result).url||''" type="info" target="_blank"
                                         :underline="false" title="View.">
-                                        <i class="el-icon-video-play" style="zoom: 1.5;"></i>
+                                        <i class="el-icon-video-play" style="zoom: 1.4;"></i>
                                     </el-link>
                                     <el-link style="display: inline;" @click="show_result_list(scope.row)" type="info"
                                         :underline="false" title="Click to read more.">
@@ -367,14 +367,10 @@
                     if (rule_json) {
                         this.sub_app.new_rule_json = rule_json
                     } else {
-                        if (/xml/g.test(this.sub_app.new_rule_json)) {
-                            let name = 'HTML-' + new Date().getTime().toString().slice(0, -3)
-                            this.sub_app.new_rule_json = '{"name":"' + name +
-                                '","request_args":{"method":"get","url":"http://httpbin.org/html","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[{"name":"text","chain_rules":[["css","body h1","$text"],["python","getitem","[0]"]],"child_rules":""}],"regex":"^http://httpbin.org/html$","encoding":""}'
+                        if (!(/httpbin\.org\/html/g.test(this.sub_app.new_rule_json))) {
+                            this.sub_app.new_rule_json = '{"name":"","request_args":{"method":"get","url":"http://httpbin.org/html","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[{"name":"text","chain_rules":[["css","body h1","$text"],["python","getitem","[0]"]],"child_rules":""}],"regex":"^http://httpbin.org/html$","encoding":""}'
                         } else {
-                            let name = 'RSS-' + new Date().getTime().toString().slice(0, -3)
-                            this.sub_app.new_rule_json = '{"name":"' + name +
-                                '","request_args":{"method":"get","url":"https://importpython.com/blog/feed/","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[{"name":"text","chain_rules":[["xml","channel>item>title","$text"],["python","getitem","[0]"]],"child_rules":""},{"name":"url","chain_rules":[["xml","channel>item>link","$text"],["python","getitem","[0]"]],"child_rules":""}],"regex":"^https?://importpython\.com/blog/feed/$","encoding":""}'
+                            this.sub_app.new_rule_json = '{"name":"","request_args":{"method":"get","url":"https://importpython.com/blog/feed/","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[{"name":"text","chain_rules":[["xml","channel>item>title","$text"],["python","getitem","[0]"]],"child_rules":""},{"name":"url","chain_rules":[["xml","channel>item>link","$text"],["python","getitem","[0]"]],"child_rules":""}],"regex":"^https?://importpython\.com/blog/feed/$","encoding":""}'
                         }
                     }
                     this.sub_app.input_object = ''
