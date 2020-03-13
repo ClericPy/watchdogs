@@ -299,8 +299,8 @@ async def load_hosts(host: str = ''):
     host = get_host(host) or host
     query = 'select `host` from host_rules'
     if host:
-        query += ' where `host`=:host'
-        values = {'host': host}
+        query += ' where `host` like :host'
+        values = {'host': f'%{host}%'}
     else:
         values = {}
     query += ' order by `host` asc'

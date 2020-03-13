@@ -195,7 +195,7 @@
                                 </el-input>
                             </el-form-item>
                         </el-form>
-                        <el-tag style="margin-right: 1em;" v-for="(host,index) in host_list" :key="host"
+                        <el-tag style="margin-right: 1em;" v-for="(host,index) in visible_host_list" :key="host"
                             @click="show_host_rule(host)" effect="dark" :type="tag_types[index%4]">
                             ${ host }
                         </el-tag>
@@ -314,6 +314,7 @@
                     task_list: [],
                     current_page: 0,
                     host_list: [],
+                    visible_host_list: [],
                     current_host: '',
                     tag_types: ['success', 'info', 'warning', 'danger'],
                     query_tasks_args: {
@@ -565,6 +566,7 @@
                             var result = r.body
                             this.current_host = result.host || ''
                             this.host_list = result.hosts
+                            this.visible_host_list = this.host_list
                         }, r => {
                             this.$message.error({
                                 message: 'connect failed: ' + r.status,
@@ -813,7 +815,16 @@
                     )
                 }
             },
-            watch: {},
+            watch: {
+                current_host: function (val) {
+                    this.visible_host_list = []
+                    this.host_list.forEach(host => {
+                        if (host.includes(val)) {
+                            this.visible_host_list.push(host)
+                        }
+                    });
+                },
+            },
             computed: {
                 uni_iframe() {
                     return document.getElementById('uni_iframe')
