@@ -114,8 +114,12 @@
                             </el-table-column>
                             <el-table-column label="latest_result" width="">
                                 <template slot-scope="scope">
-                                    <el-link @click="show_result_list(scope.row)" type="info" :underline="false"
-                                        title="Click to read more.">
+                                    <el-link :href="JSON.parse(scope.row.latest_result).url||''" type="info" target="_blank"
+                                        :underline="false" title="View.">
+                                        <i class="el-icon-video-play" style="zoom: 1.5;"></i>
+                                    </el-link>
+                                    <el-link style="display: inline;" @click="show_result_list(scope.row)" type="info"
+                                        :underline="false" title="Click to read more.">
                                         ${get_latest_result(scope.row.latest_result, 80)}
                                     </el-link>
                                 </template>
