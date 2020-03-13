@@ -169,7 +169,8 @@ async def lite(request: Request,
         for task in tasks:
             result = loads(task['latest_result'] or '{}')
             # for cache...
-            task['url'] = task.get('url') or result.get('url') or task['origin_url']
+            task['url'] = task.get('url') or result.get(
+                'url') or task['origin_url']
             task['text'] = task.get('text') or result.get('text') or ''
             task['timeago'] = task.get('timeago') or timeago(
                 (now - task['last_change_time']).seconds, 1, 1, short_name=True)
@@ -186,11 +187,17 @@ async def add_new_task(task: Task):
             raise ValueError('interval should not less than 60 seconds.')
         db = Config.db
         # check exist
-        query = tasks.select().where(tasks.c.name == task.name)
-        exist = await db.fetch_one(query=query)
-        if exist:
-            query = 'update tasks set `enable`=:enable,`tag`=:tag,`request_args`=:request_args,`origin_url`=:origin_url,`interval`=:interval,`work_hours`=:work_hours,`max_result_count`=:max_result_count,`custom_info`=:custom_info where `name`=:name'
+        if task.task_id is None:
+            # insert new task
+            query = tasks.insert()
+            values = dict(task)
+            # insert with task_id is None
+            _result = await db.execute(query=query, values=values)
+        else:
+            # update old task
+            query = 'update tasks set `name`=:name,`enable`=:enable,`tag`=:tag,`request_args`=:request_args,`origin_url`=:origin_url,`interval`=:interval,`work_hours`=:work_hours,`max_result_count`=:max_result_count,`custom_info`=:custom_info where `task_id`=:task_id'
             values = {
+                'task_id': task.task_id,
                 'name': task.name,
                 'enable': task.enable,
                 'tag': task.tag,
@@ -202,17 +209,11 @@ async def add_new_task(task: Task):
                 'custom_info': task.custom_info,
             }
             _result = await db.execute(query=query, values=values)
-        else:
-            query = tasks.insert()
-            values = dict(task)
-            # insert with task_id is None
-            _result = await db.execute(query=query, values=values)
         result = {'msg': 'ok'}
         query_tasks.cache_clear()
     except Exception as e:
         result = {'msg': str(e)}
-    logger.info(
-        f'{"[Update]" if exist else "[Add] new"} task {task}: {result}')
+    logger.info(f'{"[Update]" if exist else "[Add] new"} task {task}: {result}')
     return result
 
 
