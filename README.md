@@ -9,6 +9,7 @@ Watchdogs to keep an eye on the world's change.
 3. Simple to create new crawler with the Web UI, not like old ways to duplicate crawler code.
 4. All the crawlers run in the async environment.
 5. Almost all the buttons have the *title* attribute to describe the features in Web UI, which means doc lay on the UI.
+6. Release your hands from repetitive refreshing on the browser, subscribe the tasks with RSS reminder extensions, such as Feedbro or RSS Feed Reader. Even some custom reminder inherit watchdogs.callbacks.Callback.
 
 ## Usage
 
