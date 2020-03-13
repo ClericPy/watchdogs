@@ -304,14 +304,14 @@ def find_next_check_time(
     # 1. check strftime format
     if '==' in work_hours:
         fmt, target = work_hours.split('==')
-        current = now.strftime(fmt=fmt)
+        current = now.strftime(fmt)
         ok = current == target
         # time machine, to find a later time
         next_check_time = now
         for _ in range(60):
             # check next interval
             next_check_time = next_check_time + timedelta(seconds=interval)
-            if next_check_time.strftime(fmt=fmt) == target:
+            if next_check_time.strftime(fmt) == target:
                 # gotcha~
                 break
         return ok, next_check_time
