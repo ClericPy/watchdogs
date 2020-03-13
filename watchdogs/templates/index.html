@@ -357,11 +357,12 @@
                     if (rule_json) {
                         this.sub_app.new_rule_json = rule_json
                     } else {
-                        let name = 'C-' + new Date().getTime().toString().slice(0, -3)
                         if (/xml/g.test(this.sub_app.new_rule_json)) {
+                            let name = 'HTML-' + new Date().getTime().toString().slice(0, -3)
                             this.sub_app.new_rule_json = '{"name":"' + name +
                                 '","request_args":{"method":"get","url":"http://httpbin.org/html","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[{"name":"text","chain_rules":[["css","body h1","$text"],["python","getitem","[0]"]],"childs":""}],"regex":"^http://httpbin.org/html$","encoding":""}'
                         } else {
+                            let name = 'RSS-' + new Date().getTime().toString().slice(0, -3)
                             this.sub_app.new_rule_json = '{"name":"' + name +
                                 '","request_args":{"method":"get","url":"https://importpython.com/blog/feed/","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[{"name":"text","chain_rules":[["xml","channel>item>title","$text"],["python","getitem","[0]"]],"childs":""},{"name":"url","chain_rules":[["xml","channel>item>link","$text"],["python","getitem","[0]"]],"childs":""}],"regex":"^https?://importpython\.com/blog/feed/$","encoding":""}'
                         }
