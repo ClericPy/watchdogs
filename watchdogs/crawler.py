@@ -288,7 +288,7 @@ def find_next_check_time(
         now: Optional[datetime] = None,
 ) -> Tuple[bool, datetime]:
     '''Three kinds of format:
-        1. Tow numbers splited by `, `:
+        1. Tow numbers splited by ', ':
             0, 24   means from 00:00 ~ 23:59, for everyday
         2. JSON list of int:
             [1, 19]    means 01:00~01:59 a.m.  07:00~07:59 p.m. for everyday
