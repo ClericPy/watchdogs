@@ -212,11 +212,11 @@
             <el-form :model="new_task_form">
                 <el-form-item label="Task ID" title="Unique task id">
                     <el-input v-model="new_task_form.task_id" disabled autocomplete="off"
-                        placeholder="Task ID, for new task is null" @keyup.enter.native="add_new_task"></el-input>
+                        placeholder="Task ID, for new task is null"></el-input>
                 </el-form-item>
                 <el-form-item label="Task Name" title="Input one unique name">
                     <el-input v-model="new_task_form.name" autocomplete="off" title="Press enter to submit"
-                        placeholder="Task name, Press enter to submit." @keyup.enter.native="add_new_task"></el-input>
+                        @keyup.enter.native="add_new_task" placeholder="Task name, Press enter to submit."></el-input>
                 </el-form-item>
                 <el-form-item label="">
                     <el-switch active-text="Enable" :active-value='1' :inactive-value='0' inactive-text="Disable"
@@ -224,7 +224,8 @@
                     </el-switch>
                 </el-form-item>
                 <el-form-item title="Tag for grouping" label="Tag">
-                    <el-input v-model="new_task_form.tag" autocomplete="off"></el-input>
+                    <el-input v-model="new_task_form.tag" autocomplete="off" title="Press enter to submit"
+                        @keyup.enter.native="add_new_task"></el-input>
                 </el-form-item>
                 <el-form-item title="Input the url, or request_args JSON, or cURL string" label="request_args">
                     <el-button @click="view_crawler_rule_by_req(new_task_form.request_args)" size='mini'
@@ -234,18 +235,21 @@
                         autocomplete="off"></el-input>
                 </el-form-item>
                 <el-form-item title="The url for tracing the source" label="origin_url">
-                    <el-input v-model="new_task_form.origin_url" hold autocomplete="off"
-                        placeholder='default to request_args.url'></el-input>
+                    <el-input v-model="new_task_form.origin_url" autocomplete="off" title="Press enter to submit"
+                        @keyup.enter.native="add_new_task" placeholder='default to request_args.url'></el-input>
                 </el-form-item>
                 <el-form-item title="Crawling loop interval seconds." label="interval">
-                    <el-input v-model="new_task_form.interval" autocomplete="off"></el-input>
+                    <el-input v-model="new_task_form.interval" autocomplete="off" title="Press enter to submit"
+                        @keyup.enter.native="add_new_task"></el-input>
                 </el-form-item>
                 <el-form-item title="Crawler only works at hour in work_hours" label="work_hours">
-                    <el-input v-model="new_task_form.work_hours" autocomplete="off"
-                        placeholder="time range: 0, 24. hours list: [20, 21, 22]"></el-input>
+                    <el-input v-model="new_task_form.work_hours" autocomplete="off" title="Press enter to submit"
+                        @keyup.enter.native="add_new_task" placeholder="time range: 0, 24. hours list: [20, 21, 22]">
+                    </el-input>
                 </el-form-item>
                 <el-form-item title="Max length of the result list." label="max_result_count">
-                    <el-input v-model="new_task_form.max_result_count" autocomplete="off"></el-input>
+                    <el-input v-model="new_task_form.max_result_count" autocomplete="off" title="Press enter to submit"
+                        @keyup.enter.native="add_new_task"></el-input>
                 </el-form-item>
                 <el-form-item title="custom_info for notes, or as callback's variable format like feature_name:text"
                     label="custom_info">

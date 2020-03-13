@@ -106,7 +106,7 @@ async def auth(request: Request,
                 Config.watchdog_auth,
                 max_age=86400 * 3,
                 httponly=True)
-            logger.warn(f'password changed {old_password}->{Config.password}.')
+            logger.warning(f'password changed {old_password}->{Config.password}.')
             return resp
         valid = await md5_checker(password, Config.watchdog_auth)
         if valid:
