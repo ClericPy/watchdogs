@@ -131,8 +131,12 @@ async def auth(request: Request,
     else:
         kwargs: dict = {'request': request}
         kwargs['version'] = __version__
-        kwargs[
-            'prompt_title'] = 'Set a new password' if need_new_pwd else 'Input the password'
+        if need_new_pwd:
+            kwargs['action'] = 'Init'
+            kwargs['prompt_title'] = 'Set a new password'
+        else:
+            kwargs['action'] = 'Login'
+            kwargs['prompt_title'] = 'Input the password'
         return templates.TemplateResponse("auth.html", context=kwargs)
 
 
