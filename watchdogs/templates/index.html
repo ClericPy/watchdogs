@@ -50,7 +50,8 @@
         [aria-label="Edit Crawler JSON"] .el-textarea__inner {
             height: 10em;
         }
-        div.foot{
+
+        div.foot {
             display: flex;
             justify-content: center;
         }
@@ -157,8 +158,9 @@
                 <el-tab-pane label="New Task" name="new">
                     <iframe @load='init_iframe()' src="/uniparser/" frameborder="0" id="uni_iframe"
                         style="width: 100%; height: 90%;"></iframe>
-                    <el-popover style="margin: 0 0 0 20%;" placement="top-start" title="WARNING" width="200"
-                        trigger="hover" content=""><span style="font-size: 1em;">
+                    <el-popover v-on:dblclick.native="window.open('/auth')" title="Double click to change password"
+                        style="margin: 0 0 0 20%;" placement="top-start" title="WARNING" width="200" trigger="hover"
+                        content=""><span style="font-size: 1em;">
                             ParseRule's name should have the keys to generate RSS:
                             <br>
                             <b>text</b>
@@ -208,6 +210,10 @@
         </template>
         <el-dialog title="Task Info" :visible.sync="task_info_visible" :close-on-click-modal="false">
             <el-form :model="new_task_form">
+                <el-form-item label="Task ID" title="Unique task id">
+                    <el-input v-model="new_task_form.task_id" disabled autocomplete="off"
+                        placeholder="Task ID, for new task is null" @keyup.enter.native="add_new_task"></el-input>
+                </el-form-item>
                 <el-form-item label="Task Name" title="Input one unique name">
                     <el-input v-model="new_task_form.name" autocomplete="off" title="Press enter to submit"
                         placeholder="Task name, Press enter to submit." @keyup.enter.native="add_new_task"></el-input>
@@ -352,11 +358,12 @@
                     if (rule_json) {
                         this.sub_app.new_rule_json = rule_json
                     } else {
-                        let name = 'C-' + new Date().getTime().toString().slice(0, -3)
                         if (/xml/g.test(this.sub_app.new_rule_json)) {
+                            let name = 'HTML-' + new Date().getTime().toString().slice(0, -3)
                             this.sub_app.new_rule_json = '{"name":"' + name +
                                 '","request_args":{"method":"get","url":"http://httpbin.org/html","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[{"name":"text","chain_rules":[["css","body h1","$text"],["python","getitem","[0]"]],"childs":""}],"regex":"^http://httpbin.org/html$","encoding":""}'
                         } else {
+                            let name = 'RSS-' + new Date().getTime().toString().slice(0, -3)
                             this.sub_app.new_rule_json = '{"name":"' + name +
                                 '","request_args":{"method":"get","url":"https://importpython.com/blog/feed/","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[{"name":"text","chain_rules":[["xml","channel>item>title","$text"],["python","getitem","[0]"]],"childs":""},{"name":"url","chain_rules":[["xml","channel>item>link","$text"],["python","getitem","[0]"]],"childs":""}],"regex":"^https?://importpython\.com/blog/feed/$","encoding":""}'
                         }
@@ -456,8 +463,8 @@
                         }
                     )
                 },
-                show_form_add_new_task(init_form) {
-                    if (init_form) {
+                show_form_add_new_task(create_new_task) {
+                    if (create_new_task) {
                         let init_name = ''
                         try {
                             init_name = this.sub_app.crawler_rule.name
@@ -465,6 +472,7 @@
                             console.log(error);
                         }
                         this.new_task_form = {
+                            task_id: null,
                             name: init_name,
                             enable: 1,
                             tag: 'default',
@@ -690,6 +698,7 @@
                 },
                 update_task(row) {
                     this.new_task_form = {
+                        task_id: row.task_id,
                         name: row.name,
                         enable: row.enable,
                         tag: row.tag,

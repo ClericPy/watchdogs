@@ -32,6 +32,9 @@ def start_server(db_url=None,
                  use_default_cdn=False,
                  **uvicorn_kwargs):
     try:
+        uvicorn_kwargs.setdefault('port', 9901)
+        uvicorn_kwargs.setdefault('access_log', True)
+        Config.access_log = uvicorn_kwargs['access_log']
         logger = init_logger()
         if config_dir:
             config_dir = Path(config_dir)
@@ -53,10 +56,6 @@ def start_server(db_url=None,
             md5_salt=md5_salt,
             use_default_cdn=use_default_cdn)
         from .app import app
-        uvicorn_kwargs.setdefault('port', 9901)
-        uvicorn_kwargs.setdefault('access_log', True)
-        Config.access_log = uvicorn_kwargs['access_log']
-        uvicorn_kwargs.setdefault('http', 'h11')
         run(app, **uvicorn_kwargs)
     except Exception:
         logger.error(f'Start server error:\n{format_exc()}')
