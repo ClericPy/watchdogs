@@ -23,6 +23,9 @@ def init_logger():
     logger = logging.getLogger('watchdogs')
     uniparser_logger = logging.getLogger('uniparser')
     uvicorn_logger = logging.getLogger('uvicorn')
+    if Config.access_log:
+        # fix https://github.com/encode/uvicorn/issues/523
+        logging.getLogger('uvicorn.access').propagate = True
     formatter_str = "%(asctime)s %(levelname)-5s [%(name)s] %(filename)s(%(lineno)s): %(message)s"
     formatter = logging.Formatter(formatter_str, datefmt="%Y-%m-%d %H:%M:%S")
     logger.setLevel(logging.INFO)
