@@ -327,7 +327,7 @@ Three kinds of format:
         4. Mix up work_days and work_hours:
             > Split work_days and work_hours with ';'
             %w==5;20, 24   means every Friday 20:00 ~ 23:59
-            %w==5;[1, 2, 15]   means every Friday 1 a.m. 2 a.m. 3 p.m.
+            [1, 2, 15];%w==5   means every Friday 1 a.m. 2 a.m. 3 p.m., the work_hours is on the left side.
     '''
     # find the latest hour fit work_hours, if not exist, return next day 00:00
     now = now or datetime.now()
