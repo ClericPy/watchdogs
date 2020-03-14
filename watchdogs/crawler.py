@@ -191,7 +191,7 @@ async def crawl_once(task_name=None):
         update_values.append(values)
         if not ok:
             logger.info(
-                f'Task [{task.name}] is not on work, next_check_time reset to {next_check_time}'
+                f'Task [{task.name}] is not on work time, next_check_time reset to {next_check_time}'
             )
     await db.execute_many(query=update_query, values=update_values)
     logger.info(f'crawl_once crawling {len(todo)} valid tasks.')

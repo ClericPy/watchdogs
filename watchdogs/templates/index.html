@@ -247,6 +247,13 @@
                         @keyup.enter.native="add_new_task" placeholder='default to request_args.url'></el-input>
                 </el-form-item>
                 <el-form-item title="Crawling loop interval seconds." label="interval">
+                    <el-link type="info" @click="new_task_form.interval=600">10 mins</el-link> | 
+                    <el-link type="info" @click="new_task_form.interval=1800">30 mins</el-link> | 
+                    <el-link type="info" @click="new_task_form.interval=3600">1 hrs</el-link> | 
+                    <el-link type="info" @click="new_task_form.interval=3600*3">3 hrs</el-link> | 
+                    <el-link type="info" @click="new_task_form.interval=3600*6">6 hrs</el-link> | 
+                    <el-link type="info" @click="new_task_form.interval=3600*12">12 hrs</el-link> | 
+                    <el-link type="info" @click="new_task_form.interval=86400">1 day</el-link>
                     <el-input v-model="new_task_form.interval" autocomplete="off" title="Press enter to submit"
                         @keyup.enter.native="add_new_task"></el-input>
                 </el-form-item>
