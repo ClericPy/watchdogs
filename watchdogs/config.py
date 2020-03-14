@@ -32,6 +32,7 @@ class Config:
     mute_std_log = False
     mute_file_log = False
     LOG_FILE_SIZE_MB = {'info': 5, 'error': 5, 'server': 5}
+    uvicorn_kwargs: dict = {}
 
 
 def md5(obj, n=32, with_salt=True):
