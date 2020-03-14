@@ -282,28 +282,75 @@ class UpdateTaskQuery:
         }
 
 
-def check_work_time(now, work_hours):
-    # check time chain
-    for i in work_hours.split(';'):
-        # if ok is False, stop checking next step
-        if '==' in work_hours:
-            # check work days, using strftime
-            fmt, target = work_hours.split('==')
-            current = now.strftime(fmt)
-            if current != target:
-                return False
+def _check_work_time(now, work_hours):
+    if '==' in work_hours:
+        # check work days, using strftime
+        fmt, target = work_hours.split('==')
+        current = now.strftime(fmt)
+        # check current time format equals to target
+        return current == target
+    else:
+        # other hours format
+        current_hour = now.hour
+        if work_hours[0] == '[' and work_hours[-1] == ']':
+            work_hours_list = sorted(loads(work_hours))
         else:
-            # other hours format
-            current_hour = now.hour
-            if work_hours[0] == '[' and work_hours[-1] == ']':
-                work_hours_list = sorted(loads(work_hours))
-            else:
-                nums = [int(num) for num in re.findall(r'\d+', work_hours)]
-                work_hours_list = sorted(range(*nums))
-            if current_hour not in work_hours_list:
-                # not on work hour
-                return False
-    return True
+            nums = [int(num) for num in re.findall(r'\d+', work_hours)]
+            work_hours_list = sorted(range(*nums))
+        # check if current_hour is work hour
+        return current_hour in work_hours_list
+
+
+def check_work_time(now, work_hours):
+    """Check time if fit work_hours.
+
+    :: Test Code
+
+            from watchdogs.crawler import check_work_time, datetime
+
+            now = datetime.strptime('2020-03-14 11:47:32', '%Y-%m-%d %H:%M:%S')
+
+            oks = [
+                '0, 24',
+                '[1, 2, 3, 11]',
+                '[1, 2, 3, 11];%Y==2020',
+                '%d==14',
+                '16, 24|[11]',
+                '16, 24|%M==47',
+                '%M==46|%M==47',
+            ]
+
+            for work_hours in oks:
+                ok = check_work_time(now, work_hours)
+                print(ok, work_hours)
+                assert ok
+
+            no_oks = [
+                '0, 5',
+                '[1, 2, 3, 5]',
+                '[1, 2, 3, 11];%Y==2021',
+                '%d==11',
+                '16, 24|[12]',
+                '%M==17|16, 24',
+                '%M==46|[1, 2, 3]',
+            ]
+
+            for work_hours in no_oks:
+                ok = check_work_time(now, work_hours)
+                print(ok, work_hours)
+                assert not ok
+
+    """
+    if '|' in work_hours:
+        if '&' in work_hours or ';' in work_hours:
+            raise ValueError('| can not use with "&" or ";"')
+        return any((_check_work_time(now, partial_work_hour)
+                    for partial_work_hour in work_hours.split('|')))
+    else:
+        if ('&' in work_hours or ';' in work_hours) and '|' in work_hours:
+            raise ValueError('| can not use with "&" or ";"')
+        return all((_check_work_time(now, partial_work_hour)
+                    for partial_work_hour in re.split('&|;', work_hours)))
 
 
 def find_next_check_time(
@@ -325,9 +372,11 @@ Three kinds of format:
             %m-%d==03-13    means every year 03-13
             %H==05          means everyday morning 05:00 ~ 05:59
         4. Mix up work_days and work_hours:
-            > Split work_days and work_hours with ';'
-            %w==5;20, 24   means every Friday 20:00 ~ 23:59
-            [1, 2, 15];%w==5   means every Friday 1 a.m. 2 a.m. 3 p.m., the work_hours is on the left side.
+            > Split work_days and work_hours with ';'/'&' => 'and', '|' for 'or'.
+            %w==5;20, 24        means every Friday 20:00 ~ 23:59
+            [1, 2, 15];%w==5    means every Friday 1 a.m. 2 a.m. 3 p.m., the work_hours is on the left side.
+            %w==5|20, 24        means every Friday or everyday 20:00 ~ 23:59
+            %w==5|%w==2         means every Friday or Tuesday
     '''
     # find the latest hour fit work_hours, if not exist, return next day 00:00
     now = now or datetime.now()
