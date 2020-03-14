@@ -191,7 +191,7 @@ async def crawl_once(task_name=None):
         update_values.append(values)
         if not ok:
             logger.info(
-                f'Task [{task.name}] is not on work, next_check_time reset to {next_check_time}'
+                f'Task [{task.name}] is not on work time, next_check_time reset to {next_check_time}'
             )
     await db.execute_many(query=update_query, values=update_values)
     logger.info(f'crawl_once crawling {len(todo)} valid tasks.')
@@ -282,62 +282,73 @@ class UpdateTaskQuery:
         }
 
 
+def check_work_time(now, work_hours):
+    # check time chain
+    for i in work_hours.split(';'):
+        # if ok is False, stop checking next step
+        if '==' in work_hours:
+            # check work days, using strftime
+            fmt, target = work_hours.split('==')
+            current = now.strftime(fmt)
+            if current != target:
+                return False
+        else:
+            # other hours format
+            current_hour = now.hour
+            if work_hours[0] == '[' and work_hours[-1] == ']':
+                work_hours_list = sorted(loads(work_hours))
+            else:
+                nums = [int(num) for num in re.findall(r'\d+', work_hours)]
+                work_hours_list = sorted(range(*nums))
+            if current_hour not in work_hours_list:
+                # not on work hour
+                return False
+    return True
+
+
 def find_next_check_time(
         work_hours: str,
         interval: int,
         now: Optional[datetime] = None,
 ) -> Tuple[bool, datetime]:
-    '''Three kinds of format:
-        1. Tow numbers splited by ', ':
-            0, 24   means from 00:00 ~ 23:59, for everyday
-        2. JSON list of int:
-            [1, 19]    means 01:00~01:59 a.m.  07:00~07:59 p.m. for everyday
-        3. Standard strftime format:
+    '''
+Three kinds of format:
+
+        1. Tow numbers splited by ', ', as work_hours:
+            0, 24           means from 00:00 ~ 23:59, for everyday
+        2. JSON list of int, as work_hours:
+            [1, 19]         means 01:00~01:59 a.m.  07:00~07:59 p.m. for everyday
+        3. Standard strftime format, as work_days:
             > Split work_hours by '==', then check
                 if datetime.now().strftime(wh[0]) == wh[1]
             %A==Friday      means each Friday
             %m-%d==03-13    means every year 03-13
             %H==05          means everyday morning 05:00 ~ 05:59
+        4. Mix up work_days and work_hours:
+            > Split work_days and work_hours with ';'
+            %w==5;20, 24   means every Friday 20:00 ~ 23:59
+            [1, 2, 15];%w==5   means every Friday 1 a.m. 2 a.m. 3 p.m., the work_hours is on the left side.
     '''
     # find the latest hour fit work_hours, if not exist, return next day 00:00
     now = now or datetime.now()
-    # 1. check strftime format
-    if '==' in work_hours:
-        fmt, target = work_hours.split('==')
-        current = now.strftime(fmt)
-        ok = current == target
-        # time machine, to find a later time
+
+    ok = check_work_time(now, work_hours)
+    if ok:
+        # current time is ok, next_check_time is now+interval
+        next_check_time = now + timedelta(seconds=interval)
+        return ok, next_check_time
+    else:
+        # current time is not ok
         next_check_time = now
+        # time machine to check time fast
         for _ in range(60):
             # check next interval
             next_check_time = next_check_time + timedelta(seconds=interval)
-            if next_check_time.strftime(fmt) == target:
-                # gotcha~
+            _ok = check_work_time(next_check_time, work_hours)
+            if _ok:
+                # current is still False, but next_check_time is True
                 break
         return ok, next_check_time
-    # 2. check other simple format
-    current_hour = now.hour
-    if work_hours[0] == '[' and work_hours[-1] == ']':
-        work_hours_list = sorted(loads(work_hours))
-    else:
-        nums = [int(num) for num in re.findall(r'\d+', work_hours)]
-        work_hours_list = sorted(range(*nums))
-    if current_hour in work_hours_list:
-        # on work hour
-        ok = True
-        next_check_time = now + timedelta(seconds=interval)
-    else:
-        ok = False
-        # find the latest hour, or next day earlist hour
-        for hour in work_hours_list:
-            if hour >= current_hour:
-                next_check_time = now.replace(hour=hour)
-                break
-        else:
-            tomorrow = now + timedelta(days=1)
-            next_check_time = tomorrow.replace(
-                hour=work_hours_list[0], minute=0, second=0, microsecond=0)
-    return ok, next_check_time
 
 
 async def background_loop():

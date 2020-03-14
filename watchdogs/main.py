@@ -22,15 +22,15 @@ def clear_dir(dir_path):
     print(f'Folder removed: {dir_path}')
 
 
-def start_server(db_url=None,
-                 password=None,
-                 uninstall=False,
-                 mute_std_log=NotSet,
-                 mute_file_log=NotSet,
-                 md5_salt=None,
-                 config_dir=None,
-                 use_default_cdn=False,
-                 **uvicorn_kwargs):
+def prepare_app(db_url=None,
+                password=None,
+                uninstall=False,
+                mute_std_log=NotSet,
+                mute_file_log=NotSet,
+                md5_salt=None,
+                config_dir=None,
+                use_default_cdn=False,
+                **uvicorn_kwargs):
     try:
         uvicorn_kwargs.setdefault('port', 9901)
         uvicorn_kwargs.setdefault('access_log', True)
@@ -55,10 +55,33 @@ def start_server(db_url=None,
             password=password,
             md5_salt=md5_salt,
             use_default_cdn=use_default_cdn)
-        from .app import app
-        run(app, **uvicorn_kwargs)
+        Config.uvicorn_kwargs = uvicorn_kwargs
+
     except Exception:
         logger.error(f'Start server error:\n{format_exc()}')
+
+
+def start_app(db_url=None,
+              password=None,
+              uninstall=False,
+              mute_std_log=NotSet,
+              mute_file_log=NotSet,
+              md5_salt=None,
+              config_dir=None,
+              use_default_cdn=False,
+              **uvicorn_kwargs):
+    prepare_app(
+        db_url=db_url,
+        password=password,
+        uninstall=uninstall,
+        mute_std_log=mute_std_log,
+        mute_file_log=mute_file_log,
+        md5_salt=md5_salt,
+        config_dir=config_dir,
+        use_default_cdn=use_default_cdn,
+        **uvicorn_kwargs)
+    from .app import app
+    run(app, **Config.uvicorn_kwargs)
 
 
 def main():
@@ -68,7 +91,7 @@ def main():
             '"-h" and "--help" should be after "--", examples:\n > python -m watchdogs -- -h\n > python run_server.py -- -h'
         )
         return
-    Fire(start_server)
+    Fire(start_app)
 
 
 if __name__ == "__main__":
