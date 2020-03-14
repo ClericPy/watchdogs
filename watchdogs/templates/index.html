@@ -826,17 +826,22 @@
                     )
                 },
                 show_work_hours_doc() {
-                    let html = `<pre><code>Three kinds of format:
-        1. Tow numbers splited by ', ':
+                    let html = `<pre><code>
+Three kinds of format:
+        1. Tow numbers splited by ', ', as work_hours:
             0, 24   means from 00:00 ~ 23:59, for everyday
-        2. JSON list of int:
+        2. JSON list of int, as work_hours:
             [1, 19]    means 01:00~01:59 a.m.  07:00~07:59 p.m. for everyday
-        3. Standard strftime format:
+        3. Standard strftime format, as work_days:
             > Split work_hours by '==', then check
                 if datetime.now().strftime(wh[0]) == wh[1]
             %A==Friday      means each Friday
             %m-%d==03-13    means every year 03-13
-            %H==05          means everyday morning 05:00 ~ 05:59</code></pre>`
+            %H==05          means everyday morning 05:00 ~ 05:59
+        4. Mix up work_days and work_hours:
+            > Split work_days and work_hours with ';'
+            %A==Friday;20, 24        means every Friday 20:00 ~ 23:59
+</code></pre>`
                     this.$alert(html, 'work_hours format doc', {
                         dangerouslyUseHTMLString: true
                     });
