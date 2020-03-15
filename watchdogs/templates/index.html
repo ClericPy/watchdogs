@@ -55,6 +55,10 @@
             height: 10em;
         }
 
+        .el-table_1_column_8>.cell {
+            white-space: nowrap;
+        }
+
         div.foot {
             display: flex;
             justify-content: center;
@@ -71,9 +75,9 @@
                         <el-table @cell-dblclick="table_db_click"
                             :default-sort="{prop: 'last_change_time', order: 'descending'}" :data="task_list"
                             style="width: 100%" height="90%" @sort-change="sort_change">
-                            <el-table-column prop="task_id" label="task_id" sortable="custom" min-width="100">
+                            <el-table-column prop="task_id" label="task_id" sortable="custom" width="100">
                             </el-table-column>
-                            <el-table-column prop="name" sortable="custom" label="name" min-width="180">
+                            <el-table-column prop="name" sortable="custom" label="name" width="280">
                                 <template slot-scope="scope">
                                     <el-link :href="scope.row.origin_url" target="_blank" type="primary">
                                         ${scope.row.name}
@@ -87,7 +91,7 @@
                                     </el-link>
                                 </template>
                             </el-table-column>
-                            <el-table-column label="request_args" width="160">
+                            <el-table-column label="request_args" width="220">
                                 <template slot-scope="scope">
                                     <el-popover trigger="hover" placement="right">
                                         <pre><code>${JSON.stringify(JSON.parse(scope.row.request_args), null, 2)}</code></pre>
@@ -113,6 +117,7 @@
                                     </el-link>
                                 </template>
                             </el-table-column>
+                            <el-table-column prop="custom_info" label="custom_info" width="160"></el-table-column>
                             <el-table-column label="latest_result" min-width="160">
                                 <template slot-scope="scope">
                                     <el-link style="display: inline;"
@@ -126,7 +131,6 @@
                                     </el-link>
                                 </template>
                             </el-table-column>
-                            <el-table-column prop="custom_info" label="custom_info" min-width="160"></el-table-column>
                             <el-table-column fixed="right" label="/" min-width="100">
                                 <template slot-scope="scope">
                                     <el-switch v-model="scope.row.enable" :active-value='1' :inactive-value='0'
