@@ -11,6 +11,7 @@ class Config:
     CONFIG_DIR: Path = Path.home() / 'watchdogs'
     if not CONFIG_DIR.is_dir():
         CONFIG_DIR.mkdir()
+    ENCODING = 'utf-8'
     db: Optional[Database] = None
     logger = getLogger('watchdogs')
     password: str = ''
@@ -31,7 +32,7 @@ class Config:
     access_log: bool = True
     mute_std_log = False
     mute_file_log = False
-    LOG_FILE_SIZE_MB = {'info': 5, 'error': 5, 'server': 5}
+    LOG_FILE_SIZE_MB = {'info': 2, 'error': 5, 'server': 2}
     uvicorn_kwargs: dict = {}
 
 
