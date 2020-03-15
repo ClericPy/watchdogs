@@ -71,11 +71,16 @@
                         <el-table @cell-dblclick="table_db_click"
                             :default-sort="{prop: 'last_change_time', order: 'descending'}" :data="task_list"
                             style="width: 100%" height="90%" @sort-change="sort_change">
-                            <el-table-column prop="task_id" label="task_id" sortable="custom" width="100">
+                            <el-table-column prop="task_id" label="task_id" sortable="custom" min-width="100">
                             </el-table-column>
-                            <el-table-column prop="name" sortable="custom" label="name" width="180">
+                            <el-table-column prop="name" sortable="custom" label="name" min-width="180">
+                                <template slot-scope="scope">
+                                    <el-link :href="scope.row.origin_url" target="_blank" type="primary">
+                                        ${scope.row.name}
+                                    </el-link>
+                                </template>
                             </el-table-column>
-                            <el-table-column sortable="custom" label="tag" width="120">
+                            <el-table-column sortable="custom" label="tag" width="80">
                                 <template slot-scope="scope">
                                     <el-link :href="'?tag='+scope.row.tag" target="_blank" type="primary">
                                         ${scope.row.tag}
@@ -95,19 +100,11 @@
                                     </el-popover>
                                 </template>
                             </el-table-column>
-                            <el-table-column prop="interval" sortable="custom" label="interval" width="80">
+                            <el-table-column prop="interval" sortable="custom" label="interval" width="100">
                             </el-table-column>
                             <el-table-column prop="work_hours" label="work_hours" width="120"></el-table-column>
-                            <el-table-column prop="custom_info" label="custom_info" width="160"></el-table-column>
-                            <el-table-column label="origin_url" sortable="custom" width="220">
-                                <template slot-scope="scope">
-                                    <el-link :href="scope.row.origin_url" target="_blank" type="primary">
-                                        ${scope.row.origin_url}
-                                    </el-link>
-                                </template>
-                            </el-table-column>
                             <el-table-column label="last_change_time" prop="last_change_time" sortable="custom"
-                                width="180">
+                                width="105">
                                 <template slot-scope="scope">
                                     <el-link @click="show_time(scope.row)" type="info" :underline="false"
                                         title="Click to read more.">
@@ -116,10 +113,11 @@
                                     </el-link>
                                 </template>
                             </el-table-column>
-                            <el-table-column label="latest_result" width="">
+                            <el-table-column label="latest_result" min-width="160">
                                 <template slot-scope="scope">
-                                    <el-link :href="JSON.parse(scope.row.latest_result).url||''" type="info"
-                                        target="_blank" :underline="false" title="View.">
+                                    <el-link style="display: inline;"
+                                        :href="JSON.parse(scope.row.latest_result).url||''" type="info" target="_blank"
+                                        :underline="false">
                                         ${get_latest_result(scope.row.latest_result, 80)}
                                     </el-link>
                                     <el-link style="display: inline;" @click="show_result_list(scope.row)" type="info"
@@ -128,7 +126,8 @@
                                     </el-link>
                                 </template>
                             </el-table-column>
-                            <el-table-column fixed="right" label="/" width="100">
+                            <el-table-column prop="custom_info" label="custom_info" min-width="160"></el-table-column>
+                            <el-table-column fixed="right" label="/" min-width="100">
                                 <template slot-scope="scope">
                                     <el-switch v-model="scope.row.enable" :active-value='1' :inactive-value='0'
                                         active-color="#13ce66" inactive-color="#ff4949"
