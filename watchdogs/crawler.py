@@ -202,6 +202,7 @@ async def crawl_once(task_name=None):
             logger.error(f'crawl timeout: {names}')
         ttime_now = ttime()
         changed_tasks = []
+        update_counts = 0
         for t in done:
             task, result_list = t.result()
             if result_list is None:
@@ -216,6 +217,7 @@ async def crawl_once(task_name=None):
                     break
                 to_insert_result_list.append(result)
             if to_insert_result_list:
+                update_counts += 1
                 # new result updated
                 CLEAR_CACHE_NEEDED = True
                 query = UpdateTaskQuery(task.task_id)
@@ -241,7 +243,7 @@ async def crawl_once(task_name=None):
                 task.result_list = new_result_list
                 changed_tasks.append(task)
         logger.info(
-            f'Crawl task_name={task_name} finished. done: {len(done)}, timeout: {len(pending)}'
+            f'Crawl task_name={task_name} finished. Crawled: {len(done)}, Timeout: {len(pending)}, Update: {update_counts}.{" +++" if update_counts else ""}'
         )
         for task in changed_tasks:
             await Config.callback_handler.callback(task)
