@@ -106,7 +106,8 @@ async def auth(request: Request,
                 Config.watchdog_auth,
                 max_age=86400 * 3,
                 httponly=True)
-            logger.warning(f'password changed {old_password}->{Config.password}.')
+            logger.warning(
+                f'password changed {old_password}->{Config.password}.')
             return resp
         valid = await md5_checker(password, Config.watchdog_auth)
         if valid:
@@ -199,7 +200,7 @@ async def add_new_task(task: Task):
             _result = await db.execute(query=query, values=values)
         else:
             # update old task
-            query = 'update tasks set `name`=:name,`enable`=:enable,`tag`=:tag,`request_args`=:request_args,`origin_url`=:origin_url,`interval`=:interval,`work_hours`=:work_hours,`max_result_count`=:max_result_count,`custom_info`=:custom_info where `task_id`=:task_id'
+            query = 'update tasks set `name`=:name,`enable`=:enable,`tag`=:tag,`request_args`=:request_args,`origin_url`=:origin_url,`interval`=:interval,`work_hours`=:work_hours,`max_result_count`=:max_result_count,`custom_info`=:custom_info,`next_check_time`=:next_check_time where `task_id`=:task_id'
             values = {
                 'task_id': task.task_id,
                 'name': task.name,
@@ -211,6 +212,7 @@ async def add_new_task(task: Task):
                 'work_hours': task.work_hours,
                 'max_result_count': task.max_result_count,
                 'custom_info': task.custom_info,
+                'next_check_time': datetime.now(),
             }
             _result = await db.execute(query=query, values=values)
         result = {'msg': 'ok'}
