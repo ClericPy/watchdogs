@@ -268,8 +268,8 @@
                 </el-form-item>
                 <el-form-item title="custom_info for notes, or as callback's variable format like feature_name:text"
                     label="custom_info">
-                    <el-input v-model="new_task_form.custom_info" placeholder="string split by ':', callback_name:arg"
-                        autocomplete="off"></el-input>
+                    <el-input type="textarea" autosize v-model="new_task_form.custom_info"
+                        placeholder="string split by ':' as callback_name:arg" autocomplete="off"></el-input>
                     <b>Callbacks:</b> {{callback_handler_workers}}
                 </el-form-item>
             </el-form>
