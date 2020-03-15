@@ -1,3 +1,4 @@
+from collections import deque
 from datetime import datetime
 from json import loads
 from pathlib import Path
@@ -6,11 +7,12 @@ from traceback import format_exc
 from typing import Optional
 from xml.sax.saxutils import escape
 
+import aiofiles
 from fastapi import Cookie, FastAPI, Header
 from fastapi.staticfiles import StaticFiles
 from starlette.requests import Request
 from starlette.responses import (HTMLResponse, JSONResponse, PlainTextResponse,
-                                 RedirectResponse)
+                                 RedirectResponse, Response)
 from starlette.templating import Jinja2Templates
 from torequests.utils import quote_plus, timeago, urlparse
 from uniparser import CrawlerRule
@@ -26,7 +28,7 @@ from .settings import Config, refresh_token, release_app, setup_app
 app = FastAPI(
     title="Watchdogs",
     description=
-    f"Watchdogs to keep an eye on the world's change.\nRead more: [https://github.com/ClericPy/watchdogs](https://github.com/ClericPy/watchdogs)",
+    f"Watchdogs to keep an eye on the world's change.\nRead more: [https://github.com/ClericPy/watchdogs](https://github.com/ClericPy/watchdogs)\n\n[View Logs](/log)",
     version=__version__)
 sub_app.openapi_prefix = '/uniparser'
 app.mount("/uniparser", sub_app)
@@ -60,6 +62,7 @@ async def add_auth_checker(request: Request, call_next):
         path = urlparse(request.scope['path']).path
         request.scope['path'] = path
     if path in AUTH_PATH_WHITE_LIST or Config.watchdog_auth and watchdog_auth == Config.watchdog_auth:
+        # gateway may do better, but kong used too much memory...
         response = await call_next(request)
         if path.startswith('/static/'):
             response.headers['Cache-Control'] = 'max-age=86400'
@@ -106,7 +109,8 @@ async def auth(request: Request,
                 Config.watchdog_auth,
                 max_age=86400 * 3,
                 httponly=True)
-            logger.warning(f'password changed {old_password}->{Config.password}.')
+            logger.warning(
+                f'password changed {old_password}->{Config.password}.')
             return resp
         valid = await md5_checker(password, Config.watchdog_auth)
         if valid:
@@ -199,7 +203,7 @@ async def add_new_task(task: Task):
             _result = await db.execute(query=query, values=values)
         else:
             # update old task
-            query = 'update tasks set `name`=:name,`enable`=:enable,`tag`=:tag,`request_args`=:request_args,`origin_url`=:origin_url,`interval`=:interval,`work_hours`=:work_hours,`max_result_count`=:max_result_count,`custom_info`=:custom_info where `task_id`=:task_id'
+            query = 'update tasks set `name`=:name,`enable`=:enable,`tag`=:tag,`request_args`=:request_args,`origin_url`=:origin_url,`interval`=:interval,`work_hours`=:work_hours,`max_result_count`=:max_result_count,`custom_info`=:custom_info,`next_check_time`=:next_check_time where `task_id`=:task_id'
             values = {
                 'task_id': task.task_id,
                 'name': task.name,
@@ -211,6 +215,7 @@ async def add_new_task(task: Task):
                 'work_hours': task.work_hours,
                 'max_result_count': task.max_result_count,
                 'custom_info': task.custom_info,
+                'next_check_time': datetime.now(),
             }
             _result = await db.execute(query=query, values=values)
         result = {'msg': 'ok'}
@@ -401,6 +406,27 @@ def gen_rss(data):
 '''
 
 
+@app.get("/log")
+async def log(max_lines: int = 100,
+              refresh_every: int = 0,
+              log_names: str = 'info-server-error'):
+    html = '<style>body{background-color:#FAFAFA;padding:1em;}pre,p{background-color:#ECEFF1;padding: 1em;}</style>'
+    html += f'<meta http-equiv="refresh" content="{refresh_every};">' if refresh_every else ''
+    html += f'<p><a href="?max_lines={max_lines}&refresh_every={refresh_every}&log_names={log_names}">?max_lines={max_lines}&refresh_every={refresh_every}&log_names={log_names}</a></p>'
+    window: deque = deque((), max_lines)
+    names: list = log_names.split('-')
+    for name in names:
+        async with aiofiles.open(
+                Config.CONFIG_DIR / f'{name}.log',
+                encoding=Config.ENCODING) as f:
+            async for line in f:
+                window.append(line)
+        html += f'<hr><h3>{name}.log</h3><hr><pre><code>{"".join(window)}</code></pre>'
+        window.clear()
+    response = HTMLResponse(html)
+    return response
+
+
 @app.get("/rss")
 async def rss(request: Request,
               tag: str = '',
@@ -438,9 +464,10 @@ async def rss(request: Request,
         }
         xml_data['items'].append(item)
     xml: str = gen_rss(xml_data)
-    response = HTMLResponse(
-        xml, headers={'Content-Type': 'text/xml; charset=utf-8'})
-    response.headers['Content-Type'] = 'text/xml; charset=utf-8'
+    response = Response(
+        content=xml,
+        media_type="application/xml",
+        headers={'Content-Type': 'text/xml; charset=utf-8'})
     return response
 
 
