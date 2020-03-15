@@ -24,7 +24,7 @@ Watchdogs to keep an eye on the world's change.
 > python -m watchdogs -- -h
 
 - **db_url**:
-> sqlite / mysql / postgresql(not test) url, which [databases](https://github.com/encode/databases) support. Defaults to 'sqlite:///{HOME_PATH}/watchdogs/storage.sqlite'
+> sqlite / mysql / postgresql(not test) url, which [databases](https://github.com/encode/databases) supports. Defaults to 'sqlite:///{HOME_PATH}/watchdogs/storage.sqlite'
 - **password**:
 > init password, if null can be set on the first visit on web.
 - **mute_std_log**:
@@ -40,7 +40,9 @@ Watchdogs to keep an eye on the world's change.
 - **\*\*uvicorn_kwargs**:
 > uvicorn startup kwargs, such as port, host. Which can be set like: `python -m watchdogs --port=9999 --host=127.0.0.1`
 
+### Quick Start to Create New Task
 
+[Quick Start Screenshots](https://github.com/ClericPy/watchdogs/blob/master/quick_start.md)
 
 ## Screenshots
 
