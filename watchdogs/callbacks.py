@@ -1,9 +1,9 @@
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod, abstractproperty
 from json import loads
+from logging import getLogger
 from traceback import format_exc
 from typing import Dict
 
-from .config import Config
 from .utils import ensure_await_result
 
 
@@ -15,15 +15,12 @@ class Callback(ABC):
 
     More common notify middleware is coming.
     """
+    logger = getLogger('watchdogs')
 
     @abstractmethod
     def callback(self, task):
         """task attributes is new crawled"""
         pass
-
-    @property
-    def logger(self):
-        return Config.logger
 
 
 class ServerChanCallback(Callback):
@@ -51,6 +48,18 @@ class ServerChanCallback(Callback):
         return r.text
 
 
+class CallbackHandlerBase(ABC):
+    logger = getLogger('watchdogs')
+
+    @abstractmethod
+    async def callback(self, task):
+        pass
+
+    @abstractproperty
+    def workers(self):
+        pass
+
+
 class CallbackHandler(object):
 
     def __init__(self):
@@ -68,10 +77,6 @@ class CallbackHandler(object):
             for index, (name,
                         obj) in enumerate(self.callback_objects.items(), 1)
         ])
-
-    @property
-    def logger(self):
-        return Config.logger
 
     async def callback(self, task):
         custom_info: str = task.custom_info.strip()
