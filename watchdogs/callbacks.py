@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
-from inspect import isawaitable
 from json import loads
 from traceback import format_exc
 from typing import Dict
 
 from .config import Config
+from .utils import ensure_await_result
 
 
 class Callback(ABC):
@@ -83,11 +83,7 @@ class CallbackHandler(object):
             self.logger.info(f'callback not found: {name}')
             return
         try:
-            call_result = cb.callback(task)
-            if isawaitable(call_result):
-                call_result = await call_result
-            else:
-                call_result = call_result
+            call_result = await ensure_await_result(cb.callback(task))
             self.logger.info(
                 f'{cb.name} callback({arg}) for task {task.name} {call_result}: '
             )
