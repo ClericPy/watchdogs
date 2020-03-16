@@ -51,6 +51,14 @@ class ServerChanCallback(Callback):
 class CallbackHandlerBase(ABC):
     logger = getLogger('watchdogs')
 
+    def __init__(self):
+        self.callback_objects: Dict[str, Callback] = {}
+        for cls in Callback.__subclasses__():
+            if not hasattr(cls, 'name'):
+                self.logger.error(f'{cls} missing class attribute: `name`.')
+                continue
+            self.callback_objects[cls.name] = cls()
+
     @abstractmethod
     async def callback(self, task):
         pass
@@ -60,15 +68,10 @@ class CallbackHandlerBase(ABC):
         pass
 
 
-class CallbackHandler(object):
+class CallbackHandler(CallbackHandlerBase):
 
     def __init__(self):
-        self.callback_objects: Dict[str, Callback] = {}
-        for cls in Callback.__subclasses__():
-            if not hasattr(cls, 'name'):
-                self.logger.error(f'{cls} missing class attribute: `name`.')
-                continue
-            self.callback_objects[cls.name] = cls()
+        super().__init__()
 
     @property
     def workers(self) -> str:

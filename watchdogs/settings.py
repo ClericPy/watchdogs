@@ -1,5 +1,6 @@
 import logging
-from asyncio import ensure_future
+from asyncio import ensure_future, get_event_loop
+from datetime import datetime
 from logging.handlers import RotatingFileHandler
 
 from databases import Database
@@ -33,7 +34,8 @@ def init_logger():
         info_handler = RotatingFileHandler(
             Config.CONFIG_DIR / 'info.log',
             maxBytes=1024 * 1024 * Config.LOG_FILE_SIZE_MB['info'],
-            backupCount=1, encoding=Config.ENCODING)
+            backupCount=1,
+            encoding=Config.ENCODING)
         info_handler.setLevel(logging.INFO)
         info_handler.setFormatter(formatter)
         logger.addHandler(info_handler)
@@ -42,7 +44,8 @@ def init_logger():
         error_handler = RotatingFileHandler(
             Config.CONFIG_DIR / 'error.log',
             maxBytes=1024 * 1024 * Config.LOG_FILE_SIZE_MB['error'],
-            backupCount=1, encoding=Config.ENCODING)
+            backupCount=1,
+            encoding=Config.ENCODING)
         error_handler.setLevel(logging.ERROR)
         error_handler.setFormatter(formatter)
         logger.addHandler(error_handler)
@@ -51,7 +54,8 @@ def init_logger():
         server_handler = RotatingFileHandler(
             Config.CONFIG_DIR / 'server.log',
             maxBytes=1024 * 1024 * Config.LOG_FILE_SIZE_MB['server'],
-            backupCount=1, encoding=Config.ENCODING)
+            backupCount=1,
+            encoding=Config.ENCODING)
         server_handler.setLevel(logging.INFO)
         server_handler.setFormatter(formatter)
         uvicorn_logger.addHandler(server_handler)
@@ -145,6 +149,8 @@ def setup(
             }
 
     setup_db(db_url)
+    if Config.db_backup_function is None:
+        Config.db_backup_function = default_db_backup_sqlite
 
 
 async def setup_md5_salt():
@@ -242,3 +248,16 @@ async def setup_app(app):
 async def release_app(app):
     if Config.db:
         await Config.db.disconnect()
+
+
+async def default_db_backup_sqlite():
+    current_hour = datetime.now().strftime('%H')
+    for path in Config.CONFIG_DIR.iterdir():
+        if path.name == 'storage.sqlite':
+            import shutil
+            backup_path = Config.CONFIG_DIR / f'storage-{current_hour}.sqlite'
+            # 3.6 has no get_running_loop
+            loop = get_event_loop()
+            future = loop.run_in_executor(None, shutil.copy, str(path),
+                                          str(backup_path))
+            return await future
