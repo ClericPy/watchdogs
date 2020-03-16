@@ -1,15 +1,19 @@
 # [watchdogs](https://github.com/ClericPy/watchdogs) [![PyPI](https://img.shields.io/pypi/v/watchdogs?style=plastic)](https://pypi.org/project/watchdogs/)![PyPI - Wheel](https://img.shields.io/pypi/wheel/watchdogs?style=plastic)![PyPI - Python Version](https://img.shields.io/pypi/pyversions/watchdogs?style=plastic)![PyPI - Downloads](https://img.shields.io/pypi/dm/watchdogs?style=plastic)![PyPI - License](https://img.shields.io/pypi/l/watchdogs?style=plastic)
 
-Watchdogs to keep an eye on the world's change.
+Keep an eye on the world's change.
+
+Such as `steam price fluctuation` / `new post articals` / `news on the web portal` / `server api health`, and so on...
 
 ## Intro
 
 1. This is a web app based on [fastapi](https://github.com/tiangolo/fastapi), [databases](https://github.com/encode/databases), [uniparser](https://github.com/ClericPy/uniparser), [torequests](https://github.com/ClericPy/torequests).
-2. Smoothly deploy by pip: `pip install -U watchdogs;python3 -m watchdogs`
+2. Smoothly deploy it by pip: `pip install -U watchdogs;python3 -m watchdogs`
 3. Simple to create new crawler with the Web UI, not like old ways to duplicate crawler code.
-4. All the crawlers run in the async environment.
-5. Almost all the buttons have the *title* attribute to describe the features in Web UI, which means doc lay on the UI.
-6. Release your hands from repetitive refreshing on the browser, subscribe the tasks with RSS reminder extensions, such as Feedbro or RSS Feed Reader. Even some custom reminder inherit watchdogs.callbacks.Callback.
+4. All the crawlers keep runing in the async environment.
+5. Almost all the elements have a *title* attribute to describe the features in the Web UI, which means docs lay on the UI.
+6. Release your hands from repetitive refreshing on the browser.
+    1. Subscribe the change events with RSS reminder extensions, such as Feedbro or RSS Feed Reader.
+    2. Or implement custom reminders by inheriting `watchdogs.callbacks.Callback`.
 
 ## Usage
 
@@ -19,7 +23,7 @@ Watchdogs to keep an eye on the world's change.
 
 3. > Open with a browser: http://127.0.0.1:9901
 
-### Args
+### Command line args
 
 > python -m watchdogs -- -h
 

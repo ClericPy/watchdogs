@@ -1,10 +1,10 @@
-from abc import ABC, abstractmethod
-from inspect import isawaitable
+from abc import ABC, abstractmethod, abstractproperty
 from json import loads
+from logging import getLogger
 from traceback import format_exc
 from typing import Dict
 
-from .config import Config
+from .utils import ensure_await_result
 
 
 class Callback(ABC):
@@ -15,15 +15,12 @@ class Callback(ABC):
 
     More common notify middleware is coming.
     """
+    logger = getLogger('watchdogs')
 
     @abstractmethod
     def callback(self, task):
         """task attributes is new crawled"""
         pass
-
-    @property
-    def logger(self):
-        return Config.logger
 
 
 class ServerChanCallback(Callback):
@@ -51,7 +48,8 @@ class ServerChanCallback(Callback):
         return r.text
 
 
-class CallbackHandler(object):
+class CallbackHandlerBase(ABC):
+    logger = getLogger('watchdogs')
 
     def __init__(self):
         self.callback_objects: Dict[str, Callback] = {}
@@ -61,6 +59,20 @@ class CallbackHandler(object):
                 continue
             self.callback_objects[cls.name] = cls()
 
+    @abstractmethod
+    async def callback(self, task):
+        pass
+
+    @abstractproperty
+    def workers(self):
+        pass
+
+
+class CallbackHandler(CallbackHandlerBase):
+
+    def __init__(self):
+        super().__init__()
+
     @property
     def workers(self) -> str:
         return '\n'.join([
@@ -68,10 +80,6 @@ class CallbackHandler(object):
             for index, (name,
                         obj) in enumerate(self.callback_objects.items(), 1)
         ])
-
-    @property
-    def logger(self):
-        return Config.logger
 
     async def callback(self, task):
         custom_info: str = task.custom_info.strip()
@@ -83,11 +91,7 @@ class CallbackHandler(object):
             self.logger.info(f'callback not found: {name}')
             return
         try:
-            call_result = cb.callback(task)
-            if isawaitable(call_result):
-                call_result = await call_result
-            else:
-                call_result = call_result
+            call_result = await ensure_await_result(cb.callback(task))
             self.logger.info(
                 f'{cb.name} callback({arg}) for task {task.name} {call_result}: '
             )
