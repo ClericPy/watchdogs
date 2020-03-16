@@ -291,6 +291,12 @@ def _check_work_time(now, work_hours):
         current = now.strftime(fmt)
         # check current time format equals to target
         return current == target
+    elif '!=' in work_hours:
+        # check work days, using strftime
+        fmt, target = work_hours.split('!=')
+        current = now.strftime(fmt)
+        # check current time format equals to target
+        return current != target
     else:
         # other hours format
         current_hour = now.hour
@@ -308,39 +314,44 @@ def check_work_time(now, work_hours):
 
     :: Test Code
 
-            from watchdogs.crawler import check_work_time, datetime
+        from watchdogs.crawler import check_work_time, datetime
 
-            now = datetime.strptime('2020-03-14 11:47:32', '%Y-%m-%d %H:%M:%S')
+        now = datetime.strptime('2020-03-14 11:47:32', '%Y-%m-%d %H:%M:%S')
 
-            oks = [
-                '0, 24',
-                '[1, 2, 3, 11]',
-                '[1, 2, 3, 11];%Y==2020',
-                '%d==14',
-                '16, 24|[11]',
-                '16, 24|%M==47',
-                '%M==46|%M==47',
-            ]
+        oks = [
+            '0, 24',
+            '[1, 2, 3, 11]',
+            '[1, 2, 3, 11];%Y==2020',
+            '%d==14',
+            '16, 24|[11]',
+            '16, 24|%M==47',
+            '%M==46|%M==47',
+            '%H!=11|%d!=12',
+            '16, 24|%M!=41',
+        ]
 
-            for work_hours in oks:
-                ok = check_work_time(now, work_hours)
-                print(ok, work_hours)
-                assert ok
+        for work_hours in oks:
+            ok = check_work_time(now, work_hours)
+            print(ok, work_hours)
+            assert ok
 
-            no_oks = [
-                '0, 5',
-                '[1, 2, 3, 5]',
-                '[1, 2, 3, 11];%Y==2021',
-                '%d==11',
-                '16, 24|[12]',
-                '%M==17|16, 24',
-                '%M==46|[1, 2, 3]',
-            ]
+        no_oks = [
+            '0, 5',
+            '[1, 2, 3, 5]',
+            '[1, 2, 3, 11];%Y==2021',
+            '%d==11',
+            '16, 24|[12]',
+            '%M==17|16, 24',
+            '%M==46|[1, 2, 3]',
+            '%H!=11&%d!=12',
+            '%M!=46;%M!=47',
+        ]
 
-            for work_hours in no_oks:
-                ok = check_work_time(now, work_hours)
-                print(ok, work_hours)
-                assert not ok
+        for work_hours in no_oks:
+            ok = check_work_time(now, work_hours)
+            print(ok, work_hours)
+            assert not ok
+
 
     """
     if '|' in work_hours:
