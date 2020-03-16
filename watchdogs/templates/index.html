@@ -121,7 +121,7 @@
                             <el-table-column label="latest_result" min-width="160">
                                 <template slot-scope="scope">
                                     <el-link style="display: inline;"
-                                        :href="JSON.parse(scope.row.latest_result).url||''" type="info" target="_blank"
+                                        :href="JSON.parse(scope.row.latest_result).url||scope.row.origin_url" type="info" target="_blank"
                                         :underline="false">
                                         ${get_latest_result(scope.row.latest_result, 80)}
                                     </el-link>
