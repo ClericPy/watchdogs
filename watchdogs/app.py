@@ -24,12 +24,8 @@ from .config import md5, md5_checker
 from .crawler import crawl_once
 from .models import Task, query_tasks, tasks
 from .settings import Config, refresh_token, release_app, setup_app
-
-app = FastAPI(
-    title="Watchdogs",
-    description=
-    f"Watchdogs to keep an eye on the world's change.\nRead more: [https://github.com/ClericPy/watchdogs](https://github.com/ClericPy/watchdogs)\n\n[View Logs](/log)",
-    version=__version__)
+description = f"Watchdogs to keep an eye on the world's change.\nRead more: [https://github.com/ClericPy/watchdogs](https://github.com/ClericPy/watchdogs)\n\n[View Logs](/log)"
+app = FastAPI(title="Watchdogs", description=description, version=__version__)
 sub_app.openapi_prefix = '/uniparser'
 app.mount("/uniparser", sub_app)
 app.mount(
@@ -200,7 +196,7 @@ async def add_new_task(task: Task):
             query = tasks.insert()
             values = dict(task)
             # insert with task_id is None
-            _result = await db.execute(query=query, values=values)
+            await db.execute(query=query, values=values)
         else:
             # update old task
             query = 'update tasks set `name`=:name,`enable`=:enable,`tag`=:tag,`request_args`=:request_args,`origin_url`=:origin_url,`interval`=:interval,`work_hours`=:work_hours,`max_result_count`=:max_result_count,`custom_info`=:custom_info,`next_check_time`=:next_check_time where `task_id`=:task_id'
@@ -217,7 +213,7 @@ async def add_new_task(task: Task):
                 'custom_info': task.custom_info,
                 'next_check_time': datetime.now(),
             }
-            _result = await db.execute(query=query, values=values)
+            await db.execute(query=query, values=values)
         result = {'msg': 'ok'}
         query_tasks.cache_clear()
     except Exception as e:
@@ -310,7 +306,7 @@ async def load_hosts(host: str = ''):
         values = {}
     query += ' order by `host` asc'
     _result = await Config.db.fetch_all(query, values)
-    return {'hosts': [i.host for i in _result], 'host': host}
+    return {'hosts': [getattr(i, 'host') for i in _result], 'host': host}
 
 
 @app.get("/get_host_rule")
@@ -323,7 +319,7 @@ async def get_host_rule(host: str):
         _result = await Config.db.fetch_one(query, values)
         result = {
             'msg': 'ok',
-            'host_rule': _result.host_rule
+            'host_rule': getattr(_result, 'host_rule')
             if _result else '{"host": "%s"}' % host
         }
     except Exception as e:
@@ -367,7 +363,7 @@ async def delete_host_rule(host: str):
     try:
         if not host:
             raise ValueError('host should not be null')
-        _result = await Config.rule_db.pop_host_rule(host)
+        await Config.rule_db.pop_host_rule(host)
         result = {'msg': 'ok'}
     except Exception as e:
         result = {'msg': str(e)}

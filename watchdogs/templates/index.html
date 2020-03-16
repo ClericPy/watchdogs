@@ -8,7 +8,6 @@
     <link rel="shortcut icon" href="/static/img/favicon.ico" type="image/icon" />
     <title>Watchdogs v{{version}}</title>
     <meta name="viewport" content="width=device-width, initial-scale=0.3">
-    <!-- <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests"> -->
     <script src="{{cdn_urls['VUE_JS_CDN']}}"></script>
     <script src="{{cdn_urls['ELEMENT_JS_CDN']}}"></script>
     <script src="{{cdn_urls['VUE_RESOURCE_CDN']}}"></script>
@@ -63,6 +62,10 @@
             display: flex;
             justify-content: center;
         }
+
+        .host-tag {
+            margin: 0.5em;
+        }
     </style>
 </head>
 
@@ -91,9 +94,10 @@
                                     </el-link>
                                 </template>
                             </el-table-column>
-                            <el-table-column label="request_args" width="220">
+                            <el-table-column label="request_args" width="180">
                                 <template slot-scope="scope">
-                                    <el-popover trigger="hover" placement="right">
+                                    <el-popover trigger="hover" placement="bottom-start">
+                                        <h4>${ new URL(JSON.parse(scope.row.request_args).url).host }</h4>
                                         <pre><code>${JSON.stringify(JSON.parse(scope.row.request_args), null, 2)}</code></pre>
                                         <el-button @click="view_crawler_rule_by_req(scope.row.request_args)" size='mini'
                                             icon="el-icon-view">View Rule</el-button>
@@ -121,8 +125,8 @@
                             <el-table-column label="latest_result" min-width="160">
                                 <template slot-scope="scope">
                                     <el-link style="display: inline;"
-                                        :href="JSON.parse(scope.row.latest_result).url||''" type="info" target="_blank"
-                                        :underline="false">
+                                        :href="JSON.parse(scope.row.latest_result).url||scope.row.origin_url"
+                                        type="info" target="_blank" :underline="false">
                                         ${get_latest_result(scope.row.latest_result, 80)}
                                     </el-link>
                                     <el-link style="display: inline;" @click="show_result_list(scope.row)" type="info"
@@ -153,14 +157,14 @@
                         <div class="foot">
                             <el-button type="success" style="margin: 0; width: 20%;" :disabled="!has_more" plain>
                                 Page: ${current_page} - Load More</el-button>
-                            <el-button type="primary" @click="reload_tasks" size="" style="margin: 0;"
-                                title="Refresh the page" icon="el-icon-refresh-right"></el-button>
+                            <el-button type="primary" @click="reload_tasks" size="" style="margin: 0;" title="Refresh"
+                                icon="el-icon-refresh-right"></el-button>
                             <a href="{{rss_url}}" target="_blank" rel="noopener noreferrer" style="margin: 0;">
-                                <el-button title="Subscribe this tag with RSS reader." size="" style="margin: 0;"
-                                    type="warning" icon="el-icon-star-off"></el-button>
+                                <el-button title="RSS Feed" size="" style="margin: 0;" type="warning"
+                                    icon="el-icon-star-off"></el-button>
                             </a>
                             <a href="{{lite_url}}" target="_blank" rel="noopener noreferrer" style="margin: 0;">
-                                <el-button title="Lite view for mobile" size="" style="margin: 0;"
+                                <el-button title="Lite page for mobile view" size="" style="margin: 0;"
                                     icon="el-icon-mobile-phone"></el-button>
                             </a>
                         </div>
@@ -193,10 +197,9 @@
                         @click="show_form_add_new_task(true)"> 2.
                         Add
                         New Task</el-button>
-
                 </el-tab-pane>
                 <el-tab-pane label="Rules" name="rules">
-                    <div style="width: 70%;margin: 0 auto;">
+                    <div style="width: 65%;margin: 0 auto;">
                         <el-form @submit.prevent.native="load_hosts" id="input_host_form" label-position="left" inline>
                             <el-form-item>
                                 <el-input v-model="current_host" title="Press enter to submit"
@@ -206,12 +209,13 @@
                                 </el-input>
                             </el-form-item>
                         </el-form>
-                        <el-tag style="margin-right: 1em;" v-for="(host,index) in visible_host_list" :key="host"
-                            @click="show_host_rule(host)" effect="dark" :type="tag_types[index%4]">
-                            ${ host }
-                        </el-tag>
+                        <div class="host-tags">
+                            <el-tag class="host-tag" v-for="(host,index) in visible_host_list" :key="host"
+                                @click="show_host_rule(host)" effect="dark" :type="tag_types[index%5]">
+                                ${ host }
+                            </el-tag>
+                        </div>
                     </div>
-
                 </el-tab-pane>
                 <el-tab-pane label="API" name="apis">
                     <iframe v-if="activeName=='apis'" src="/docs" frameborder="0"
@@ -250,13 +254,15 @@
                         @keyup.enter.native="add_new_task" placeholder='default to request_args.url'></el-input>
                 </el-form-item>
                 <el-form-item title="Crawling loop interval seconds." label="interval">
-                    <el-link type="info" @click="new_task_form.interval=600">10 mins</el-link> |
-                    <el-link type="info" @click="new_task_form.interval=1800">30 mins</el-link> |
-                    <el-link type="info" @click="new_task_form.interval=3600">1 hrs</el-link> |
-                    <el-link type="info" @click="new_task_form.interval=3600*3">3 hrs</el-link> |
-                    <el-link type="info" @click="new_task_form.interval=3600*6">6 hrs</el-link> |
-                    <el-link type="info" @click="new_task_form.interval=3600*12">12 hrs</el-link> |
-                    <el-link type="info" @click="new_task_form.interval=86400">1 day</el-link>
+                    <el-link type="primary" @click="new_task_form.interval=600">10 mins</el-link> |
+                    <el-link type="primary" @click="new_task_form.interval=1800">30 mins</el-link> |
+                    <el-link type="primary" @click="new_task_form.interval=3600">1 hrs</el-link> |
+                    <el-link type="success" @click="new_task_form.interval=3600*3">3 hrs</el-link> |
+                    <el-link type="warning" @click="new_task_form.interval=3600*6">6 hrs</el-link> |
+                    <el-link type="danger" @click="new_task_form.interval=3600*12">12 hrs</el-link> |
+                    <el-link type="info" @click="new_task_form.interval=86400">1 day</el-link> |
+                    <el-link type="info" @click="new_task_form.interval=86400*7">7 days</el-link> |
+                    <el-link type="info" @click="new_task_form.interval=86400*30">30 days</el-link>
                     <el-input v-model="new_task_form.interval" autocomplete="off" title="Press enter to submit"
                         @keyup.enter.native="add_new_task"></el-input>
                 </el-form-item>
@@ -318,9 +324,7 @@
                     </el-col>
                 </el-row>
             </div>
-
         </el-dialog>
-
     </div>
     <script>
         var Main = {
@@ -339,7 +343,7 @@
                     host_list: [],
                     visible_host_list: [],
                     current_host: '',
-                    tag_types: ['success', 'info', 'warning', 'danger'],
+                    tag_types: ['', 'success', 'info', 'warning', 'danger'],
                     query_tasks_args: {
                         order_by: 'last_change_time',
                         sort: 'desc',
@@ -376,7 +380,6 @@
                             });
                         }
                     )
-
                 },
                 init_iframe_crawler_rule(rule_json) {
                     if (rule_json) {
@@ -568,7 +571,6 @@
                                 });
                                 this.has_more = result.has_more
                             }
-
                         }, r => {
                             this.$message.error({
                                 message: 'connect failed: ' + r.status,
@@ -809,7 +811,6 @@
                             message: 'Canceled'
                         });
                     })
-
                 },
                 show_host_rule(host) {
                     this.$http.get('get_host_rule', {
@@ -822,7 +823,6 @@
                             if (result.msg == 'ok') {
                                 this.current_host_rule = JSON.parse(result.host_rule)
                                 this.rule_info_visible = true
-
                             } else {
                                 this.$message.error({
                                     message: 'get_host_rule failed: ' + JSON.stringify(result),
