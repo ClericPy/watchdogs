@@ -94,9 +94,10 @@
                                     </el-link>
                                 </template>
                             </el-table-column>
-                            <el-table-column label="request_args" width="220">
+                            <el-table-column label="request_args" width="180">
                                 <template slot-scope="scope">
-                                    <el-popover trigger="hover" placement="right">
+                                    <el-popover trigger="hover" placement="bottom-start">
+                                        <h4>${ new URL(JSON.parse(scope.row.request_args).url).host }</h4>
                                         <pre><code>${JSON.stringify(JSON.parse(scope.row.request_args), null, 2)}</code></pre>
                                         <el-button @click="view_crawler_rule_by_req(scope.row.request_args)" size='mini'
                                             icon="el-icon-view">View Rule</el-button>
