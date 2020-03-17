@@ -2,7 +2,7 @@
 
 Keep an eye on the world's change.
 
-Such as `steam price fluctuation` / `new post articals` / `news on the web portal` / `server api health`, and so on...
+Such as `steam price fluctuation` / `new post articals` / `news on the web portal` / `server api health` / `binge-watching`,  and so on...
 
 ## Intro
 
