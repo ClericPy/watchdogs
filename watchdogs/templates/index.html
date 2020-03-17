@@ -66,6 +66,10 @@
         .host-tag {
             margin: 0.5em;
         }
+
+        .el-table .warning-row {
+            background: oldlace;
+        }
     </style>
 </head>
 
@@ -75,7 +79,7 @@
             <el-tabs @tab-click="handleClick" v-model="activeName" class="full-screen" stretch='true'>
                 <el-tab-pane label="Tasks" name="tasks">
                     <template>
-                        <el-table @cell-dblclick="table_db_click"
+                        <el-table @cell-dblclick="table_db_click" :row-class-name="check_error_task"
                             :default-sort="{prop: 'last_change_time', order: 'descending'}" :data="task_list"
                             style="width: 100%" height="90%" @sort-change="sort_change">
                             <el-table-column prop="task_id" label="task_id" sortable="custom" width="100">
@@ -124,6 +128,10 @@
                             <el-table-column prop="custom_info" label="custom_info" width="160"></el-table-column>
                             <el-table-column label="latest_result" min-width="160">
                                 <template slot-scope="scope">
+                                    <i type="warn" v-if="scope.row.error" class="el-icon-warning" circle size="mini"
+                                        style="margin: 0;"
+                                        @click='app.$alert(scope.row.error, "Crawler Error", {closeOnClickModal:true, closeOnPressEscape:true})'>
+                                    </i>
                                     <el-link style="display: inline;"
                                         :href="JSON.parse(scope.row.latest_result).url||scope.row.origin_url"
                                         type="info" target="_blank" :underline="false">
@@ -242,6 +250,10 @@
                     <el-input v-model="new_task_form.tag" autocomplete="off" title="Press enter to submit"
                         @keyup.enter.native="add_new_task"></el-input>
                 </el-form-item>
+                <el-form-item label="Error" title="An error occurred when trying to crawl">
+                    <el-input v-model="new_task_form.error" disabled autocomplete="off" placeholder="No errors.">
+                    </el-input>
+                </el-form-item>
                 <el-form-item title="Input the url, or request_args JSON, or cURL string" label="request_args">
                     <el-button @click="view_crawler_rule_by_req(new_task_form.request_args)" size='mini'
                         icon="el-icon-view"><b>View Rule</b>
@@ -254,13 +266,14 @@
                         @keyup.enter.native="add_new_task" placeholder='default to request_args.url'></el-input>
                 </el-form-item>
                 <el-form-item title="Crawling loop interval seconds." label="interval">
-                    <el-link type="primary" @click="new_task_form.interval=600">10 mins</el-link> |
-                    <el-link type="primary" @click="new_task_form.interval=1800">30 mins</el-link> |
-                    <el-link type="primary" @click="new_task_form.interval=3600">1 hrs</el-link> |
+                    <el-link style="margin-left: 1em;" type="danger" @click="new_task_form.interval=300">5 mins</el-link> |
+                    <el-link type="danger" @click="new_task_form.interval=600">10 mins</el-link> |
+                    <el-link type="warning" @click="new_task_form.interval=1800">30 mins</el-link> |
+                    <el-link type="warning" @click="new_task_form.interval=3600">1 hrs</el-link> |
                     <el-link type="success" @click="new_task_form.interval=3600*3">3 hrs</el-link> |
-                    <el-link type="warning" @click="new_task_form.interval=3600*6">6 hrs</el-link> |
-                    <el-link type="danger" @click="new_task_form.interval=3600*12">12 hrs</el-link> |
-                    <el-link type="info" @click="new_task_form.interval=86400">1 day</el-link> |
+                    <el-link type="success" @click="new_task_form.interval=3600*6">6 hrs</el-link> |
+                    <el-link type="primary" @click="new_task_form.interval=3600*12">12 hrs</el-link> |
+                    <el-link type="primary" @click="new_task_form.interval=86400">1 day</el-link> |
                     <el-link type="info" @click="new_task_form.interval=86400*7">7 days</el-link> |
                     <el-link type="info" @click="new_task_form.interval=86400*30">30 days</el-link>
                     <el-input v-model="new_task_form.interval" autocomplete="off" title="Press enter to submit"
@@ -331,7 +344,6 @@
             data() {
                 return {
                     activeName: 'tasks',
-                    // activeName: 'rules',
                     iframe_loaded: false,
                     task_info_visible: false,
                     rule_info_visible: false,
@@ -361,13 +373,15 @@
                             var result = r.body
                             if (result.msg == 'ok') {
                                 this.$message({
-                                    message: 'Add task success: ' + result.msg,
+                                    message: 'Add task ' + this.new_task_form.name + ' success: ' +
+                                        result.msg,
                                     type: 'success'
                                 });
                                 this.reload_tasks()
                             } else {
                                 this.$message.error({
-                                    message: 'Add task failed: ' + result.msg,
+                                    message: 'Add task ' + this.new_task_form.name + ' failed: ' +
+                                        result.msg,
                                     duration: 0,
                                     showClose: true,
                                 });
@@ -416,7 +430,7 @@
                                 this.task_info_visible = false
                             } else {
                                 this.$message.error({
-                                    message: 'find rule failed: ' + result.msg,
+                                    message: 'rule not find in db: ' + result.msg,
                                     duration: 0,
                                     showClose: true,
                                 });
@@ -501,6 +515,7 @@
                             name: init_name,
                             enable: 1,
                             tag: 'default',
+                            error: '',
                             request_args: '',
                             origin_url: '',
                             interval: 300,
@@ -702,18 +717,26 @@
                         r => {
                             var result = r.body
                             if (result.msg == 'ok') {
-                                this.$message.success({
-                                    message: 'Crawl task success',
-                                });
-                                Vue.set(this.task_list, index, result.task)
+
+                                let task = result.task
+                                Vue.set(this.task_list, index, task)
+                                if (task.error) {
+                                    this.$message.error({
+                                        message: 'Crawl task ' + row.name + ' ' + task.error,
+                                    });
+                                } else {
+                                    this.$message.success({
+                                        message: 'Crawl task ' + row.name + ' success',
+                                    });
+                                }
                             } else {
                                 this.$message.error({
-                                    message: 'Crawl task failed: ' + result.msg,
+                                    message: 'Crawl task ' + row.name + ' failed: ' + result.msg,
                                 });
                             }
                         }, r => {
                             this.$message.error({
-                                message: 'connect failed: ' + r.status,
+                                message: 'force_crawl connect failed: ' + r.status,
                             });
                         }
                     )
@@ -751,12 +774,13 @@
                                 var result = r.body
                                 if (result.msg == 'ok') {
                                     this.$message.success({
-                                        message: 'Delete task success',
+                                        message: 'Delete task ' + row.name + ' success',
                                     });
                                     this.task_list.splice(index, 1)
                                 } else {
                                     this.$message.error({
-                                        message: 'Delete task failed: ' + result.msg,
+                                        message: 'Delete task ' + row.name + ' failed: ' +
+                                            result.msg,
                                     });
                                 }
                             }, r => {
@@ -787,14 +811,14 @@
                                 var result = r.body
                                 if (result.msg == 'ok') {
                                     this.$message.success({
-                                        message: 'Delete host rule success',
+                                        message: 'Delete host ' + host + ' rule success',
                                     });
                                     this.current_host_rule = {}
                                     this.rule_info_visible = false
                                     this.load_hosts()
                                 } else {
                                     this.$message.error({
-                                        message: 'Delete host rule failed: ' + JSON
+                                        message: 'Delete host ' + host + ' rule failed: ' + JSON
                                             .stringify(
                                                 result),
                                     });
@@ -825,7 +849,8 @@
                                 this.rule_info_visible = true
                             } else {
                                 this.$message.error({
-                                    message: 'get_host_rule failed: ' + JSON.stringify(result),
+                                    message: 'get_host_rule ' + host + ' failed: ' + JSON.stringify(
+                                        result),
                                 });
                             }
                         }, r => {
@@ -840,27 +865,37 @@
 Three kinds of format:
 
     1. Tow numbers splited by ', ', as work_hours:
-        0, 24               means from 00:00 ~ 23:59, for everyday
+        0, 24           means from 00:00 ~ 23:59, for everyday
     2. JSON list of int, as work_hours:
-        [1, 19]             means 01:00~01:59 a.m.  07:00~07:59 p.m. for everyday
+        [1, 19]         means 01:00~01:59 a.m.  07:00~07:59 p.m. for everyday
     3. Standard strftime format, as work_days:
         > Split work_hours by '==', then check
             if datetime.now().strftime(wh[0]) == wh[1]
-        %A==Friday          means each Friday
-        %m-%d==03-13        means every year 03-13
-        %H==05              means everyday morning 05:00 ~ 05:59
+        %A==Friday      means each Friday
+        %m-%d==03-13    means every year 03-13
+        %H==05          means everyday morning 05:00 ~ 05:59
     4. Mix up work_days and work_hours:
-        > Split work_days and work_hours with ';'/'&' => 'and', '|' for 'or'.
+        > Split work_days and work_hours with ';'/'&' => 'and', '|' => 'or'.
+        > Support == for equal, != for unequal.
         %w==5;20, 24        means every Friday 20:00 ~ 23:59
         [1, 2, 15];%w==5    means every Friday 1 a.m. 2 a.m. 3 p.m., the work_hours is on the left side.
         %w==5|20, 24        means every Friday or everyday 20:00 ~ 23:59
         %w==5|%w==2         means every Friday or Tuesday
+        %w!=6&%w!=0         means everyday except Saturday & Sunday.
 </code></pre>`
                     this.$alert(html, 'work_hours format doc', {
                         dangerouslyUseHTMLString: true,
                         closeOnClickModal: true,
                         closeOnPressEscape: true,
                     });
+                },
+                check_error_task({
+                    row,
+                    rowIndex
+                }) {
+                    if (row.error) {
+                        return 'warning-row'
+                    }
                 },
             },
             watch: {

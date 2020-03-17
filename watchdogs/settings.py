@@ -5,9 +5,10 @@ from logging.handlers import RotatingFileHandler
 
 from databases import Database
 
+from .background import background_loop, db_backup_handler
 from .callbacks import CallbackHandler
 from .config import Config, md5
-from .crawler import background_loop
+from .crawler import crawl_once
 from .models import Metas, RuleStorageDB
 
 NotSet = type('NotSet', (object,), {})
@@ -230,6 +231,11 @@ def mute_loggers():
             )
 
 
+async def setup_background():
+    loop_funcs = [db_backup_handler, crawl_once]
+    ensure_future(background_loop(loop_funcs))
+
+
 async def setup_app(app):
     mute_loggers()
     setup_uniparser()
@@ -238,10 +244,10 @@ async def setup_app(app):
         await db.connect()
         from .models import create_tables
         create_tables(str(db.url))
+        await setup_background()
         await setup_md5_salt()
         await setup_crawler()
         await refresh_token()
-        ensure_future(background_loop())
     Config.logger.info(f'App start success, CONFIG_DIR: {Config.CONFIG_DIR}')
 
 
@@ -251,13 +257,25 @@ async def release_app(app):
 
 
 async def default_db_backup_sqlite():
-    current_hour = datetime.now().strftime('%H')
-    for path in Config.CONFIG_DIR.iterdir():
-        if path.name == 'storage.sqlite':
+    current_time = datetime.now().strftime('%Y%m%d%H%M%S')
+    for storage_path in Config.CONFIG_DIR.iterdir():
+        if storage_path.name == 'storage.sqlite':
             import shutil
-            backup_path = Config.CONFIG_DIR / f'storage-{current_hour}.sqlite'
+            from pathlib import Path
+            backup_dir: Path = Config.CONFIG_DIR / 'backups'
+            if not backup_dir.is_dir():
+                backup_dir.mkdir()
+            backup_path = backup_dir / f'storage-{current_time}.sqlite'
             # 3.6 has no get_running_loop
             loop = get_event_loop()
-            future = loop.run_in_executor(None, shutil.copy, str(path),
+            # wait for copy
+            future = loop.run_in_executor(None, shutil.copy, str(storage_path),
                                           str(backup_path))
-            return await future
+            await future
+            # remove overdue files
+            backup_file_paths = sorted([i for i in backup_dir.iterdir()],
+                                       key=lambda path: path.name,
+                                       reverse=True)
+            path_to_del = backup_file_paths[Config.backup_count:]
+            for p in path_to_del:
+                p.unlink()
