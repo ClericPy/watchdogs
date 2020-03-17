@@ -58,4 +58,5 @@ class Config:
     uvicorn_kwargs: dict = {}
     # check interval 60s, so format do use %M , backup every 12 hours. this pattern may miss for crawl cost more than 60s.
     db_backup_time: str = '%H:%M==00:00|%H:%M==12:00'
+    backup_count: int = 4
     db_backup_function: Optional[Callable[..., Any]] = None
