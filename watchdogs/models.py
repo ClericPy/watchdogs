@@ -248,7 +248,7 @@ async def query_tasks(
     query = tasks.select()
     if task_name:
         query = query.where(tasks.c.name == task_name)
-    if task_id:
+    if task_id is not None:
         query = query.where(tasks.c.task_id == task_id)
     if tag:
         query = query.where(tasks.c.tag == tag)

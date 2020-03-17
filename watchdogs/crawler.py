@@ -220,7 +220,7 @@ async def _crawl_once(task_name: Optional[str] = None):
             f'Crawl task_name={task_name} finished. Crawled: {len(done)}, Error: {len(crawl_errors)}, Timeout: {len(pending)}, Update: {update_counts}.{" +++" if update_counts else ""}'
         )
         for task in changed_tasks:
-            await Config.callback_handler.callback(task)
+            ensure_future(try_catch(Config.callback_handler.callback, task))
     else:
         logger.info(f'Crawl task_name={task_name} finished. 0 todo.')
     if CLEAR_CACHE_NEEDED:
