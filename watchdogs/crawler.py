@@ -56,11 +56,13 @@ Three kinds of format:
             %m-%d==03-13    means every year 03-13
             %H==05          means everyday morning 05:00 ~ 05:59
         4. Mix up work_days and work_hours:
-            > Split work_days and work_hours with ';'/'&' => 'and', '|' for 'or'.
+            > Split work_days and work_hours with ';'/'&' => 'and', '|' => 'or'.
+            > Support == for equal, != for unequal.
             %w==5;20, 24        means every Friday 20:00 ~ 23:59
             [1, 2, 15];%w==5    means every Friday 1 a.m. 2 a.m. 3 p.m., the work_hours is on the left side.
             %w==5|20, 24        means every Friday or everyday 20:00 ~ 23:59
             %w==5|%w==2         means every Friday or Tuesday
+            %w!=6&%w!=0         means everyday except Saturday & Sunday.
     '''
     # find the latest hour fit work_hours, if not exist, return next day 00:00
     now = now or datetime.now()
