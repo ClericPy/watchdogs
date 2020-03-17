@@ -264,6 +264,9 @@
                     <el-button @click="view_crawler_rule_by_req(new_task_form.request_args)" size='mini'
                         icon="el-icon-view"><b>View Rule</b>
                     </el-button>
+                    <span> | "retry": 2, "timeout": 3, "ssl": False, and other args refer to <a
+                            href="https://docs.aiohttp.org/en/stable/client_reference.html#aiohttp.ClientSession.request"
+                            target="_blank" rel="noopener noreferrer">aiohttp</a> </span>
                     <el-input type="textarea" :autosize="{ minRows: 2, maxRows: 4}" v-model="new_task_form.request_args"
                         autocomplete="off"></el-input>
                 </el-form-item>
