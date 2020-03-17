@@ -161,14 +161,7 @@ async def lite(request: Request,
     if not valid:
         return PlainTextResponse('signature expired')
     tasks, _ = await query_tasks(tag=tag, task_id=task_id)
-    if task_id:
-        if tasks:
-            task = tasks[0]
-            items = loads(task['result_list'] or '[]')
-            return {'result_list': items}
-        else:
-            return {'result_list': []}
-    else:
+    if task_id is None:
         now = datetime.now()
         for task in tasks:
             result = loads(task['latest_result'] or '{}')
@@ -181,6 +174,13 @@ async def lite(request: Request,
         kwargs = {'tasks': tasks, 'request': request}
         kwargs['version'] = __version__
         return templates.TemplateResponse("lite.html", context=kwargs)
+    else:
+        if tasks:
+            task = tasks[0]
+            items = loads(task['result_list'] or '[]')
+            return {'result_list': items}
+        else:
+            return {'result_list': []}
 
 
 @app.post("/add_new_task")
@@ -195,6 +195,7 @@ async def add_new_task(task: Task):
             # insert new task
             query = tasks.insert()
             values = dict(task)
+            values.pop('error', None)
             # insert with task_id is None
             await db.execute(query=query, values=values)
         else:
@@ -276,8 +277,6 @@ async def load_tasks(
                 (now - item['last_change_time']).seconds, 1, 1, short_name=True)
         result = {'msg': 'ok', 'tasks': _result, 'has_more': has_more}
     except Exception as e:
-        import traceback
-        traceback.print_exc()
         result = {'msg': str(e), 'tasks': [], 'has_more': False}
     return result
 

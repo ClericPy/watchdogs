@@ -1,5 +1,6 @@
 from datetime import datetime
 from typing import Optional, Tuple
+from traceback import format_exc
 
 import sqlalchemy
 from async_lru import alru_cache
@@ -26,6 +27,8 @@ tasks = sqlalchemy.Table(
     sqlalchemy.Column(
         "tag", sqlalchemy.String(128), server_default="default",
         nullable=False),
+    sqlalchemy.Column(
+        "error", sqlalchemy.TEXT, nullable=False, server_default=""),
     sqlalchemy.Column("request_args", sqlalchemy.TEXT, nullable=False),
     sqlalchemy.Column(
         "origin_url",
@@ -83,8 +86,18 @@ metas = sqlalchemy.Table(
 
 
 def create_tables(db_url):
-    engine = sqlalchemy.create_engine(db_url)
-    metadata.create_all(engine)
+    try:
+        engine = sqlalchemy.create_engine(db_url)
+        metadata.create_all(engine)
+        # backward compatibility for tasks table without error column
+        try:
+            engine.execute('ALTER TABLE tasks ADD COLUMN error TEXT NOT NULL DEFAULT ""')
+        except Exception:
+            pass
+    except Exception:
+        Config.logger.critical(f'Fatal error on creating Table: {format_exc()}')
+        import os
+        os._exit(1)
 
 
 class RuleStorageDB(RuleStorage):
@@ -206,6 +219,7 @@ class Task(BaseModel):
     name: str
     enable: int = 0
     tag: str = 'default'
+    error: str = ''
     request_args: str
     origin_url: str = ''
     interval: int = 300
