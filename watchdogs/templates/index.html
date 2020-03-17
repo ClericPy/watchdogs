@@ -254,13 +254,14 @@
                         @keyup.enter.native="add_new_task" placeholder='default to request_args.url'></el-input>
                 </el-form-item>
                 <el-form-item title="Crawling loop interval seconds." label="interval">
-                    <el-link type="primary" @click="new_task_form.interval=600">10 mins</el-link> |
-                    <el-link type="primary" @click="new_task_form.interval=1800">30 mins</el-link> |
-                    <el-link type="primary" @click="new_task_form.interval=3600">1 hrs</el-link> |
+                    <el-link type="danger" @click="new_task_form.interval=300">5 mins</el-link> |
+                    <el-link type="danger" @click="new_task_form.interval=600">10 mins</el-link> |
+                    <el-link type="warning" @click="new_task_form.interval=1800">30 mins</el-link> |
+                    <el-link type="warning" @click="new_task_form.interval=3600">1 hrs</el-link> |
                     <el-link type="success" @click="new_task_form.interval=3600*3">3 hrs</el-link> |
-                    <el-link type="warning" @click="new_task_form.interval=3600*6">6 hrs</el-link> |
-                    <el-link type="danger" @click="new_task_form.interval=3600*12">12 hrs</el-link> |
-                    <el-link type="info" @click="new_task_form.interval=86400">1 day</el-link> |
+                    <el-link type="success" @click="new_task_form.interval=3600*6">6 hrs</el-link> |
+                    <el-link type="primary" @click="new_task_form.interval=3600*12">12 hrs</el-link> |
+                    <el-link type="primary" @click="new_task_form.interval=86400">1 day</el-link> |
                     <el-link type="info" @click="new_task_form.interval=86400*7">7 days</el-link> |
                     <el-link type="info" @click="new_task_form.interval=86400*30">30 days</el-link>
                     <el-input v-model="new_task_form.interval" autocomplete="off" title="Press enter to submit"
@@ -840,21 +841,23 @@
 Three kinds of format:
 
     1. Tow numbers splited by ', ', as work_hours:
-        0, 24               means from 00:00 ~ 23:59, for everyday
+        0, 24           means from 00:00 ~ 23:59, for everyday
     2. JSON list of int, as work_hours:
-        [1, 19]             means 01:00~01:59 a.m.  07:00~07:59 p.m. for everyday
+        [1, 19]         means 01:00~01:59 a.m.  07:00~07:59 p.m. for everyday
     3. Standard strftime format, as work_days:
         > Split work_hours by '==', then check
             if datetime.now().strftime(wh[0]) == wh[1]
-        %A==Friday          means each Friday
-        %m-%d==03-13        means every year 03-13
-        %H==05              means everyday morning 05:00 ~ 05:59
+        %A==Friday      means each Friday
+        %m-%d==03-13    means every year 03-13
+        %H==05          means everyday morning 05:00 ~ 05:59
     4. Mix up work_days and work_hours:
-        > Split work_days and work_hours with ';'/'&' => 'and', '|' for 'or'.
+        > Split work_days and work_hours with ';'/'&' => 'and', '|' => 'or'.
+        > Support == for equal, != for unequal.
         %w==5;20, 24        means every Friday 20:00 ~ 23:59
         [1, 2, 15];%w==5    means every Friday 1 a.m. 2 a.m. 3 p.m., the work_hours is on the left side.
         %w==5|20, 24        means every Friday or everyday 20:00 ~ 23:59
         %w==5|%w==2         means every Friday or Tuesday
+        %w!=6&%w!=0         means everyday except Saturday & Sunday.
 </code></pre>`
                     this.$alert(html, 'work_hours format doc', {
                         dangerouslyUseHTMLString: true,
