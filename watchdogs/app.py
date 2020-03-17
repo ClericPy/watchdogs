@@ -169,7 +169,7 @@ async def lite(request: Request,
             task['url'] = task.get('url') or result.get(
                 'url') or task['origin_url']
             task['text'] = task.get('text') or result.get('text') or ''
-            task['timeago'] = task.get('timeago') or timeago(
+            task['timeago'] = timeago(
                 (now - task['last_change_time']).seconds, 1, 1, short_name=True)
         kwargs = {'tasks': tasks, 'request': request}
         kwargs['version'] = __version__
