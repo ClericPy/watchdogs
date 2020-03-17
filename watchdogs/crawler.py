@@ -91,13 +91,15 @@ async def crawl(task):
     logger = Config.logger
     logger.info(f'Start crawling: {task.name}')
     crawl_result = await crawler.acrawl(task.request_args)
+    error = ''
 
     if isinstance(crawl_result, RuleNotFoundError):
-        msg = f'RuleNotFoundError {task.name}: {crawl_result}'
-        logger.error(msg)
-        result_list = [{"text": msg}]
+        error = repr(crawl_result)
+        logger.error(f'{task.name}: {error}')
+        result_list = [{"text": error}]
     elif isinstance(crawl_result, BaseException):
-        logger.error(f'Crawl failed {task.name}: {crawl_result}')
+        error = getattr(crawl_result, 'text', repr(crawl_result))
+        logger.error(f'{task.name}: {error}')
         result_list = None
     else:
         if len(crawl_result) == 1:
@@ -105,13 +107,13 @@ async def crawl(task):
             result_list = get_watchdog_result(item=crawl_result.popitem()[1])
             if not isinstance(result_list, list):
                 result_list = [result_list]
-            # for more log? use force crawl one web UI
+            # use force crawl one web UI for more log
             logger.info(f'{task.name} Crawl success: {result_list}' [:150])
         else:
-            msg = 'ERROR: crawl_result schema: {rule_name: {"text": "xxx", "url": "xxx"}} or {rule_name: [{"text": "xxx", "url": "xxx"}]}, but given %s' % crawl_result
-            logger.error(msg)
-            result_list = [msg]
-    return task, result_list
+            error = 'Invalid crawl_result schema: {rule_name: [{"text": "xxx", "url": "xxx"}]}, but given %r' % crawl_result
+            logger.error(f'{task.name}: {error}')
+            result_list = [error]
+    return task, error, result_list
 
 
 async def _crawl_once(task_name: Optional[str] = None):
@@ -129,7 +131,6 @@ async def _crawl_once(task_name: Optional[str] = None):
             tasks.c.next_check_time <= now)
     todo = []
     now = datetime.now()
-    update_query = 'update tasks set `last_check_time`=:last_check_time,`next_check_time`=:next_check_time where task_id=:task_id'
     update_values = []
     CLEAR_CACHE_NEEDED = False
     async for _task in db.iterate(query=query):
@@ -158,6 +159,7 @@ async def _crawl_once(task_name: Optional[str] = None):
             logger.info(
                 f'Task [{task.name}] is not on work time, next_check_time reset to {next_check_time}'
             )
+    update_query = 'update tasks set `last_check_time`=:last_check_time,`next_check_time`=:next_check_time where task_id=:task_id'
     await db.execute_many(query=update_query, values=update_values)
     logger.info(f'crawl_once crawling {len(todo)} valid tasks.')
     if todo:
@@ -168,8 +170,11 @@ async def _crawl_once(task_name: Optional[str] = None):
         ttime_now = ttime()
         changed_tasks = []
         update_counts = 0
+        crawl_errors = []
         for t in done:
-            task, result_list = t.result()
+            task, error, result_list = t.result()
+            if error != task.error:
+                crawl_errors.append({'task_id': task.task_id, 'error': error})
             if result_list is None:
                 continue
             # compare latest_result and new list
@@ -182,6 +187,7 @@ async def _crawl_once(task_name: Optional[str] = None):
                     break
                 to_insert_result_list.append(result)
             if to_insert_result_list:
+                # update db
                 update_counts += 1
                 # new result updated
                 CLEAR_CACHE_NEEDED = True
@@ -207,8 +213,11 @@ async def _crawl_once(task_name: Optional[str] = None):
                 task.last_change_time = now
                 task.result_list = new_result_list
                 changed_tasks.append(task)
+        if crawl_errors:
+            update_query = 'update tasks set `error`=:error where task_id=:task_id'
+            await db.execute_many(query=update_query, values=crawl_errors)
         logger.info(
-            f'Crawl task_name={task_name} finished. Crawled: {len(done)}, Timeout: {len(pending)}, Update: {update_counts}.{" +++" if update_counts else ""}'
+            f'Crawl task_name={task_name} finished. Crawled: {len(done)}, Error: {len(crawl_errors)}, Timeout: {len(pending)}, Update: {update_counts}.{" +++" if update_counts else ""}'
         )
         for task in changed_tasks:
             await Config.callback_handler.callback(task)

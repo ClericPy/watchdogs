@@ -139,6 +139,15 @@
         .result-list>ol {
             padding-left: 1em;
         }
+
+        .error {
+            color: #ebb563;
+            font-size: 0.5em;
+        }
+
+        .task.error-task {
+            border: 1px solid #ebb563;
+        }
     </style>
 </head>
 
@@ -150,15 +159,21 @@
         <div class="tasks-main">
             <div class="tasks">
                 {% for task in tasks %}
-                <div class="task" id="task-{{task.task_id}}">
+                <div class="task{{' error-task' if task.error else ''}}" id="task-{{task.task_id}}">
                     <h3 class="title"><a href="{{task.url}}" target="_blank">{{task.name}}</a></h3>
                     <p class="desc">{{task.text}}</p>
                     <p title="Click to show more" class="task-time" onclick="show_more({{task.task_id}})">
                         <span class="ts_create">{{task.last_change_time.strftime('%Y-%m-%d %H:%M:%S')}}</span>
                         <!-- <span class="source">{{task.name}}</span> -->
-                        <span class="source"> - {{task.timeago}} ago</span>
+                        <span class="timeago"> - {{task.timeago}} ago</span>
                         <span class="emoji">📂</span>
                         <span class="view-more">View More</span>
+                        {%- if task.error -%}
+                        <br>
+                        <span class="error">
+                            Error: {{task.error}}
+                        </span>
+                        {% endif %}
                     </p>
                 </div>
                 {% endfor %}
