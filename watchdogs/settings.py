@@ -185,7 +185,8 @@ async def setup_crawler():
     Config.crawler = crawler
     callback_handler = CallbackHandler()
     Config.callback_handler = callback_handler
-    Config.logger.info(f'Current online callbacks:\n{callback_handler.workers}')
+    workers = ', '.join(callback_handler.callbacks_dict.keys())
+    Config.logger.info(f'Current online callbacks:\n{workers}')
 
 
 async def update_password(password=None):
