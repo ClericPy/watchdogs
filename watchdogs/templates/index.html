@@ -79,7 +79,8 @@
             <el-tabs @tab-click="handleClick" v-model="activeName" class="full-screen" stretch='true'>
                 <el-tab-pane label="Tasks" name="tasks">
                     <template>
-                        <el-table @cell-dblclick="table_db_click" :row-class-name="check_error_task"
+                        <el-table @row-dblclick="row_db_click" @row-click="show_task_error"
+                            :row-class-name="check_error_task"
                             :default-sort="{prop: 'last_change_time', order: 'descending'}" :data="task_list"
                             style="width: 100%" height="90%" @sort-change="sort_change">
                             <el-table-column prop="task_id" label="task_id" sortable="custom" width="100">
@@ -128,10 +129,9 @@
                             <el-table-column prop="custom_info" label="custom_info" width="160"></el-table-column>
                             <el-table-column label="latest_result" min-width="160">
                                 <template slot-scope="scope">
-                                    <i type="warn" v-if="scope.row.error" class="el-icon-warning" circle size="mini"
-                                        style="margin: 0;"
-                                        @click='app.$alert(scope.row.error, "Crawler Error", {closeOnClickModal:true, closeOnPressEscape:true})'>
-                                    </i>
+                                    <!-- <i type="warn" v-if="scope.row.error" class="el-icon-warning" circle size="mini"
+                                        style="margin: 0;" @click='show_task_error(scope.row)'>
+                                    </i> -->
                                     <el-link style="display: inline;"
                                         :href="JSON.parse(scope.row.latest_result).url||scope.row.origin_url"
                                         type="info" target="_blank" :underline="false">
@@ -266,7 +266,8 @@
                         @keyup.enter.native="add_new_task" placeholder='default to request_args.url'></el-input>
                 </el-form-item>
                 <el-form-item title="Crawling loop interval seconds." label="interval">
-                    <el-link style="margin-left: 1em;" type="danger" @click="new_task_form.interval=300">5 mins</el-link> |
+                    <el-link style="margin-left: 1em;" type="danger" @click="new_task_form.interval=300">5 mins
+                    </el-link> |
                     <el-link type="danger" @click="new_task_form.interval=600">10 mins</el-link> |
                     <el-link type="warning" @click="new_task_form.interval=1800">30 mins</el-link> |
                     <el-link type="warning" @click="new_task_form.interval=3600">1 hrs</el-link> |
@@ -741,8 +742,17 @@
                         }
                     )
                 },
-                table_db_click(row, col, cell, e) {
+                row_db_click(row) {
                     this.update_task(row)
+                },
+                show_task_error(row) {
+                    if (row.error) {
+                        app.$alert(row.error, "Crawler Error", {
+                            closeOnClickModal: true,
+                            closeOnPressEscape: true,
+                            center:true
+                        })
+                    }
                 },
                 update_task(row) {
                     this.new_task_form = {
