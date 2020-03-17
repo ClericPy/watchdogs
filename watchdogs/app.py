@@ -1,6 +1,6 @@
 from collections import deque
 from datetime import datetime
-from json import loads
+from json import dumps, loads
 from pathlib import Path
 from time import time
 from traceback import format_exc
@@ -24,6 +24,7 @@ from .config import md5, md5_checker
 from .crawler import crawl_once
 from .models import Task, query_tasks, tasks
 from .settings import Config, refresh_token, release_app, setup_app
+
 description = f"Watchdogs to keep an eye on the world's change.\nRead more: [https://github.com/ClericPy/watchdogs](https://github.com/ClericPy/watchdogs)\n\n[View Logs](/log)"
 app = FastAPI(title="Watchdogs", description=description, version=__version__)
 sub_app.openapi_prefix = '/uniparser'
@@ -147,8 +148,7 @@ async def index(request: Request, tag: str = ''):
     kwargs['version'] = __version__
     kwargs['rss_url'] = f'/rss?tag={quote_plus(tag)}&sign={md5(tag)}'
     kwargs['lite_url'] = f'/lite?tag={quote_plus(tag)}&sign={md5(tag)}'
-    kwargs['callback_handler_workers'] = ', '.join(
-        Config.callback_handler.callback_objects.keys())
+    kwargs['callback_workers'] = dumps(Config.callback_handler.workers)
     return templates.TemplateResponse("index.html", context=kwargs)
 
 
