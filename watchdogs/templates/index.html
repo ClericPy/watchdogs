@@ -70,10 +70,16 @@
         .el-table .warning-row {
             background: oldlace;
         }
+
+        .cb_name {
+            cursor: pointer;
+            padding-left: 1em;
+        }
     </style>
 </head>
 
 <body>
+    <template id="tmp_vars">{{callback_workers|safe}}</template>
     <div id="app" class="full-screen">
         <template>
             <el-tabs @tab-click="handleClick" v-model="activeName" class="full-screen" stretch='true'>
@@ -120,7 +126,7 @@
                                 width="165">
                                 <template slot-scope="scope">
                                     <el-link @click="show_time(scope.row)" type="info" :underline="false"
-                                        title="Click to read more.">
+                                        :title="scope.row.last_change_time.replace(/\..*/, '').replace('T', ' ')+'. Click to read more.'">
                                         <b>${scope.row.timeago} ago</b><br>
                                         <!-- ${scope.row.last_change_time.replace(/\..*/, '').replace('T', ' ')} -->
                                     </el-link>
@@ -290,11 +296,15 @@
                     <el-input v-model="new_task_form.max_result_count" autocomplete="off" title="Press enter to submit"
                         @keyup.enter.native="add_new_task"></el-input>
                 </el-form-item>
-                <el-form-item title="custom_info for notes, or as callback's variable format like feature_name:text"
-                    label="custom_info">
-                    <el-input type="textarea" autosize v-model="new_task_form.custom_info"
+                <el-form-item label="custom_info">
+                    <el-input type="textarea" autosize v-model="new_task_form.custom_info" clearable
                         placeholder="string split by ':' as callback_name:arg" autocomplete="off"></el-input>
-                    <b>Callbacks:</b> {{callback_handler_workers}}
+                    <b>Callbacks:</b>
+                    <div style="display: inline;" v-for="(value, name) in callback_workers">
+                        <span class="cb_name" @click="click_cb_name(name)">${name}</span>
+                    </div>
+                    <pre
+                        style="margin: 0px;border: 1px solid #8080802b;padding-left: 1em;"><code style="margin: 0;">${current_cb_doc}</code></pre>
                 </el-form-item>
             </el-form>
             <div slot="footer" class="dialog-footer">
@@ -362,6 +372,8 @@
                         sort: 'desc',
                         tag: '',
                     },
+                    callback_workers: {},
+                    current_cb_doc: '',
                 }
             },
             methods: {
@@ -750,7 +762,7 @@
                         app.$alert(row.error, "Crawler Error", {
                             closeOnClickModal: true,
                             closeOnPressEscape: true,
-                            center:true
+                            center: true
                         })
                     }
                 },
@@ -907,6 +919,10 @@ Three kinds of format:
                         return 'warning-row'
                     }
                 },
+                click_cb_name(name) {
+                    this.current_cb_doc = this.callback_workers[name]
+                    this.new_task_form.custom_info = name + ':'
+                },
             },
             watch: {
                 current_host: function (val) {
@@ -936,6 +952,13 @@ Three kinds of format:
             delimiters: ['${', '}']
         }).$mount('#app')
         app.load_tasks()
+
+        function init_vars() {
+            let node = document.getElementById('tmp_vars')
+            app.callback_workers = JSON.parse(node.innerHTML)
+            node.parentNode.removeChild(node)
+        }
+        init_vars()
     </script>
 </body>
 
