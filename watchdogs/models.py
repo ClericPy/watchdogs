@@ -91,7 +91,8 @@ def create_tables(db_url):
         metadata.create_all(engine)
         # backward compatibility for tasks table without error column
         try:
-            engine.execute('ALTER TABLE tasks ADD COLUMN error TEXT NOT NULL DEFAULT ""')
+            engine.execute(
+                'ALTER TABLE tasks ADD COLUMN error TEXT NOT NULL DEFAULT ""')
         except Exception:
             pass
     except Exception:
