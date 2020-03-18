@@ -2,7 +2,7 @@
 
 Keep an eye on the world's change.
 
-Such as `steam price fluctuation` / `new post articals` / `news on the web portal` / `server api health` / `binge-watching`,  and so on...
+Such as `steam price fluctuation` / `new post articles` / `news on the web portal` / `server api health` / `binge-watching`,  and so on...
 
 ## Intro
 
@@ -12,7 +12,7 @@ Such as `steam price fluctuation` / `new post articals` / `news on the web porta
 4. All the crawlers keep runing in the async environment.
 5. Almost all the elements have a *title* attribute to describe the features in the Web UI, which means docs lay on the UI.
 6. Release your hands from repetitive refreshing on the browser.
-    1. Subscribe the change events with RSS reminder extensions, such as Feedbro or RSS Feed Reader.
+    1. Subscribe the change events with RSS reminder extensions, such as [Feedbro](https://chrome.google.com/webstore/detail/feedbro/mefgmmbdailogpfhfblcnnjfmnpnmdfa) or RSS Feed Reader.
     2. Or implement custom reminders by inheriting `watchdogs.callbacks.Callback`.
 
 ## Usage

@@ -1,6 +1,6 @@
 from logging import getLogger
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 from databases import Database
 from frequency_controller import AsyncFrequency
@@ -33,10 +33,10 @@ class Config:
     if not CONFIG_DIR.is_dir():
         CONFIG_DIR.mkdir()
     ENCODING = 'utf-8'
-    db: Optional[Database] = None
+    db: Database = None
     logger = getLogger('watchdogs')
     password: str = ''
-    rule_db: Optional[RuleStorage] = None
+    rule_db: RuleStorage = None
     metas = None
     check_interval: int = 60
     default_interval: int = 5 * 60
@@ -50,7 +50,7 @@ class Config:
     # for anti-crawl frequency
     DEFAULT_HOST_FREQUENCY = (1, 1)
     cdn_urls: dict = {}
-    callback_handler: Optional[CallbackHandlerBase] = None
+    callback_handler: CallbackHandlerBase = None
     access_log: bool = True
     mute_std_log = False
     mute_file_log = False
@@ -59,4 +59,4 @@ class Config:
     # check interval 60s, so format do use %M , backup every 12 hours. this pattern may miss for crawl cost more than 60s.
     db_backup_time: str = '%H:%M==00:00|%H:%M==12:00'
     backup_count: int = 4
-    db_backup_function: Optional[Callable[..., Any]] = None
+    db_backup_function: Callable[..., Any] = None
