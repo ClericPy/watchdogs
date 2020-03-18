@@ -8,7 +8,8 @@ from setuptools import find_packages, setup
 linux:
 rm -rf "dist/*";rm -rf "build/*";python3 setup.py bdist_wheel;twine upload "dist/*;rm -rf "dist/*";rm -rf "build/*""
 win32:
-rm -rf dist;rm -rf build;python3 setup.py bdist_wheel;twine upload "dist/*";rm -rf dist;rm -rf build;rm -rf watchdogs.egg-info
+rm -rf dist;rm -rf build;python3 setup.py bdist_wheel;twine upload "dist/*"
+rm -rf dist;rm -rf build;rm -rf watchdogs.egg-info
 """
 
 py_version = sys.version_info
