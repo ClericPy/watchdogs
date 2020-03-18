@@ -11,7 +11,7 @@ from .config import Config, md5
 from .crawler import crawl_once
 from .models import Metas, RuleStorageDB
 
-NotSet = type('NotSet', (object,), {})
+NotSet = object()
 
 
 def get_valid_value(values: list, default=None, invalid=NotSet):
@@ -183,9 +183,9 @@ async def setup_crawler():
         f'Downloader middleware installed: {crawler.uniparser.ensure_adapter(False).__class__.__name__}'
     )
     Config.crawler = crawler
-    callback_handler = CallbackHandler()
-    Config.callback_handler = callback_handler
-    workers = ', '.join(callback_handler.callbacks_dict.keys())
+    if Config.callback_handler is None:
+        Config.callback_handler = CallbackHandler()
+    workers = ', '.join(Config.callback_handler.callbacks_dict.keys())
     Config.logger.info(f'Current online callbacks:\n{workers}')
 
 

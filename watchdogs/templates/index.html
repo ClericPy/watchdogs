@@ -110,7 +110,9 @@
                                         <h4>${ new URL(JSON.parse(scope.row.request_args).url).host }</h4>
                                         <pre><code>${JSON.stringify(JSON.parse(scope.row.request_args), null, 2)}</code></pre>
                                         <el-button @click="view_crawler_rule_by_req(scope.row.request_args)" size='mini'
-                                            icon="el-icon-view">View Rule</el-button>
+                                            icon="el-icon-view"><b>Rule</b></el-button>
+                                        <el-button @click="view_host_by_req(scope.row.request_args)" size='mini'
+                                            icon="el-icon-view"><b>Host</b></el-button>
                                         <div slot="reference" class="name-wrapper">
                                             <el-tag size="medium">${ new
                                                 URL(JSON.parse(scope.row.request_args).url).host }</el-tag>
@@ -202,7 +204,7 @@
                         Init
                     </el-button>
                     <el-button icon='el-icon-upload' type='warning' style="margin: 0;"
-                        @click="process_crawler_rule('add', null)">
+                        @click="process_crawler_rule('add', null, 0)">
                         1.
                         Save Crawler Rule
                     </el-button>
@@ -261,8 +263,9 @@
                 </el-form-item>
                 <el-form-item title="Input the url, or request_args JSON, or cURL string" label="request_args">
                     <el-button @click="view_crawler_rule_by_req(new_task_form.request_args)" size='mini'
-                        icon="el-icon-view"><b>View Rule</b>
-                    </el-button>
+                        icon="el-icon-view"><b>Rule</b></el-button>
+                    <el-button @click="view_host_by_req(new_task_form.request_args)" size='mini' icon="el-icon-view">
+                        <b>Host</b></el-button>
                     <span> | "retry": 2, "timeout": 3, "ssl": False, and other args refer to <a
                             href="https://docs.aiohttp.org/en/stable/client_reference.html#aiohttp.ClientSession.request"
                             target="_blank" rel="noopener noreferrer">aiohttp</a> </span>
@@ -345,7 +348,7 @@
                             style="zoom: 1.5;cursor: pointer;margin-right: 1em;" class="el-icon-view"></i>
                         <i title="Edit JSON" @click="edit_crawler_rule(rule)"
                             style="zoom: 1.5;cursor: pointer;margin-right: 1em;" class="el-icon-edit-outline"></i>
-                        <i title="Delete" @click="process_crawler_rule('pop', rule)"
+                        <i title="Delete" @click="process_crawler_rule('pop', rule, 0)"
                             style="zoom: 1.5;cursor: pointer;margin-right: 1em;" class="el-icon-delete"></i>
                     </el-col>
                 </el-row>
@@ -431,6 +434,18 @@
                     this.sub_app.new_rule_json = crawler_rule_json
                     this.sub_app.load_rule()
                 },
+                view_host_by_req(request_args) {
+                    let url = JSON.parse(request_args).url
+                    if (!url) {
+                        this.$alert('request_args.url should not be null')
+                        return
+                    }
+                    // this.activeName = 'rules'
+                    // Vue.set(this, 'activeName', 'rules')
+                    this.current_host = (new URL(url)).hostname
+                    document.getElementById('tab-rules').click()
+                    this.task_info_visible = false
+                },
                 view_crawler_rule_by_req(request_args) {
                     if (!request_args) {
                         this.$alert('request_args should not be null')
@@ -478,7 +493,7 @@
                     }).then(({
                         value
                     }) => {
-                        this.process_crawler_rule('add', JSON.parse(value))
+                        this.process_crawler_rule('add', JSON.parse(value), 0)
                     }).catch(() => {
                         this.$message({
                             type: 'info',
@@ -486,11 +501,15 @@
                         });
                     });
                 },
-                process_crawler_rule(method, rule) {
+                process_crawler_rule(method, rule, force) {
                     let current_crawler_rule = rule || JSON.parse(this.sub_app
                         .current_crawler_rule_json)
                     let data = JSON.stringify(current_crawler_rule)
-                    this.$http.post('crawler_rule.' + method, data).then(
+                    let api = 'crawler_rule.' + method
+                    if (force == 1) {
+                        api += '?force=1'
+                    }
+                    this.$http.post(api, data).then(
                         r => {
                             var result = r.body
                             if (result.msg == 'ok') {
@@ -502,11 +521,27 @@
                                     this.show_host_rule(this.current_host_rule.host)
                                 }
                             } else {
-                                this.$message.error({
-                                    message: method + ' rule failed: ' + result.msg,
-                                    duration: 0,
-                                    showClose: true,
-                                });
+                                if (method == 'add' && /matched more than 1 rule/g.test(result.msg)) {
+                                    this.$confirm('Failed for url matched more than 1 rule, overwrite it?',
+                                        'Confirm', {
+                                            confirmButtonText: 'Yes',
+                                            cancelButtonText: 'No',
+                                            type: 'error'
+                                        }).then(() => {
+                                        this.process_crawler_rule(method, rule, 1)
+                                    }).catch(() => {
+                                        this.$message({
+                                            type: 'info',
+                                            message: 'Adding rule canceled.'
+                                        });
+                                    });
+                                } else {
+                                    this.$message.error({
+                                        message: method + ' rule failed: ' + result.msg,
+                                        duration: 0,
+                                        showClose: true,
+                                    });
+                                }
                             }
                         }, r => {
                             this.$message.error({
@@ -927,6 +962,10 @@ Three kinds of format:
             watch: {
                 current_host: function (val) {
                     this.visible_host_list = []
+                    if (/^https?:\/\//g.test(val)) {
+                        val = (new URL(val).hostname)
+                        this.current_host = val
+                    }
                     this.host_list.forEach(host => {
                         if (host.includes(val)) {
                             this.visible_host_list.push(host)

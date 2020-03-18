@@ -246,7 +246,7 @@ async def query_tasks(
 ) -> Tuple[list, bool]:
     offset = page_size * (page - 1)
     query = tasks.select()
-    if task_name:
+    if task_name is not None:
         query = query.where(tasks.c.name == task_name)
     if task_id is not None:
         query = query.where(tasks.c.task_id == task_id)

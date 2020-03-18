@@ -218,7 +218,7 @@ async def add_new_task(task: Task):
         result = {'msg': 'ok'}
         query_tasks.cache_clear()
     except Exception as e:
-        result = {'msg': str(e)}
+        result = {'msg': repr(e)}
     logger.info(f'{"[Update]" if exist else "[Add] new"} task {task}: {result}')
     return result
 
@@ -231,7 +231,7 @@ async def delete_task(task_id: int):
         result = {'msg': 'ok'}
         query_tasks.cache_clear()
     except Exception as e:
-        result = {'msg': str(e)}
+        result = {'msg': repr(e)}
     logger.info(f'[Delete] task {task_id}: {result}')
     return result
 
@@ -247,7 +247,7 @@ async def force_crawl(task_name: str):
             short_name=True)
         result = {'msg': 'ok', 'task': task}
     except Exception as e:
-        result = {'msg': str(e)}
+        result = {'msg': repr(e)}
     logger.info(f'[Force] crawl {task_name}: {result}')
     return result
 
@@ -290,7 +290,7 @@ async def enable_task(task_id: int, enable: int = 1):
         result = {'msg': 'ok', 'updated': _result}
         query_tasks.cache_clear()
     except Exception as e:
-        result = {'msg': str(e)}
+        result = {'msg': repr(e)}
     return result
 
 
@@ -322,15 +322,23 @@ async def get_host_rule(host: str):
             if _result else '{"host": "%s"}' % host
         }
     except Exception as e:
-        result = {'msg': str(e)}
+        result = {'msg': repr(e)}
     logger.info(f'[Get] host_rule {host}: {result}')
     return result
 
 
 @app.post("/crawler_rule.{method}")
-async def crawler_rule(method: str, rule: CrawlerRule):
+async def crawler_rule(method: str, rule: CrawlerRule,
+                       force: Optional[int] = 0):
     try:
+        if not rule['name']:
+            raise ValueError('rule name can not be null')
         if method == 'add':
+            if force:
+                exist_rule = await Config.rule_db.find_crawler_rule(rule['request_args']['url'])
+                if exist_rule:
+                    logger.info(f'add crawler_rule force=1, old rule removed: {exist_rule}')
+                    await Config.rule_db.pop_crawler_rule(exist_rule)
             _result = await Config.rule_db.add_crawler_rule(rule)
         elif method == 'pop':
             _result = await Config.rule_db.pop_crawler_rule(rule)
@@ -338,7 +346,7 @@ async def crawler_rule(method: str, rule: CrawlerRule):
             raise ValueError(f'method only support add and pop')
         result = {'msg': 'ok', 'result': _result}
     except Exception as e:
-        result = {'msg': str(e)}
+        result = {'msg': repr(e)}
     logger.info(f'[{method.title()}] crawler rule {rule}: {result}')
     return result
 
@@ -352,7 +360,7 @@ async def find_crawler_rule(request_args: dict):
             raise ValueError(f'rule not found for given url: {url}')
         result = {'msg': 'ok', 'result': rule.dumps()}
     except Exception as e:
-        result = {'msg': str(e)}
+        result = {'msg': repr(e)}
     logger.info(f'[Find] crawler rule: {result}')
     return result
 
@@ -365,7 +373,7 @@ async def delete_host_rule(host: str):
         await Config.rule_db.pop_host_rule(host)
         result = {'msg': 'ok'}
     except Exception as e:
-        result = {'msg': str(e)}
+        result = {'msg': repr(e)}
     logger.info(f'[Delete] host rule {host}: {result}')
     return result
 

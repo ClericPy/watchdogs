@@ -90,9 +90,8 @@ async def crawl(task):
     crawler: Crawler = Config.crawler
     logger = Config.logger
     logger.info(f'Start crawling: {task.name}')
-    crawl_result = await crawler.acrawl(task.request_args)
+    crawl_result = await try_catch(crawler.acrawl, task.request_args)
     error = ''
-
     if isinstance(crawl_result, RuleNotFoundError):
         error = repr(crawl_result)
         logger.error(f'{task.name}: {error}')
