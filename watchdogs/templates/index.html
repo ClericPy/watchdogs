@@ -110,7 +110,9 @@
                                         <h4>${ new URL(JSON.parse(scope.row.request_args).url).host }</h4>
                                         <pre><code>${JSON.stringify(JSON.parse(scope.row.request_args), null, 2)}</code></pre>
                                         <el-button @click="view_crawler_rule_by_req(scope.row.request_args)" size='mini'
-                                            icon="el-icon-view">View Rule</el-button>
+                                            icon="el-icon-view"><b>Rule</b></el-button>
+                                        <el-button @click="view_host_by_req(scope.row.request_args)" size='mini'
+                                            icon="el-icon-view"><b>Host</b></el-button>
                                         <div slot="reference" class="name-wrapper">
                                             <el-tag size="medium">${ new
                                                 URL(JSON.parse(scope.row.request_args).url).host }</el-tag>
@@ -261,7 +263,10 @@
                 </el-form-item>
                 <el-form-item title="Input the url, or request_args JSON, or cURL string" label="request_args">
                     <el-button @click="view_crawler_rule_by_req(new_task_form.request_args)" size='mini'
-                        icon="el-icon-view"><b>View Rule</b>
+                        icon="el-icon-view"><b>Rule</b>
+                    </el-button>
+                    <el-button @click="view_host_by_req(new_task_form.request_args)" size='mini'
+                        icon="el-icon-view"><b>Host</b>
                     </el-button>
                     <span> | "retry": 2, "timeout": 3, "ssl": False, and other args refer to <a
                             href="https://docs.aiohttp.org/en/stable/client_reference.html#aiohttp.ClientSession.request"
@@ -430,6 +435,18 @@
                     // crawler_rule_json = '{"name":"HelloWorld222","request_args":{"method":"get","url":"http://httpbin.org/forms/post","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[],"regex":"","encoding":""}'
                     this.sub_app.new_rule_json = crawler_rule_json
                     this.sub_app.load_rule()
+                },
+                view_host_by_req(request_args) {
+                    let url = JSON.parse(request_args).url
+                    if (!url) {
+                        this.$alert('request_args.url should not be null')
+                        return
+                    }
+                    // this.activeName = 'rules'
+                    // Vue.set(this, 'activeName', 'rules')
+                    this.current_host = (new URL(url)).hostname
+                    document.getElementById('tab-rules').click()
+                    this.task_info_visible = false
                 },
                 view_crawler_rule_by_req(request_args) {
                     if (!request_args) {
