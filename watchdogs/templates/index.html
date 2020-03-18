@@ -962,6 +962,10 @@ Three kinds of format:
             watch: {
                 current_host: function (val) {
                     this.visible_host_list = []
+                    if (/^https?:\/\//g.test(val)) {
+                        val = (new URL(val).hostname)
+                        this.current_host = val
+                    }
                     this.host_list.forEach(host => {
                         if (host.includes(val)) {
                             this.visible_host_list.push(host)
