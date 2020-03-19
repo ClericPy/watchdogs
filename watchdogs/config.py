@@ -20,12 +20,13 @@ def md5(obj, n=32, with_salt=True):
 
 
 async def md5_checker(string, target, freq=True):
-    result = md5(string) == target
     if freq:
         async with Config.check_pwd_freq:
-            return result
+            # anti guessing password
+            return md5(string) == target
     else:
-        return result
+        # may get a cache
+        return md5(string) == target
 
 
 class Config:
