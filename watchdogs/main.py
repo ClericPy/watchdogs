@@ -22,15 +22,15 @@ def clear_dir(dir_path):
     print(f'Folder removed: {dir_path}')
 
 
-def prepare_app(db_url=None,
-                password=None,
-                uninstall=False,
-                mute_std_log=NotSet,
-                mute_file_log=NotSet,
-                md5_salt=None,
-                config_dir=None,
-                use_default_cdn=False,
-                **uvicorn_kwargs):
+def init_app(db_url=None,
+             password=None,
+             uninstall=False,
+             mute_std_log=NotSet,
+             mute_file_log=NotSet,
+             md5_salt=None,
+             config_dir=None,
+             use_default_cdn=False,
+             **uvicorn_kwargs):
     try:
         uvicorn_kwargs.setdefault('port', 9901)
         uvicorn_kwargs.setdefault('access_log', True)
@@ -55,7 +55,8 @@ def prepare_app(db_url=None,
             password=password,
             md5_salt=md5_salt,
             use_default_cdn=use_default_cdn)
-        Config.uvicorn_kwargs = uvicorn_kwargs
+        from .app import app
+        return app
 
     except Exception:
         logger.error(f'Start server error:\n{format_exc()}')
@@ -70,7 +71,7 @@ def start_app(db_url=None,
               config_dir=None,
               use_default_cdn=False,
               **uvicorn_kwargs):
-    prepare_app(
+    app = init_app(
         db_url=db_url,
         password=password,
         uninstall=uninstall,
@@ -80,7 +81,6 @@ def start_app(db_url=None,
         config_dir=config_dir,
         use_default_cdn=use_default_cdn,
         **uvicorn_kwargs)
-    from .app import app
     run(app, **Config.uvicorn_kwargs)
 
 

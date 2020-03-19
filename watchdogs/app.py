@@ -5,16 +5,15 @@ from pathlib import Path
 from time import time
 from traceback import format_exc
 from typing import Optional
-from xml.sax.saxutils import escape
 
 import aiofiles
-from fastapi import Cookie, FastAPI, Header
+from fastapi import Cookie, Depends, FastAPI, Header
 from fastapi.staticfiles import StaticFiles
 from starlette.requests import Request
 from starlette.responses import (HTMLResponse, JSONResponse, PlainTextResponse,
                                  RedirectResponse, Response)
 from starlette.templating import Jinja2Templates
-from torequests.utils import quote_plus, timeago, urlparse
+from torequests.utils import quote_plus, timeago
 from uniparser import CrawlerRule
 from uniparser.fastapi_ui import app as sub_app
 from uniparser.utils import get_host
@@ -24,6 +23,7 @@ from .config import md5, md5_checker
 from .crawler import crawl_once
 from .models import Task, query_tasks, tasks
 from .settings import Config, refresh_token, release_app, setup_app
+from .utils import gen_rss
 
 description = f"Watchdogs to keep an eye on the world's change.\nRead more: [https://github.com/ClericPy/watchdogs](https://github.com/ClericPy/watchdogs)\n\n[View Logs](/log)"
 app = FastAPI(title="Watchdogs", description=description, version=__version__)
@@ -36,7 +36,6 @@ app.mount(
 logger = Config.logger
 templates = Jinja2Templates(
     directory=str((Path(__file__).parent / 'templates').absolute()))
-AUTH_PATH_WHITE_LIST = {'/auth', '/rss', '/lite'}
 
 
 @app.on_event("startup")
@@ -49,25 +48,59 @@ async def shutdown():
     await release_app(app)
 
 
-@app.middleware("http")
-async def add_auth_checker(request: Request, call_next):
-    # print(request.scope)
-    # {'type': 'http', 'http_version': '1.1', 'server': ('127.0.0.1', 9901), 'client': ('127.0.0.1', 7037), 'scheme': 'http', 'method': 'GET', 'root_path': '', 'path': '/auth', 'raw_path': b'/auth', 'query_string': b'', 'headers': [(b'host', b'127.0.0.1:9901'), (b'connection', b'keep-alive'), (b'sec-fetch-dest', b'image'), (b'user-agent', b'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36'), (b'dnt', b'1'), (b'accept', b'image/webp,image/apng,image/*,*/*;q=0.8'), (b'sec-fetch-site', b'same-origin'), (b'sec-fetch-mode', b'no-cors'), (b'referer', b'http://127.0.0.1:9901/auth'), (b'accept-encoding', b'gzip, deflate, br'), (b'accept-language', b'zh-CN,zh;q=0.9'), (b'cookie', b'ads_id=lakdsjflakjdf; _ga=GA1.1.1550108461.1583462251')], 'fastapi_astack': <contextlib.AsyncExitStack object at 0x00000165BE69EEB8>, 'app': <fastapi.applications.FastAPI object at 0x00000165A7B738D0>}
-    watchdog_auth = request.cookies.get('watchdog_auth')
-    path = request.scope['path']
-    if not path.startswith('/'):
-        path = urlparse(request.scope['path']).path
-        request.scope['path'] = path
-    if path in AUTH_PATH_WHITE_LIST or Config.watchdog_auth and watchdog_auth == Config.watchdog_auth:
-        # gateway may do better, but kong used too much memory...
-        response = await call_next(request)
-        if path.startswith('/static/'):
-            response.headers['Cache-Control'] = 'max-age=86400'
-        return response
-    else:
-        resp = RedirectResponse('/auth', 302)
-        resp.set_cookie('watchdog_auth', '')
-        return resp
+# @app.middleware("http")
+# async def add_auth_checker(request: Request, call_next):
+#     AUTH_PATH_WHITE_LIST = {'/auth', '/rss', '/lite'}
+#     # print(request.scope)
+#     # {'type': 'http', 'http_version': '1.1', 'server': ('127.0.0.1', 9901), 'client': ('127.0.0.1', 7037), 'scheme': 'http', 'method': 'GET', 'root_path': '', 'path': '/auth', 'raw_path': b'/auth', 'query_string': b'', 'headers': [(b'host', b'127.0.0.1:9901'), (b'connection', b'keep-alive'), (b'sec-fetch-dest', b'image'), (b'user-agent', b'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36'), (b'dnt', b'1'), (b'accept', b'image/webp,image/apng,image/*,*/*;q=0.8'), (b'sec-fetch-site', b'same-origin'), (b'sec-fetch-mode', b'no-cors'), (b'referer', b'http://127.0.0.1:9901/auth'), (b'accept-encoding', b'gzip, deflate, br'), (b'accept-language', b'zh-CN,zh;q=0.9'), (b'cookie', b'ads_id=lakdsjflakjdf; _ga=GA1.1.1550108461.1583462251')], 'fastapi_astack': <contextlib.AsyncExitStack object at 0x00000165BE69EEB8>, 'app': <fastapi.applications.FastAPI object at 0x00000165A7B738D0>}
+#     watchdog_auth = request.cookies.get('watchdog_auth')
+#     path = request.scope['path']
+#     if not path.startswith('/'):
+#         path = urlparse(request.scope['path']).path
+#         request.scope['path'] = path
+#     if path in AUTH_PATH_WHITE_LIST or Config.watchdog_auth and watchdog_auth == Config.watchdog_auth:
+#         # gateway may do better, but kong used too much memory...
+#         response = await call_next(request)
+#         if path.startswith('/static/'):
+#             response.headers['Cache-Control'] = 'max-age=86400'
+#         return response
+#     else:
+#         resp = RedirectResponse('/auth', 302)
+#         resp.set_cookie('watchdog_auth', '')
+#         return resp
+
+
+class InvalidCookieError(Exception):
+    '''bad cookie redirect to /auth'''
+
+
+async def check_cookie(watchdog_auth: str = Cookie('')):
+    if Config.watchdog_auth and watchdog_auth != Config.watchdog_auth:
+        raise InvalidCookieError()
+
+
+class InvalidTokenError(Exception):
+    '''bad token return text: invalid token'''
+
+
+async def check_token(tag: str = '',
+                      sign: str = '',
+                      host: str = Header('', alias='Host')):
+    valid = await md5_checker(tag, sign, False)
+    if not valid:
+        raise InvalidTokenError()
+
+
+@app.exception_handler(InvalidCookieError)
+async def cookie_error_handler(request: Request, exc: InvalidCookieError):
+    resp = RedirectResponse('/auth', 302)
+    resp.set_cookie('watchdog_auth', '')
+    return resp
+
+
+@app.exception_handler(InvalidTokenError)
+async def token_error_handler(request: Request, exc: InvalidTokenError):
+    return PlainTextResponse('signature expired')
 
 
 @app.exception_handler(Exception)
@@ -141,7 +174,7 @@ async def auth(request: Request,
         return templates.TemplateResponse("auth.html", context=kwargs)
 
 
-@app.get("/")
+@app.get("/", dependencies=[Depends(check_cookie)])
 async def index(request: Request, tag: str = ''):
     kwargs: dict = {'request': request}
     kwargs['cdn_urls'] = Config.cdn_urls
@@ -152,38 +185,12 @@ async def index(request: Request, tag: str = ''):
     return templates.TemplateResponse("index.html", context=kwargs)
 
 
-@app.get("/lite")
-async def lite(request: Request,
-               tag: str = '',
-               sign: str = '',
-               task_id: Optional[int] = None):
-    valid = await md5_checker(tag, sign, False)
-    if not valid:
-        return PlainTextResponse('signature expired')
-    tasks, _ = await query_tasks(tag=tag, task_id=task_id)
-    if task_id is None:
-        now = datetime.now()
-        for task in tasks:
-            result = loads(task['latest_result'] or '{}')
-            # for cache...
-            task['url'] = task.get('url') or result.get(
-                'url') or task['origin_url']
-            task['text'] = task.get('text') or result.get('text') or ''
-            task['timeago'] = timeago(
-                (now - task['last_change_time']).seconds, 1, 1, short_name=True)
-        kwargs = {'tasks': tasks, 'request': request}
-        kwargs['version'] = __version__
-        return templates.TemplateResponse("lite.html", context=kwargs)
-    else:
-        if tasks:
-            task = tasks[0]
-            items = loads(task['result_list'] or '[]')
-            return {'result_list': items}
-        else:
-            return {'result_list': []}
+@app.get("/favicon.ico", dependencies=[Depends(check_cookie)])
+async def favicon():
+    return RedirectResponse('/static/img/favicon.ico', 301)
 
 
-@app.post("/add_new_task")
+@app.post("/add_new_task", dependencies=[Depends(check_cookie)])
 async def add_new_task(task: Task):
     try:
         exist = 'unknown'
@@ -223,7 +230,7 @@ async def add_new_task(task: Task):
     return result
 
 
-@app.get("/delete_task")
+@app.get("/delete_task", dependencies=[Depends(check_cookie)])
 async def delete_task(task_id: int):
     try:
         query = tasks.delete().where(tasks.c.task_id == task_id)
@@ -236,7 +243,7 @@ async def delete_task(task_id: int):
     return result
 
 
-@app.get("/force_crawl")
+@app.get("/force_crawl", dependencies=[Depends(check_cookie)])
 async def force_crawl(task_name: str):
     try:
         task = await crawl_once(task_name=task_name)
@@ -252,7 +259,7 @@ async def force_crawl(task_name: str):
     return result
 
 
-@app.get("/load_tasks")
+@app.get("/load_tasks", dependencies=[Depends(check_cookie)])
 async def load_tasks(
         task_name: Optional[str] = None,
         page: int = 1,
@@ -281,7 +288,7 @@ async def load_tasks(
     return result
 
 
-@app.get("/enable_task")
+@app.get("/enable_task", dependencies=[Depends(check_cookie)])
 async def enable_task(task_id: int, enable: int = 1):
     query = 'update tasks set `enable`=:enable where `task_id`=:task_id'
     values = {'task_id': task_id, 'enable': enable}
@@ -294,7 +301,7 @@ async def enable_task(task_id: int, enable: int = 1):
     return result
 
 
-@app.get('/load_hosts')
+@app.get('/load_hosts', dependencies=[Depends(check_cookie)])
 async def load_hosts(host: str = ''):
     host = get_host(host) or host
     query = 'select `host` from host_rules'
@@ -308,7 +315,7 @@ async def load_hosts(host: str = ''):
     return {'hosts': [getattr(i, 'host') for i in _result], 'host': host}
 
 
-@app.get("/get_host_rule")
+@app.get("/get_host_rule", dependencies=[Depends(check_cookie)])
 async def get_host_rule(host: str):
     try:
         if not host:
@@ -327,7 +334,7 @@ async def get_host_rule(host: str):
     return result
 
 
-@app.post("/crawler_rule.{method}")
+@app.post("/crawler_rule.{method}", dependencies=[Depends(check_cookie)])
 async def crawler_rule(method: str, rule: CrawlerRule,
                        force: Optional[int] = 0):
     try:
@@ -335,9 +342,12 @@ async def crawler_rule(method: str, rule: CrawlerRule,
             raise ValueError('rule name can not be null')
         if method == 'add':
             if force:
-                exist_rule = await Config.rule_db.find_crawler_rule(rule['request_args']['url'])
+                exist_rule = await Config.rule_db.find_crawler_rule(
+                    rule['request_args']['url'])
                 if exist_rule:
-                    logger.info(f'add crawler_rule force=1, old rule removed: {exist_rule}')
+                    logger.info(
+                        f'add crawler_rule force=1, old rule removed: {exist_rule}'
+                    )
                     await Config.rule_db.pop_crawler_rule(exist_rule)
             _result = await Config.rule_db.add_crawler_rule(rule)
         elif method == 'pop':
@@ -351,7 +361,7 @@ async def crawler_rule(method: str, rule: CrawlerRule,
     return result
 
 
-@app.post("/find_crawler_rule")
+@app.post("/find_crawler_rule", dependencies=[Depends(check_cookie)])
 async def find_crawler_rule(request_args: dict):
     try:
         url = request_args.get('url')
@@ -365,7 +375,7 @@ async def find_crawler_rule(request_args: dict):
     return result
 
 
-@app.get("/delete_host_rule")
+@app.get("/delete_host_rule", dependencies=[Depends(check_cookie)])
 async def delete_host_rule(host: str):
     try:
         if not host:
@@ -378,38 +388,7 @@ async def delete_host_rule(host: str):
     return result
 
 
-def gen_rss(data):
-    nodes = []
-    channel = data['channel']
-    item_keys = ['title', 'description', 'link', 'guid', 'pubDate']
-    for item in data['items']:
-        item_nodes = []
-        for key in item_keys:
-            value = item.get(key)
-            if value:
-                item_nodes.append(f'<{key}>{escape(value)}</{key}>')
-        nodes.append(''.join(item_nodes))
-    items_string = ''.join((f'<item>{tmp}</item>' for tmp in nodes))
-    return rf'''<?xml version="1.0" encoding="UTF-8" ?>
-<rss version="2.0">
-<channel>
-  <title>{channel['title']}</title>
-  <link>{channel['link']}</link>
-  <description>{channel['description']}</description>
-  <image>
-    <url>{channel['link']}/static/img/favicon.ico</url>
-    <title>{channel['title']}</title>
-    <link>{channel['link']}</link>
-    <width>32</width>
-    <height>32</height>
-   </image>
-  {items_string}
-</channel>
-</rss>
-'''
-
-
-@app.get("/log")
+@app.get("/log", dependencies=[Depends(check_cookie)])
 async def log(max_lines: int = 100,
               refresh_every: int = 0,
               log_names: str = 'info-server-error'):
@@ -430,7 +409,7 @@ async def log(max_lines: int = 100,
     return response
 
 
-@app.get("/rss")
+@app.get("/rss", dependencies=[Depends(check_token)])
 async def rss(request: Request,
               tag: str = '',
               sign: str = '',
@@ -474,6 +453,32 @@ async def rss(request: Request,
     return response
 
 
-@app.get("/favicon.ico")
-async def favicon():
-    return RedirectResponse('/static/img/favicon.ico', 301)
+@app.get("/lite", dependencies=[Depends(check_token)])
+async def lite(request: Request,
+               tag: str = '',
+               sign: str = '',
+               task_id: Optional[int] = None):
+    valid = await md5_checker(tag, sign, False)
+    if not valid:
+        return PlainTextResponse('signature expired')
+    tasks, _ = await query_tasks(tag=tag, task_id=task_id)
+    if task_id is None:
+        now = datetime.now()
+        for task in tasks:
+            result = loads(task['latest_result'] or '{}')
+            # for cache...
+            task['url'] = task.get('url') or result.get(
+                'url') or task['origin_url']
+            task['text'] = task.get('text') or result.get('text') or ''
+            task['timeago'] = timeago(
+                (now - task['last_change_time']).seconds, 1, 1, short_name=True)
+        kwargs = {'tasks': tasks, 'request': request}
+        kwargs['version'] = __version__
+        return templates.TemplateResponse("lite.html", context=kwargs)
+    else:
+        if tasks:
+            task = tasks[0]
+            items = loads(task['result_list'] or '[]')
+            return {'result_list': items}
+        else:
+            return {'result_list': []}

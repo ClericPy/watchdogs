@@ -6,6 +6,7 @@ from logging import getLogger
 from sys import _getframe
 from traceback import format_exc
 from typing import Optional
+from xml.sax.saxutils import escape
 
 logger = getLogger('watchdogs')
 
@@ -243,6 +244,37 @@ async def try_catch(func, *args, **kwargs):
         logger.error(
             f'Catch an error while running {func.__name__}: {format_exc()}')
         return err
+
+
+def gen_rss(data):
+    nodes = []
+    channel = data['channel']
+    item_keys = ['title', 'description', 'link', 'guid', 'pubDate']
+    for item in data['items']:
+        item_nodes = []
+        for key in item_keys:
+            value = item.get(key)
+            if value:
+                item_nodes.append(f'<{key}>{escape(value)}</{key}>')
+        nodes.append(''.join(item_nodes))
+    items_string = ''.join((f'<item>{tmp}</item>' for tmp in nodes))
+    return rf'''<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0">
+<channel>
+  <title>{channel['title']}</title>
+  <link>{channel['link']}</link>
+  <description>{channel['description']}</description>
+  <image>
+    <url>{channel['link']}/static/img/favicon.ico</url>
+    <title>{channel['title']}</title>
+    <link>{channel['link']}</link>
+    <width>32</width>
+    <height>32</height>
+   </image>
+  {items_string}
+</channel>
+</rss>
+'''
 
 
 solo = SoloLock()
