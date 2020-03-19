@@ -174,10 +174,8 @@ async def auth(request: Request,
         return templates.TemplateResponse("auth.html", context=kwargs)
 
 
-@app.get("/")
-async def index(request: Request,
-                tag: str = '',
-                check_cookie=Depends(check_cookie)):
+@app.get("/", dependencies=[Depends(check_cookie)])
+async def index(request: Request, tag: str = ''):
     kwargs: dict = {'request': request}
     kwargs['cdn_urls'] = Config.cdn_urls
     kwargs['version'] = __version__
@@ -187,13 +185,13 @@ async def index(request: Request,
     return templates.TemplateResponse("index.html", context=kwargs)
 
 
-@app.get("/favicon.ico")
-async def favicon(check_cookie=Depends(check_cookie)):
+@app.get("/favicon.ico", dependencies=[Depends(check_cookie)])
+async def favicon():
     return RedirectResponse('/static/img/favicon.ico', 301)
 
 
-@app.post("/add_new_task")
-async def add_new_task(task: Task, check_cookie=Depends(check_cookie)):
+@app.post("/add_new_task", dependencies=[Depends(check_cookie)])
+async def add_new_task(task: Task):
     try:
         exist = 'unknown'
         if task.interval < 60:
@@ -232,8 +230,8 @@ async def add_new_task(task: Task, check_cookie=Depends(check_cookie)):
     return result
 
 
-@app.get("/delete_task")
-async def delete_task(task_id: int, check_cookie=Depends(check_cookie)):
+@app.get("/delete_task", dependencies=[Depends(check_cookie)])
+async def delete_task(task_id: int):
     try:
         query = tasks.delete().where(tasks.c.task_id == task_id)
         await Config.db.execute(query=query)
@@ -245,8 +243,8 @@ async def delete_task(task_id: int, check_cookie=Depends(check_cookie)):
     return result
 
 
-@app.get("/force_crawl")
-async def force_crawl(task_name: str, check_cookie=Depends(check_cookie)):
+@app.get("/force_crawl", dependencies=[Depends(check_cookie)])
+async def force_crawl(task_name: str):
     try:
         task = await crawl_once(task_name=task_name)
         task['timeago'] = timeago(
@@ -261,7 +259,7 @@ async def force_crawl(task_name: str, check_cookie=Depends(check_cookie)):
     return result
 
 
-@app.get("/load_tasks")
+@app.get("/load_tasks", dependencies=[Depends(check_cookie)])
 async def load_tasks(
         task_name: Optional[str] = None,
         page: int = 1,
@@ -269,7 +267,6 @@ async def load_tasks(
         order_by: str = 'last_change_time',
         sort: str = 'desc',
         tag: str = '',
-        check_cookie=Depends(check_cookie),
 ):
     try:
         _result, has_more = await query_tasks(
@@ -291,10 +288,8 @@ async def load_tasks(
     return result
 
 
-@app.get("/enable_task")
-async def enable_task(task_id: int,
-                      enable: int = 1,
-                      check_cookie=Depends(check_cookie)):
+@app.get("/enable_task", dependencies=[Depends(check_cookie)])
+async def enable_task(task_id: int, enable: int = 1):
     query = 'update tasks set `enable`=:enable where `task_id`=:task_id'
     values = {'task_id': task_id, 'enable': enable}
     try:
@@ -306,8 +301,8 @@ async def enable_task(task_id: int,
     return result
 
 
-@app.get('/load_hosts')
-async def load_hosts(host: str = '', check_cookie=Depends(check_cookie)):
+@app.get('/load_hosts', dependencies=[Depends(check_cookie)])
+async def load_hosts(host: str = ''):
     host = get_host(host) or host
     query = 'select `host` from host_rules'
     if host:
@@ -320,8 +315,8 @@ async def load_hosts(host: str = '', check_cookie=Depends(check_cookie)):
     return {'hosts': [getattr(i, 'host') for i in _result], 'host': host}
 
 
-@app.get("/get_host_rule")
-async def get_host_rule(host: str, check_cookie=Depends(check_cookie)):
+@app.get("/get_host_rule", dependencies=[Depends(check_cookie)])
+async def get_host_rule(host: str):
     try:
         if not host:
             raise ValueError('host name should not be null')
@@ -339,11 +334,9 @@ async def get_host_rule(host: str, check_cookie=Depends(check_cookie)):
     return result
 
 
-@app.post("/crawler_rule.{method}")
-async def crawler_rule(method: str,
-                       rule: CrawlerRule,
-                       force: Optional[int] = 0,
-                       check_cookie=Depends(check_cookie)):
+@app.post("/crawler_rule.{method}", dependencies=[Depends(check_cookie)])
+async def crawler_rule(method: str, rule: CrawlerRule,
+                       force: Optional[int] = 0):
     try:
         if not rule['name']:
             raise ValueError('rule name can not be null')
@@ -368,9 +361,8 @@ async def crawler_rule(method: str,
     return result
 
 
-@app.post("/find_crawler_rule")
-async def find_crawler_rule(request_args: dict,
-                            check_cookie=Depends(check_cookie)):
+@app.post("/find_crawler_rule", dependencies=[Depends(check_cookie)])
+async def find_crawler_rule(request_args: dict):
     try:
         url = request_args.get('url')
         rule: CrawlerRule = await Config.rule_db.find_crawler_rule(url)
@@ -383,8 +375,8 @@ async def find_crawler_rule(request_args: dict,
     return result
 
 
-@app.get("/delete_host_rule")
-async def delete_host_rule(host: str, check_cookie=Depends(check_cookie)):
+@app.get("/delete_host_rule", dependencies=[Depends(check_cookie)])
+async def delete_host_rule(host: str):
     try:
         if not host:
             raise ValueError('host should not be null')
@@ -396,11 +388,10 @@ async def delete_host_rule(host: str, check_cookie=Depends(check_cookie)):
     return result
 
 
-@app.get("/log")
+@app.get("/log", dependencies=[Depends(check_cookie)])
 async def log(max_lines: int = 100,
               refresh_every: int = 0,
-              log_names: str = 'info-server-error',
-              check_cookie=Depends(check_cookie)):
+              log_names: str = 'info-server-error'):
     html = '<style>body{background-color:#FAFAFA;padding:1em;}pre,p{background-color:#ECEFF1;padding: 1em;}</style>'
     html += f'<meta http-equiv="refresh" content="{refresh_every};">' if refresh_every else ''
     html += f'<p><a href="?max_lines={max_lines}&refresh_every={refresh_every}&log_names={log_names}">?max_lines={max_lines}&refresh_every={refresh_every}&log_names={log_names}</a></p>'
@@ -418,12 +409,11 @@ async def log(max_lines: int = 100,
     return response
 
 
-@app.get("/rss")
+@app.get("/rss", dependencies=[Depends(check_token)])
 async def rss(request: Request,
               tag: str = '',
               sign: str = '',
-              host: str = Header('', alias='Host'),
-              check_token=Depends(check_token)):
+              host: str = Header('', alias='Host')):
     valid = await md5_checker(tag, sign, False)
     if not valid:
         return PlainTextResponse('signature expired')
@@ -463,12 +453,11 @@ async def rss(request: Request,
     return response
 
 
-@app.get("/lite")
+@app.get("/lite", dependencies=[Depends(check_token)])
 async def lite(request: Request,
                tag: str = '',
                sign: str = '',
-               task_id: Optional[int] = None,
-               check_token=Depends(check_token)):
+               task_id: Optional[int] = None):
     valid = await md5_checker(tag, sign, False)
     if not valid:
         return PlainTextResponse('signature expired')
