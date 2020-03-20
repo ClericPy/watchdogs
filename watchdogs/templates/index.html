@@ -226,8 +226,8 @@
                         </el-form>
                         <div class="host-tags">
                             <el-tag class="host-tag" v-for="(host,index) in visible_host_list" :key="host"
-                                @click="show_host_rule(host)" effect="dark" :type="tag_types[index%5]">
-                                ${ host }
+                                @click="show_host_rule(host.name)" effect="dark" :type="tag_types[index%5]">
+                                ${ host.name } <i v-if="host.freq" class="el-icon-lock"></i>
                             </el-tag>
                         </div>
                     </div>
@@ -325,6 +325,29 @@
             :visible.sync="rule_info_visible" :close-on-click-modal="false">
             <el-button type="danger" icon="el-icon-delete" @click="delete_host_rule(current_host_rule.host)">Delete
             </el-button>
+            <el-row>
+                <h4 title="Example: n=1, interval=3 means crawl once each 3 seconds.">Frequency: <span>Send [n] request
+                        each [interval] seconds</span></h4>
+                <el-col :span="8">
+                    <el-input clearable
+                        placeholder="Number of concurrent, default to null / 0, will remove frequency controller)."
+                        title="Number of concurrent, default to null / 0, will remove frequency controller)."
+                        v-model="current_host_rule.n">
+                        <template slot="prepend">n:</template>
+                    </el-input>
+                </el-col>
+                <el-col :span="8">
+                    <el-input clearable placeholder="Crawling interval seconds, default to 0."
+                        title="Crawling interval seconds, default to 0." v-model="current_host_rule.interval">
+                        <template slot="prepend">interval:</template>
+                    </el-input>
+                </el-col>
+                <el-col :span="8">
+                    <el-button @click="update_frequency" type="warning">Update Frequency</el-button>
+                </el-col>
+            </el-row>
+
+
             <el-row :gutter="20">
                 <el-col :span="8">
                     <h4>Name</h4>
@@ -919,7 +942,7 @@
                         r => {
                             var result = r.body
                             if (result.msg == 'ok') {
-                                this.current_host_rule = JSON.parse(result.host_rule)
+                                this.current_host_rule = result.host_rule
                                 this.rule_info_visible = true
                             } else {
                                 this.$message.error({
@@ -976,6 +999,41 @@ Three kinds of format:
                     this.current_cb_doc = this.callback_workers[name]
                     this.new_task_form.custom_info = name + ':'
                 },
+                update_frequency() {
+                    let host = this.current_host_rule.host
+                    let n = this.current_host_rule.n || 0
+                    let interval = this.current_host_rule.interval || 0
+                    this.$http.get('update_host_freq', {
+                        params: {
+                            host: host,
+                            n: n,
+                            interval: interval
+                        }
+                    }).then(
+                        r => {
+                            var result = r.body
+                            if (result.msg == 'ok') {
+                                this.$message({
+                                    message: 'Update frequency ' + host + ': ' +
+                                        result.msg,
+                                    type: 'success'
+                                });
+                                this.current_host_rule.n = n
+                                this.current_host_rule.interval = interval
+                            } else {
+                                this.$message.error({
+                                    message: 'update_frequency ' + host + ' failed: ' + JSON
+                                        .stringify(
+                                            result),
+                                });
+                            }
+                        }, r => {
+                            this.$message.error({
+                                message: 'connect failed: ' + r.status,
+                            });
+                        }
+                    )
+                },
             },
             watch: {
                 current_host: function (val) {
@@ -985,7 +1043,7 @@ Three kinds of format:
                         this.current_host = val
                     }
                     this.host_list.forEach(host => {
-                        if (host.includes(val)) {
+                        if (host.name.includes(val)) {
                             this.visible_host_list.push(host)
                         }
                     });
