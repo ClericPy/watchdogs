@@ -2,16 +2,13 @@ from collections import deque
 from datetime import datetime
 from json import dumps, loads
 from pathlib import Path
-from time import time
-from traceback import format_exc
 from typing import Optional
 
 import aiofiles
 from fastapi import Cookie, Depends, FastAPI, Header
 from fastapi.staticfiles import StaticFiles
 from starlette.requests import Request
-from starlette.responses import (HTMLResponse, JSONResponse, PlainTextResponse,
-                                 RedirectResponse, Response)
+from starlette.responses import HTMLResponse, RedirectResponse, Response
 from starlette.templating import Jinja2Templates
 from torequests.utils import quote_plus, timeago
 from uniparser import CrawlerRule
@@ -40,61 +37,12 @@ templates = Jinja2Templates(
 
 @app.on_event("startup")
 async def startup():
-    await setup_app()
+    await setup_app(app)
 
 
 @app.on_event("shutdown")
 async def shutdown():
-    await release_app()
-
-
-class InvalidCookieError(Exception):
-    '''bad cookie redirect to /auth'''
-
-
-async def check_cookie(watchdog_auth: str = Cookie('')):
-    if Config.watchdog_auth and watchdog_auth != Config.watchdog_auth:
-        raise InvalidCookieError()
-
-
-class InvalidTokenError(Exception):
-    '''bad token return text: invalid token'''
-
-
-async def check_token(tag: str = '',
-                      sign: str = '',
-                      host: str = Header('', alias='Host')):
-    valid = await md5_checker(tag, sign, False)
-    if not valid:
-        raise InvalidTokenError()
-
-
-@app.exception_handler(InvalidCookieError)
-async def cookie_error_handler(request: Request, exc: InvalidCookieError):
-    resp = RedirectResponse('/auth', 302)
-    resp.set_cookie('watchdog_auth', '')
-    return resp
-
-
-@app.exception_handler(InvalidTokenError)
-async def token_error_handler(request: Request, exc: InvalidTokenError):
-    return PlainTextResponse('signature expired')
-
-
-@app.exception_handler(Exception)
-async def exception_handler(request: Request, exc: Exception):
-    trace_id = str(int(time() * 1000))
-    err_name = exc.__class__.__name__
-    err_value = str(exc)
-    msg = f'{err_name}({err_value}) trace_id: {trace_id}:\n{format_exc()}'
-    logger.error(msg)
-    return JSONResponse(
-        status_code=500,
-        content={
-            "message": f"Oops! {err_name}.",
-            "trace_id": trace_id
-        },
-    )
+    await release_app(app)
 
 
 @app.get('/auth')
@@ -111,7 +59,7 @@ async def auth(request: Request,
             old_password = Config.password
             Config.password = password
             await refresh_token()
-            resp = RedirectResponse('/')
+            resp = RedirectResponse('/watchdogs')
             resp.set_cookie(
                 'watchdog_auth',
                 Config.watchdog_auth,
@@ -120,9 +68,8 @@ async def auth(request: Request,
             logger.warning(
                 f'password changed {old_password}->{Config.password}.')
             return resp
-        valid = await md5_checker(password, Config.watchdog_auth)
-        if valid:
-            resp = RedirectResponse('/')
+        elif (await md5_checker(password, Config.watchdog_auth)):
+            resp = RedirectResponse('/watchdogs')
             resp.set_cookie(
                 'watchdog_auth',
                 Config.watchdog_auth,
@@ -130,8 +77,6 @@ async def auth(request: Request,
                 httponly=True)
             logger.info('correct password, login success.')
             return resp
-        # elif valid is None:
-        #     return PlainTextResponse('Check password too fast')
         else:
             # invalid password, clear cookie
             resp = RedirectResponse('/auth', 302)
@@ -152,8 +97,8 @@ async def auth(request: Request,
         return templates.TemplateResponse("auth.html", context=kwargs)
 
 
-@app.get("/", dependencies=[Depends(check_cookie)])
-async def index(request: Request, tag: str = ''):
+@app.get("/watchdogs", dependencies=[Depends(Config.check_cookie)])
+async def watchdogs(request: Request, tag: str = ''):
     kwargs: dict = {'request': request}
     kwargs['cdn_urls'] = Config.cdn_urls
     kwargs['version'] = __version__
@@ -163,12 +108,12 @@ async def index(request: Request, tag: str = ''):
     return templates.TemplateResponse("index.html", context=kwargs)
 
 
-@app.get("/favicon.ico", dependencies=[Depends(check_cookie)])
+@app.get("/favicon.ico", dependencies=[Depends(Config.check_cookie)])
 async def favicon():
     return RedirectResponse('/static/img/favicon.ico', 301)
 
 
-@app.post("/add_new_task", dependencies=[Depends(check_cookie)])
+@app.post("/add_new_task", dependencies=[Depends(Config.check_cookie)])
 async def add_new_task(task: Task):
     try:
         exist = 'unknown'
@@ -208,7 +153,7 @@ async def add_new_task(task: Task):
     return result
 
 
-@app.get("/delete_task", dependencies=[Depends(check_cookie)])
+@app.get("/delete_task", dependencies=[Depends(Config.check_cookie)])
 async def delete_task(task_id: int):
     try:
         query = tasks.delete().where(tasks.c.task_id == task_id)
@@ -221,7 +166,7 @@ async def delete_task(task_id: int):
     return result
 
 
-@app.get("/force_crawl", dependencies=[Depends(check_cookie)])
+@app.get("/force_crawl", dependencies=[Depends(Config.check_cookie)])
 async def force_crawl(task_name: str):
     try:
         task = await crawl_once(task_name=task_name)
@@ -237,7 +182,7 @@ async def force_crawl(task_name: str):
     return result
 
 
-@app.get("/load_tasks", dependencies=[Depends(check_cookie)])
+@app.get("/load_tasks", dependencies=[Depends(Config.check_cookie)])
 async def load_tasks(
         task_name: Optional[str] = None,
         page: int = 1,
@@ -266,7 +211,7 @@ async def load_tasks(
     return result
 
 
-@app.get("/enable_task", dependencies=[Depends(check_cookie)])
+@app.get("/enable_task", dependencies=[Depends(Config.check_cookie)])
 async def enable_task(task_id: int, enable: int = 1):
     query = 'update tasks set `enable`=:enable where `task_id`=:task_id'
     values = {'task_id': task_id, 'enable': enable}
@@ -279,7 +224,7 @@ async def enable_task(task_id: int, enable: int = 1):
     return result
 
 
-@app.get('/load_hosts', dependencies=[Depends(check_cookie)])
+@app.get('/load_hosts', dependencies=[Depends(Config.check_cookie)])
 async def load_hosts(host: str = ''):
     host = get_host(host) or host
     query = 'select `host` from host_rules'
@@ -293,7 +238,7 @@ async def load_hosts(host: str = ''):
     return {'hosts': [getattr(i, 'host') for i in _result], 'host': host}
 
 
-@app.get("/get_host_rule", dependencies=[Depends(check_cookie)])
+@app.get("/get_host_rule", dependencies=[Depends(Config.check_cookie)])
 async def get_host_rule(host: str):
     try:
         if not host:
@@ -312,7 +257,7 @@ async def get_host_rule(host: str):
     return result
 
 
-@app.post("/crawler_rule.{method}", dependencies=[Depends(check_cookie)])
+@app.post("/crawler_rule.{method}", dependencies=[Depends(Config.check_cookie)])
 async def crawler_rule(method: str, rule: CrawlerRule,
                        force: Optional[int] = 0):
     try:
@@ -339,7 +284,7 @@ async def crawler_rule(method: str, rule: CrawlerRule,
     return result
 
 
-@app.post("/find_crawler_rule", dependencies=[Depends(check_cookie)])
+@app.post("/find_crawler_rule", dependencies=[Depends(Config.check_cookie)])
 async def find_crawler_rule(request_args: dict):
     try:
         url = request_args.get('url')
@@ -353,7 +298,7 @@ async def find_crawler_rule(request_args: dict):
     return result
 
 
-@app.get("/delete_host_rule", dependencies=[Depends(check_cookie)])
+@app.get("/delete_host_rule", dependencies=[Depends(Config.check_cookie)])
 async def delete_host_rule(host: str):
     try:
         if not host:
@@ -366,7 +311,7 @@ async def delete_host_rule(host: str):
     return result
 
 
-@app.get("/log", dependencies=[Depends(check_cookie)])
+@app.get("/log", dependencies=[Depends(Config.check_cookie)])
 async def log(max_lines: int = 100,
               refresh_every: int = 0,
               log_names: str = 'info-server-error'):
@@ -387,7 +332,7 @@ async def log(max_lines: int = 100,
     return response
 
 
-@app.get("/rss", dependencies=[Depends(check_token)])
+@app.get("/rss", dependencies=[Depends(Config.check_token)])
 async def rss(request: Request,
               tag: str = '',
               sign: str = '',
@@ -428,7 +373,7 @@ async def rss(request: Request,
     return response
 
 
-@app.get("/lite", dependencies=[Depends(check_token)])
+@app.get("/lite", dependencies=[Depends(Config.check_token)])
 async def lite(request: Request,
                tag: str = '',
                sign: str = '',
