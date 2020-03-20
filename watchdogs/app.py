@@ -60,7 +60,7 @@ async def auth(request: Request,
             old_password = Config.password
             Config.password = password
             await refresh_token()
-            resp = RedirectResponse('/watchdogs')
+            resp = RedirectResponse('/')
             resp.set_cookie(
                 'watchdog_auth',
                 Config.watchdog_auth,
@@ -70,7 +70,7 @@ async def auth(request: Request,
                 f'password changed {old_password}->{Config.password}.')
             return resp
         elif (await md5_checker(password, Config.watchdog_auth)):
-            resp = RedirectResponse('/watchdogs')
+            resp = RedirectResponse('/')
             resp.set_cookie(
                 'watchdog_auth',
                 Config.watchdog_auth,
@@ -98,13 +98,8 @@ async def auth(request: Request,
         return templates.TemplateResponse("auth.html", context=kwargs)
 
 
-@app.get('/', dependencies=[Depends(Config.check_cookie)])
-async def index():
-    return RedirectResponse('/watchdogs', 302)
-
-
-@app.get("/watchdogs", dependencies=[Depends(Config.check_cookie)])
-async def watchdogs(request: Request, tag: str = ''):
+@app.get("/", dependencies=[Depends(Config.check_cookie)])
+async def index(request: Request, tag: str = ''):
     kwargs: dict = {'request': request}
     kwargs['cdn_urls'] = Config.cdn_urls
     kwargs['version'] = __version__
