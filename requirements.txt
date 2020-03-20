@@ -2,8 +2,9 @@ uniparser>=1.3.6
 fastapi
 uvicorn
 databases
-torequests>=4.9.9
+torequests>=4.9.11
 fire
 jinja2
 aiofiles
 async_lru
+frequency_controller>=0.0.6
