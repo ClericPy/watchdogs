@@ -40,34 +40,12 @@ templates = Jinja2Templates(
 
 @app.on_event("startup")
 async def startup():
-    await setup_app(app)
+    await setup_app()
 
 
 @app.on_event("shutdown")
 async def shutdown():
-    await release_app(app)
-
-
-# @app.middleware("http")
-# async def add_auth_checker(request: Request, call_next):
-#     AUTH_PATH_WHITE_LIST = {'/auth', '/rss', '/lite'}
-#     # print(request.scope)
-#     # {'type': 'http', 'http_version': '1.1', 'server': ('127.0.0.1', 9901), 'client': ('127.0.0.1', 7037), 'scheme': 'http', 'method': 'GET', 'root_path': '', 'path': '/auth', 'raw_path': b'/auth', 'query_string': b'', 'headers': [(b'host', b'127.0.0.1:9901'), (b'connection', b'keep-alive'), (b'sec-fetch-dest', b'image'), (b'user-agent', b'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36'), (b'dnt', b'1'), (b'accept', b'image/webp,image/apng,image/*,*/*;q=0.8'), (b'sec-fetch-site', b'same-origin'), (b'sec-fetch-mode', b'no-cors'), (b'referer', b'http://127.0.0.1:9901/auth'), (b'accept-encoding', b'gzip, deflate, br'), (b'accept-language', b'zh-CN,zh;q=0.9'), (b'cookie', b'ads_id=lakdsjflakjdf; _ga=GA1.1.1550108461.1583462251')], 'fastapi_astack': <contextlib.AsyncExitStack object at 0x00000165BE69EEB8>, 'app': <fastapi.applications.FastAPI object at 0x00000165A7B738D0>}
-#     watchdog_auth = request.cookies.get('watchdog_auth')
-#     path = request.scope['path']
-#     if not path.startswith('/'):
-#         path = urlparse(request.scope['path']).path
-#         request.scope['path'] = path
-#     if path in AUTH_PATH_WHITE_LIST or Config.watchdog_auth and watchdog_auth == Config.watchdog_auth:
-#         # gateway may do better, but kong used too much memory...
-#         response = await call_next(request)
-#         if path.startswith('/static/'):
-#             response.headers['Cache-Control'] = 'max-age=86400'
-#         return response
-#     else:
-#         resp = RedirectResponse('/auth', 302)
-#         resp.set_cookie('watchdog_auth', '')
-#         return resp
+    await release_app()
 
 
 class InvalidCookieError(Exception):
@@ -414,9 +392,6 @@ async def rss(request: Request,
               tag: str = '',
               sign: str = '',
               host: str = Header('', alias='Host')):
-    valid = await md5_checker(tag, sign, False)
-    if not valid:
-        return PlainTextResponse('signature expired')
     tasks, _ = await query_tasks(tag=tag)
     source_link = f'https://{host}'
     # print(source_link)
@@ -458,9 +433,6 @@ async def lite(request: Request,
                tag: str = '',
                sign: str = '',
                task_id: Optional[int] = None):
-    valid = await md5_checker(tag, sign, False)
-    if not valid:
-        return PlainTextResponse('signature expired')
     tasks, _ = await query_tasks(tag=tag, task_id=task_id)
     if task_id is None:
         now = datetime.now()

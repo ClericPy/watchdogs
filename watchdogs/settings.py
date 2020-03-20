@@ -237,7 +237,7 @@ async def setup_background():
     ensure_future(background_loop(loop_funcs))
 
 
-async def setup_app(app):
+async def setup_app():
     mute_loggers()
     setup_uniparser()
     db = Config.db
@@ -252,7 +252,7 @@ async def setup_app(app):
     Config.logger.info(f'App start success, CONFIG_DIR: {Config.CONFIG_DIR}')
 
 
-async def release_app(app):
+async def release_app():
     if Config.db:
         await Config.db.disconnect()
 
