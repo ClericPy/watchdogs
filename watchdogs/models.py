@@ -68,6 +68,7 @@ tasks = sqlalchemy.Table(
         "last_change_time",
         sqlalchemy.TIMESTAMP,
         server_default="1970-01-01 08:00:00",
+        index=True,
         nullable=False),
     sqlalchemy.Column("custom_info", sqlalchemy.TEXT),
 )
@@ -93,6 +94,11 @@ def create_tables(db_url):
         try:
             engine.execute(
                 'ALTER TABLE tasks ADD COLUMN error TEXT NOT NULL DEFAULT ""')
+        except Exception:
+            pass
+        try:
+            engine.execute(
+                'CREATE INDEX change_time_idx ON tasks (last_change_time);')
         except Exception:
             pass
     except Exception:

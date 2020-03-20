@@ -1,6 +1,6 @@
 from asyncio import ensure_future, wait
 from datetime import datetime, timedelta
-from json import dumps, loads
+from json import JSONDecodeError, dumps, loads
 from typing import Optional, Tuple
 
 from torequests.utils import ttime
@@ -160,6 +160,8 @@ async def _crawl_once(task_name: Optional[str] = None):
             )
     update_query = 'update tasks set `last_check_time`=:last_check_time,`next_check_time`=:next_check_time where task_id=:task_id'
     await db.execute_many(query=update_query, values=update_values)
+    if update_values:
+        CLEAR_CACHE_NEEDED = True
     logger.info(f'crawl_once crawling {len(todo)} valid tasks.')
     if todo:
         done, pending = await wait(todo, timeout=Config.default_crawler_timeout)
@@ -189,14 +191,16 @@ async def _crawl_once(task_name: Optional[str] = None):
                 # update db
                 update_counts += 1
                 # new result updated
-                CLEAR_CACHE_NEEDED = True
                 query = UpdateTaskQuery(task.task_id)
                 # JSON
                 new_latest_result = dumps(
                     to_insert_result_list[0], sort_keys=True)
                 query.add('latest_result', new_latest_result)
                 query.add('last_change_time', now)
-                old_result_list = loads(task.result_list or '[]')
+                try:
+                    old_result_list = loads(task.result_list or '[]')
+                except JSONDecodeError:
+                    old_result_list = []
                 # older insert first, keep the newer is on the top
                 for result in to_insert_result_list[::-1]:
                     # result is dict, not json string
@@ -223,7 +227,7 @@ async def _crawl_once(task_name: Optional[str] = None):
     else:
         logger.info(f'Crawl task_name={task_name} finished. 0 todo.')
     if CLEAR_CACHE_NEEDED:
-        logger.info('Clear cache for crawling new results.')
+        logger.info('Clear cache for crawling new tasks.')
         query_tasks.cache_clear()
     if task_name:
         query = tasks.select().where(tasks.c.name == task_name)
