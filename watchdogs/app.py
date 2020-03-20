@@ -1,6 +1,6 @@
 from collections import deque
 from datetime import datetime
-from json import dumps, loads
+from json import JSONDecodeError, dumps, loads
 from pathlib import Path
 from typing import Optional
 
@@ -95,6 +95,11 @@ async def auth(request: Request,
             kwargs['action'] = 'Login'
             kwargs['prompt_title'] = 'Input the password'
         return templates.TemplateResponse("auth.html", context=kwargs)
+
+
+@app.get('/', dependencies=[Depends(Config.check_cookie)])
+async def index():
+    return RedirectResponse('/watchdogs', 302)
 
 
 @app.get("/watchdogs", dependencies=[Depends(Config.check_cookie)])
@@ -395,7 +400,10 @@ async def lite(request: Request,
     else:
         if tasks:
             task = tasks[0]
-            items = loads(task['result_list'] or '[]')
-            return {'result_list': items}
+            try:
+                result_list = loads(task['result_list'] or '[]')
+            except JSONDecodeError:
+                result_list = []
+            return {'result_list': result_list}
         else:
             return {'result_list': []}

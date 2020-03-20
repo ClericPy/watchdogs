@@ -1,6 +1,6 @@
 from asyncio import ensure_future, wait
 from datetime import datetime, timedelta
-from json import dumps, loads
+from json import JSONDecodeError, dumps, loads
 from typing import Optional, Tuple
 
 from torequests.utils import ttime
@@ -196,7 +196,10 @@ async def _crawl_once(task_name: Optional[str] = None):
                     to_insert_result_list[0], sort_keys=True)
                 query.add('latest_result', new_latest_result)
                 query.add('last_change_time', now)
-                old_result_list = loads(task.result_list or '[]')
+                try:
+                    old_result_list = loads(task.result_list or '[]')
+                except JSONDecodeError:
+                    old_result_list = []
                 # older insert first, keep the newer is on the top
                 for result in to_insert_result_list[::-1]:
                     # result is dict, not json string
