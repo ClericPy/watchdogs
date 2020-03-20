@@ -164,8 +164,8 @@ async def _crawl_once(task_name: Optional[str] = None):
     if todo:
         done, pending = await wait(todo, timeout=Config.default_crawler_timeout)
         if pending:
-            names = [getattr(t, 'name') for t in pending]
-            logger.error(f'crawl timeout: {names}')
+            names = [getattr(t, 'task_name', None) for t in pending]
+            logger.error(f'crawl timeout {len(names)}: {names}')
         ttime_now = ttime()
         changed_tasks = []
         update_counts = 0
