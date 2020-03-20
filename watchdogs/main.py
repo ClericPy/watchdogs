@@ -50,6 +50,7 @@ def init_app(db_url=None,
         ignore_file_log = uvicorn_kwargs.pop('ignore_file_log', NotSet)
         Config.mute_file_log = get_valid_value([ignore_file_log, mute_file_log],
                                                Config.mute_file_log)
+        Config.uvicorn_kwargs = uvicorn_kwargs
         setup(
             db_url=db_url,
             password=password,
