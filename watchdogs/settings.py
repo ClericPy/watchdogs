@@ -237,7 +237,12 @@ async def setup_background():
     ensure_future(background_loop(loop_funcs))
 
 
-async def setup_app():
+def setup_exception_handlers(app):
+    for exc, callback in Config.exception_handlers:
+        app.add_exception_handler(exc, callback)
+
+
+async def setup_app(app):
     mute_loggers()
     setup_uniparser()
     db = Config.db
@@ -249,10 +254,11 @@ async def setup_app():
         await setup_md5_salt()
         await setup_crawler()
         await refresh_token()
+        setup_exception_handlers(app)
     Config.logger.info(f'App start success, CONFIG_DIR: {Config.CONFIG_DIR}')
 
 
-async def release_app():
+async def release_app(app):
     if Config.db:
         await Config.db.disconnect()
 
