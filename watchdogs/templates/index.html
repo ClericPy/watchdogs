@@ -301,6 +301,10 @@
                     <el-input v-model="new_task_form.max_result_count" autocomplete="off" title="Press enter to submit"
                         @keyup.enter.native="add_new_task"></el-input>
                 </el-form-item>
+                <el-form-item title="History of the result list." label="result_list">
+                    <el-input v-model="new_task_form.result_list" type="textarea" title="Standard JSON list.">
+                    </el-input>
+                </el-form-item>
                 <el-form-item label="custom_info">
                     <el-input type="textarea" autosize v-model="new_task_form.custom_info" clearable
                         placeholder="string split by ':' as callback_name:arg" autocomplete="off"></el-input>
@@ -383,22 +387,28 @@
             },
             methods: {
                 add_new_task() {
-                    this.task_info_visible = false
                     // {"name":"get demo","request_args":{"method":"get","url":"http://httpbin.org/get","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[{"name":"text","chain_rules":[["css","p","$text"],["python","getitem","[0]"]],"child_rules":""}],"regex":"http://httpbin.org/get","encoding":""}
+                    try {
+                        JSON.parse(this.new_task_form.result_list)
+                    } catch (error) {
+                        this.$alert('Bad JSON of result_list')
+                        return
+                    }
+                    this.task_info_visible = false
                     let data = JSON.stringify(this.new_task_form)
                     this.$http.post('add_new_task', data).then(
                         r => {
                             var result = r.body
                             if (result.msg == 'ok') {
                                 this.$message({
-                                    message: 'Add task ' + this.new_task_form.name + ' success: ' +
+                                    message: 'Update task ' + this.new_task_form.name + ' success: ' +
                                         result.msg,
                                     type: 'success'
                                 });
                                 this.reload_tasks()
                             } else {
                                 this.$message.error({
-                                    message: 'Add task ' + this.new_task_form.name + ' failed: ' +
+                                    message: 'Update task ' + this.new_task_form.name + ' failed: ' +
                                         result.msg,
                                     duration: 0,
                                     showClose: true,
@@ -522,7 +532,8 @@
                                 }
                             } else {
                                 if (method == 'add' && /matched more than 1 rule/g.test(result.msg)) {
-                                    this.$confirm('Failed for url matched more than 1 rule, overwrite it?',
+                                    this.$confirm(
+                                        'Failed for url matched more than 1 rule, overwrite it?',
                                         'Confirm', {
                                             confirmButtonText: 'Yes',
                                             cancelButtonText: 'No',
@@ -571,6 +582,7 @@
                             interval: 300,
                             work_hours: '0, 24',
                             max_result_count: 10,
+                            result_list: '[]',
                             custom_info: '',
                         }
                         let current_crawler_rule = JSON.parse(this.sub_app.current_crawler_rule_json)
@@ -781,7 +793,8 @@
                                 }
                             } else {
                                 this.$message.error({
-                                    message: 'Crawl task ' + row.name + ' failed: ' + result.msg,
+                                    message: 'Crawl task ' + row.name + ' failed: ' + result
+                                        .msg,
                                 });
                             }
                         }, r => {
@@ -812,6 +825,7 @@
                         interval: row.interval,
                         work_hours: row.work_hours,
                         max_result_count: row.max_result_count,
+                        result_list: row.result_list,
                         custom_info: row.custom_info,
                     }
                     this.show_form_add_new_task(false)
@@ -836,7 +850,8 @@
                                     this.task_list.splice(index, 1)
                                 } else {
                                     this.$message.error({
-                                        message: 'Delete task ' + row.name + ' failed: ' +
+                                        message: 'Delete task ' + row.name +
+                                            ' failed: ' +
                                             result.msg,
                                     });
                                 }
@@ -868,14 +883,16 @@
                                 var result = r.body
                                 if (result.msg == 'ok') {
                                     this.$message.success({
-                                        message: 'Delete host ' + host + ' rule success',
+                                        message: 'Delete host ' + host +
+                                            ' rule success',
                                     });
                                     this.current_host_rule = {}
                                     this.rule_info_visible = false
                                     this.load_hosts()
                                 } else {
                                     this.$message.error({
-                                        message: 'Delete host ' + host + ' rule failed: ' + JSON
+                                        message: 'Delete host ' + host +
+                                            ' rule failed: ' + JSON
                                             .stringify(
                                                 result),
                                     });
@@ -906,8 +923,9 @@
                                 this.rule_info_visible = true
                             } else {
                                 this.$message.error({
-                                    message: 'get_host_rule ' + host + ' failed: ' + JSON.stringify(
-                                        result),
+                                    message: 'get_host_rule ' + host + ' failed: ' + JSON
+                                        .stringify(
+                                            result),
                                 });
                             }
                         }, r => {
