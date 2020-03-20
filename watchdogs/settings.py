@@ -1,9 +1,17 @@
 import logging
 from asyncio import ensure_future, get_event_loop
 from datetime import datetime
+from json import dumps, loads
 from logging.handlers import RotatingFileHandler
 
 from databases import Database
+from torequests.utils import (
+    curlparse, escape, guess_interval, itertools_chain, json, parse_qs,
+    parse_qsl, ptime, quote, quote_plus, slice_by_size, slice_into_pieces,
+    split_n, timeago, ttime, unescape, unique, unquote, unquote_plus, urljoin,
+    urlparse, urlsplit, urlunparse)
+from uniparser.config import GlobalConfig
+from uniparser.parsers import AsyncFrequency, UDFParser, Uniparser
 
 from .background import background_loop, db_backup_handler
 from .callbacks import CallbackHandler
@@ -79,15 +87,7 @@ def setup_db(db_url=None):
     Config.metas = Metas(Config.db)
 
 
-def setup_uniparser():
-    from torequests.utils import (
-        curlparse, escape, guess_interval, itertools_chain, json, parse_qs,
-        parse_qsl, ptime, quote, quote_plus, slice_by_size, slice_into_pieces,
-        split_n, timeago, ttime, unescape, unique, unquote, unquote_plus,
-        urljoin, urlparse, urlsplit, urlunparse)
-    from uniparser.parsers import Uniparser, AsyncFrequency, UDFParser
-    from uniparser.config import GlobalConfig
-
+async def setup_uniparser():
     UDFParser._GLOBALS_ARGS.update({
         'curlparse': curlparse,
         'escape': escape,
@@ -116,6 +116,7 @@ def setup_uniparser():
     GlobalConfig.GLOBAL_TIMEOUT = Config.downloader_timeout
     Uniparser._DEFAULT_ASYNC_FREQUENCY = AsyncFrequency(
         *Config.DEFAULT_HOST_FREQUENCY)
+    await load_host_freqs()
 
 
 def setup(
@@ -244,7 +245,7 @@ def setup_exception_handlers(app):
 
 async def setup_app(app):
     mute_loggers()
-    setup_uniparser()
+    await setup_uniparser()
     db = Config.db
     if db:
         await db.connect()
@@ -286,3 +287,35 @@ async def default_db_backup_sqlite():
             path_to_del = backup_file_paths[Config.backup_count:]
             for p in path_to_del:
                 p.unlink()
+
+
+def get_host_freq_list(host):
+    freq = Uniparser._HOST_FREQUENCIES.get(host, None)
+    if freq:
+        return [freq.n, freq.interval]
+    else:
+        return [None, 0]
+
+
+async def set_host_freq(host, n, interval):
+    if n:
+        Uniparser._HOST_FREQUENCIES[host] = AsyncFrequency(n, interval)
+    else:
+        Uniparser._HOST_FREQUENCIES.pop(host, None)
+    await save_host_freqs()
+
+
+async def save_host_freqs():
+    items = {
+        host: freq.to_list()
+        for host, freq in Uniparser._HOST_FREQUENCIES.items()
+    }
+    await Config.metas.set('host_freqs', dumps(items))
+
+
+async def load_host_freqs():
+    host_freqs_str = await Config.metas.get('host_freqs', default='{}')
+    host_freqs = loads(host_freqs_str)
+    Uniparser._HOST_FREQUENCIES = {
+        host: AsyncFrequency(*args) for host, args in host_freqs.items()
+    }

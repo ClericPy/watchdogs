@@ -11,7 +11,7 @@ from starlette.requests import Request
 from starlette.responses import HTMLResponse, RedirectResponse, Response
 from starlette.templating import Jinja2Templates
 from torequests.utils import quote_plus, timeago
-from uniparser import CrawlerRule
+from uniparser import CrawlerRule, Uniparser
 from uniparser.fastapi_ui import app as sub_app
 from uniparser.utils import get_host
 
@@ -19,7 +19,8 @@ from . import __version__
 from .config import md5, md5_checker
 from .crawler import crawl_once
 from .models import Task, query_tasks, tasks
-from .settings import Config, refresh_token, release_app, setup_app
+from .settings import (Config, get_host_freq_list, refresh_token, release_app,
+                       set_host_freq, setup_app)
 from .utils import gen_rss
 
 description = f"Watchdogs to keep an eye on the world's change.\nRead more: [https://github.com/ClericPy/watchdogs](https://github.com/ClericPy/watchdogs)\n\n[View Logs](/log)"
@@ -240,7 +241,12 @@ async def load_hosts(host: str = ''):
         values = {}
     query += ' order by `host` asc'
     _result = await Config.db.fetch_all(query, values)
-    return {'hosts': [getattr(i, 'host') for i in _result], 'host': host}
+    host_freqs = Uniparser._HOST_FREQUENCIES
+    hosts = [{
+        'name': getattr(i, 'host', None),
+        'freq': getattr(i, 'host', None) in host_freqs
+    } for i in _result]
+    return {'hosts': hosts, 'host': host}
 
 
 @app.get("/get_host_rule", dependencies=[Depends(Config.check_cookie)])
@@ -251,11 +257,10 @@ async def get_host_rule(host: str):
         query = 'select `host_rule` from host_rules where `host`=:host'
         values = {'host': host}
         _result = await Config.db.fetch_one(query, values)
-        result = {
-            'msg': 'ok',
-            'host_rule': getattr(_result, 'host_rule')
-            if _result else '{"host": "%s"}' % host
-        }
+        host_rule = getattr(_result, 'host_rule', None)
+        host_rule = loads(host_rule) if host_rule else {"host": host}
+        host_rule['n'], host_rule['interval'] = get_host_freq_list(host)
+        result = {'msg': 'ok', 'host_rule': host_rule}
     except Exception as e:
         result = {'msg': repr(e)}
     logger.info(f'[Get] host_rule {host}: {result}')
@@ -407,3 +412,18 @@ async def lite(request: Request,
             return {'result_list': result_list}
         else:
             return {'result_list': []}
+
+
+@app.get("/update_host_freq", dependencies=[Depends(Config.check_cookie)])
+async def update_host_freq(host: str,
+                           n: Optional[int] = 0,
+                           interval: Optional[int] = 0):
+    try:
+        if not host:
+            raise ValueError('host should not be null')
+        await set_host_freq(host, n=n, interval=interval)
+        result = {'msg': 'ok'}
+    except Exception as e:
+        result = {'msg': repr(e)}
+    logger.info(f'[Update] host frequency {host}: {result}')
+    return result
