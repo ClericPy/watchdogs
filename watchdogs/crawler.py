@@ -115,7 +115,7 @@ async def crawl(task):
     return task, error, result_list
 
 
-async def _crawl_once(task_name: Optional[str] = None):
+async def _crawl_once(task_name: Optional[str] = None, chunk_size: int = 20):
     """task_name means force crawl"""
     db: Database = Config.db
     now = datetime.now()
@@ -128,11 +128,14 @@ async def _crawl_once(task_name: Optional[str] = None):
     else:
         query = tasks.select().where(tasks.c.enable == 1).where(
             tasks.c.next_check_time <= now)
+        query = query.limit(chunk_size)
     todo = []
     now = datetime.now()
     update_values = []
     CLEAR_CACHE_NEEDED = False
-    async for _task in db.iterate(query=query):
+    fetched_tasks = await db.fetch_all(query=query)
+    has_more = len(fetched_tasks) >= chunk_size
+    for _task in fetched_tasks:
         task = Task(**dict(_task))
         # check work hours
         ok, next_check_time = find_next_check_time(task.work_hours or '0, 24',
@@ -177,6 +180,7 @@ async def _crawl_once(task_name: Optional[str] = None):
             if error != task.error:
                 crawl_errors.append({'task_id': task.task_id, 'error': error})
             if result_list is None:
+                # ignore update this task
                 continue
             # compare latest_result and new list
             # later first, just like the saved result_list sortings
@@ -198,7 +202,8 @@ async def _crawl_once(task_name: Optional[str] = None):
                 query.add('latest_result', new_latest_result)
                 query.add('last_change_time', now)
                 try:
-                    old_result_list = loads(task.result_list or '[]')
+                    old_result_list = loads(
+                        task.result_list) if task.result_list else []
                 except JSONDecodeError:
                     old_result_list = []
                 # older insert first, keep the newer is on the top
@@ -233,6 +238,8 @@ async def _crawl_once(task_name: Optional[str] = None):
         query = tasks.select().where(tasks.c.name == task_name)
         _task = await db.fetch_one(query=query)
         return dict(_task)
+    else:
+        return has_more
 
 
 async def crawl_once(task_name: Optional[str] = None):

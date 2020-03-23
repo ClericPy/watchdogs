@@ -69,7 +69,7 @@ async def auth(request: Request,
             logger.warning(
                 f'password changed {old_password}->{Config.password}.')
             return resp
-        elif (await md5_checker(password, Config.watchdog_auth)):
+        elif (await md5_checker(password, Config.watchdog_auth, freq=True)):
             resp = RedirectResponse('/')
             resp.set_cookie(
                 'watchdog_auth',
@@ -126,7 +126,8 @@ async def add_new_task(task: Task):
             # insert new task
             query = tasks.insert()
             values = dict(task)
-            values.pop('error', None)
+            if not values.get('error'):
+                values['error'] = ''
             # insert with task_id is None
             await db.execute(query=query, values=values)
         else:
@@ -337,6 +338,21 @@ async def log(max_lines: int = 100,
     return response
 
 
+@app.get("/update_host_freq", dependencies=[Depends(Config.check_cookie)])
+async def update_host_freq(host: str,
+                           n: Optional[int] = 0,
+                           interval: Optional[int] = 0):
+    try:
+        if not host:
+            raise ValueError('host should not be null')
+        await set_host_freq(host, n=n, interval=interval)
+        result = {'msg': 'ok'}
+    except Exception as e:
+        result = {'msg': repr(e)}
+    logger.info(f'[Update] host frequency {host}: {result}')
+    return result
+
+
 @app.get("/rss", dependencies=[Depends(Config.check_token)])
 async def rss(request: Request,
               tag: str = '',
@@ -401,24 +417,10 @@ async def lite(request: Request,
         if tasks:
             task = tasks[0]
             try:
-                result_list = loads(task['result_list'] or '[]')
+                result_list = loads(
+                    task['result_list']) if task['result_list'] else []
             except JSONDecodeError:
                 result_list = []
             return {'result_list': result_list}
         else:
             return {'result_list': []}
-
-
-@app.get("/update_host_freq", dependencies=[Depends(Config.check_cookie)])
-async def update_host_freq(host: str,
-                           n: Optional[int] = 0,
-                           interval: Optional[int] = 0):
-    try:
-        if not host:
-            raise ValueError('host should not be null')
-        await set_host_freq(host, n=n, interval=interval)
-        result = {'msg': 'ok'}
-    except Exception as e:
-        result = {'msg': repr(e)}
-    logger.info(f'[Update] host frequency {host}: {result}')
-    return result

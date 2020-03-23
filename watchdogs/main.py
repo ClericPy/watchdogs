@@ -1,11 +1,11 @@
 import sys
-from pathlib import Path
 from traceback import format_exc
 
 from fire import Fire
 from uvicorn import run
 
 from .settings import Config, NotSet, get_valid_value, init_logger, setup
+from .config import ensure_dir
 
 
 def clear_dir(dir_path):
@@ -37,10 +37,7 @@ def init_app(db_url=None,
         Config.access_log = uvicorn_kwargs['access_log']
         logger = init_logger()
         if config_dir:
-            config_dir = Path(config_dir)
-            if not config_dir.is_dir():
-                config_dir.mkdir()
-            Config.CONFIG_DIR = config_dir
+            Config.CONFIG_DIR = ensure_dir(config_dir)
         if uninstall:
             return clear_dir(Config.CONFIG_DIR)
         # backward compatibility

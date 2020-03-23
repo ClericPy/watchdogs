@@ -25,14 +25,14 @@ def md5(obj, n=32, with_salt=True):
     return _md5(f'{obj}{salt}', n=n)
 
 
-async def md5_checker(string, target, freq=True):
+async def md5_checker(obj, target, freq=False):
     if freq:
         async with Config.check_pwd_freq:
             # anti guessing password
-            return md5(string) == target
+            return md5(obj) == target
     else:
         # may get a cache
-        return md5(string) == target
+        return md5(obj) == target
 
 
 class InvalidCookieError(Exception):
@@ -51,7 +51,7 @@ class InvalidTokenError(Exception):
 async def check_token(tag: str = '',
                       sign: str = '',
                       host: str = Header('', alias='Host')):
-    valid = await md5_checker(tag, sign, False)
+    valid = await md5_checker(tag, sign, freq=False)
     if not valid:
         raise InvalidTokenError()
 
@@ -89,11 +89,26 @@ async def exception_handler(request: Request, exc: Exception):
     )
 
 
+def ensure_dir(path: Path):
+    if isinstance(path, str):
+        path = Path(path)
+    if path.is_dir():
+        return path
+    else:
+        paths = list(reversed(path.parents))
+        paths.append(path)
+        p: Path
+        for p in paths:
+            if not p.is_dir():
+                p.mkdir()
+        return path
+
+
 class Config:
-    CONFIG_DIR: Path = Path.home() / 'watchdogs'
-    if not CONFIG_DIR.is_dir():
-        CONFIG_DIR.mkdir()
+    CONFIG_DIR: Path = ensure_dir(Path.home() / 'watchdogs')
     ENCODING = 'utf-8'
+    # db_url defaults to sqlite://
+    db_url: str = ''
     db: Database = None
     logger = logger
     password: str = ''
