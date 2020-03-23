@@ -126,7 +126,8 @@ async def add_new_task(task: Task):
             # insert new task
             query = tasks.insert()
             values = dict(task)
-            values.pop('error', None)
+            if not values.get('error'):
+                values['error'] = ''
             # insert with task_id is None
             await db.execute(query=query, values=values)
         else:
@@ -416,7 +417,8 @@ async def lite(request: Request,
         if tasks:
             task = tasks[0]
             try:
-                result_list = loads(task['result_list'] or '[]')
+                result_list = loads(
+                    task['result_list']) if task['result_list'] else []
             except JSONDecodeError:
                 result_list = []
             return {'result_list': result_list}
