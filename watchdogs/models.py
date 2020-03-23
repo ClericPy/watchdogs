@@ -273,15 +273,19 @@ async def query_tasks(
         order_by: str = 'last_change_time',
         sort: str = 'desc',
         tag: str = '',
+        task_ids: Tuple[int] = None,
 ) -> Tuple[list, bool]:
     offset = page_size * (page - 1)
     query = tasks.select()
-    if task_name is not None:
-        query = query.where(tasks.c.name == task_name)
-    if task_id is not None:
-        query = query.where(tasks.c.task_id == task_id)
-    if tag:
-        query = query.where(tasks.c.tag == tag)
+    if task_ids:
+        query = query.where(tasks.c.task_id.in_(task_ids))
+    else:
+        if task_id is not None:
+            query = query.where(tasks.c.task_id == task_id)
+        if task_name is not None:
+            query = query.where(tasks.c.name == task_name)
+        if tag:
+            query = query.where(tasks.c.tag == tag)
     if order_by and sort:
         ob = getattr(tasks.c, order_by, None)
         if ob is None:
