@@ -25,14 +25,14 @@ def md5(obj, n=32, with_salt=True):
     return _md5(f'{obj}{salt}', n=n)
 
 
-async def md5_checker(string, target, freq=True):
+async def md5_checker(obj, target, freq=False):
     if freq:
         async with Config.check_pwd_freq:
             # anti guessing password
-            return md5(string) == target
+            return md5(obj) == target
     else:
         # may get a cache
-        return md5(string) == target
+        return md5(obj) == target
 
 
 class InvalidCookieError(Exception):
@@ -51,7 +51,7 @@ class InvalidTokenError(Exception):
 async def check_token(tag: str = '',
                       sign: str = '',
                       host: str = Header('', alias='Host')):
-    valid = await md5_checker(tag, sign, False)
+    valid = await md5_checker(tag, sign, freq=False)
     if not valid:
         raise InvalidTokenError()
 
