@@ -69,7 +69,7 @@ async def auth(request: Request,
             logger.warning(
                 f'password changed {old_password}->{Config.password}.')
             return resp
-        elif (await md5_checker(password, Config.watchdog_auth)):
+        elif (await md5_checker(password, Config.watchdog_auth, freq=True)):
             resp = RedirectResponse('/')
             resp.set_cookie(
                 'watchdog_auth',
