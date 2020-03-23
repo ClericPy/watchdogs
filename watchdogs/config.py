@@ -94,6 +94,8 @@ class Config:
     if not CONFIG_DIR.is_dir():
         CONFIG_DIR.mkdir()
     ENCODING = 'utf-8'
+    # db_url defaults to sqlite://
+    db_url: str = ''
     db: Database = None
     logger = logger
     password: str = ''

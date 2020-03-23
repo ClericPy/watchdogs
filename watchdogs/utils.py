@@ -246,6 +246,13 @@ async def try_catch(func, *args, **kwargs):
         return err
 
 
+def ignore_error(func, *args, **kwargs):
+    try:
+        return func(*args, **kwargs)
+    except Exception as err:
+        return err
+
+
 def gen_rss(data):
     nodes = []
     channel = data['channel']

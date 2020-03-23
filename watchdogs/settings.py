@@ -82,6 +82,7 @@ def setup_db(db_url=None):
     if db_url is None:
         sqlite_path = Config.CONFIG_DIR / 'storage.sqlite'
         db_url = f'sqlite:///{sqlite_path}'
+    Config.db_url = db_url
     Config.db = Database(db_url)
     Config.rule_db = RuleStorageDB(Config.db)
     Config.metas = Metas(Config.db)

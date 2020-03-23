@@ -1,16 +1,17 @@
 from datetime import datetime
-from typing import Optional, Tuple
 from traceback import format_exc
+from typing import Optional, Tuple
 
 import sqlalchemy
 from async_lru import alru_cache
 from databases import Database
 from pydantic import BaseModel
-from sqlalchemy.sql import text
+from sqlalchemy.sql import func, text
 from uniparser import CrawlerRule, HostRule
 from uniparser.crawler import RuleStorage, get_host
 
 from .config import Config
+from .utils import ignore_error
 
 metadata = sqlalchemy.MetaData()
 date0 = datetime.strptime('1970-01-01 08:00:00', '%Y-%m-%d %H:%M:%S')
@@ -56,17 +57,17 @@ tasks = sqlalchemy.Table(
         server_default='[]'),  # JSON list
     sqlalchemy.Column(
         "last_check_time",
-        sqlalchemy.TIMESTAMP,
+        sqlalchemy.DATETIME,
         server_default="1970-01-01 08:00:00",
         nullable=False),
     sqlalchemy.Column(
         "next_check_time",
-        sqlalchemy.TIMESTAMP,
+        sqlalchemy.DATETIME,
         server_default="1970-01-01 08:00:00",
         nullable=False),
     sqlalchemy.Column(
         "last_change_time",
-        sqlalchemy.TIMESTAMP,
+        sqlalchemy.DATETIME,
         server_default="1970-01-01 08:00:00",
         index=True,
         nullable=False),
@@ -84,6 +85,21 @@ metas = sqlalchemy.Table(
     sqlalchemy.Column('key', sqlalchemy.String(64), primary_key=True),
     sqlalchemy.Column('value', sqlalchemy.TEXT),
 )
+if Config.db_url.startswith('mysql://'):
+    for table in [tasks, host_rules, metas]:
+        table.append_column(
+            sqlalchemy.Column(
+                "ts_create",
+                sqlalchemy.DATETIME,
+                server_default=func.now(),
+                nullable=False))
+        table.append_column(
+            sqlalchemy.Column(
+                "ts_update",
+                sqlalchemy.DATETIME,
+                server_default=func.now(),
+                onupdate=func.now(),
+                nullable=False))
 
 
 def create_tables(db_url):
@@ -91,16 +107,21 @@ def create_tables(db_url):
         engine = sqlalchemy.create_engine(db_url)
         metadata.create_all(engine)
         # backward compatibility for tasks table without error column
-        try:
-            engine.execute(
-                'ALTER TABLE tasks ADD COLUMN error TEXT NOT NULL DEFAULT ""')
-        except Exception:
-            pass
-        try:
-            engine.execute(
-                'CREATE INDEX change_time_idx ON tasks (last_change_time);')
-        except Exception:
-            pass
+        sqls = [
+            'ALTER TABLE `tasks` ADD COLUMN `error` TEXT NOT NULL DEFAULT ""',
+            'CREATE INDEX change_time_idx ON tasks (last_change_time)',
+        ]
+        if Config.db_url.startswith('mysql://'):
+            sqls.extend([
+                'ALTER TABLE `tasks` ADD COLUMN `ts_create` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP',
+                'ALTER TABLE `host_rules` ADD COLUMN `ts_create` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP',
+                'ALTER TABLE `metas` ADD COLUMN `ts_create` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP',
+                'ALTER TABLE `tasks` ADD COLUMN `ts_update` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+                'ALTER TABLE `host_rules` ADD COLUMN `ts_update` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+                'ALTER TABLE `metas` ADD COLUMN `ts_update` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+            ])
+        for sql in sqls:
+            ignore_error(engine.execute, sql)
     except Exception:
         Config.logger.critical(f'Fatal error on creating Table: {format_exc()}')
         import os
@@ -238,6 +259,9 @@ class Task(BaseModel):
     next_check_time: datetime = date0
     last_change_time: datetime = date0
     custom_info: str = ''
+    if Config.db_url.startswith('mysql://'):
+        ts_create: Optional[datetime] = datetime.now()
+        ts_update: Optional[datetime] = datetime.now()
 
 
 @alru_cache()
