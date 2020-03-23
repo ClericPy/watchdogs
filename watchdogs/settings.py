@@ -5,12 +5,11 @@ from json import dumps, loads
 from logging.handlers import RotatingFileHandler
 
 from databases import Database
-from torequests.utils import (curlparse, escape, guess_interval,
-                              itertools_chain, json, parse_qs, parse_qsl,
-                              ptime, quote, quote_plus, slice_by_size,
-                              slice_into_pieces, split_n, timeago, ttime,
-                              unescape, unique, unquote, unquote_plus, urljoin,
-                              urlparse, urlsplit, urlunparse)
+from torequests.utils import (
+    curlparse, escape, guess_interval, itertools_chain, json, parse_qs,
+    parse_qsl, ptime, quote, quote_plus, slice_by_size, slice_into_pieces,
+    split_n, timeago, ttime, unescape, unique, unquote, unquote_plus, urljoin,
+    urlparse, urlsplit, urlunparse)
 from uniparser.config import GlobalConfig
 from uniparser.parsers import AsyncFrequency, UDFParser, Uniparser
 
@@ -80,11 +79,12 @@ def init_logger():
 
 
 def setup_db(db_url=None):
-    if db_url is None:
+    if db_url:
+        Config.db_url = db_url
+    elif Config.db_url is None:
         sqlite_path = Config.CONFIG_DIR / 'storage.sqlite'
-        db_url = f'sqlite:///{sqlite_path}'
-    Config.db_url = db_url
-    Config.db = Database(db_url)
+        Config.db_url = f'sqlite:///{sqlite_path}'
+    Config.db = Database(Config.db_url)
     Config.rule_db = RuleStorageDB(Config.db)
     Config.metas = Metas(Config.db)
 
@@ -247,17 +247,21 @@ def setup_exception_handlers(app):
 
 async def setup_app(app):
     mute_loggers()
-    await setup_uniparser()
     db = Config.db
-    if db:
-        await db.connect()
-        from .models import create_tables
-        create_tables(str(db.url))
-        await setup_background()
-        await setup_md5_salt()
-        await setup_crawler()
-        await refresh_token()
-        setup_exception_handlers(app)
+    if not db:
+        raise RuntimeError('No database?')
+    await db.connect()
+    from .models import create_tables
+    create_tables(str(db.url))
+    await setup_md5_salt()
+    await refresh_token()
+    setup_exception_handlers(app)
+    # 1
+    await setup_uniparser()
+    # 2
+    await setup_crawler()
+    # 3
+    await setup_background()
     Config.logger.info(f'App start success, CONFIG_DIR: {Config.CONFIG_DIR}')
 
 

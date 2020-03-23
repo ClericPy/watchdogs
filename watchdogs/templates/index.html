@@ -848,7 +848,7 @@
                         interval: row.interval,
                         work_hours: row.work_hours,
                         max_result_count: row.max_result_count,
-                        result_list: row.result_list,
+                        result_list: row.result_list || '[]',
                         custom_info: row.custom_info,
                     }
                     this.show_form_add_new_task(false)

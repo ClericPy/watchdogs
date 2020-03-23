@@ -28,8 +28,7 @@ tasks = sqlalchemy.Table(
     sqlalchemy.Column(
         "tag", sqlalchemy.String(128), server_default="default",
         nullable=False),
-    sqlalchemy.Column(
-        "error", sqlalchemy.TEXT, nullable=False, server_default=""),
+    sqlalchemy.Column("error", sqlalchemy.TEXT),
     sqlalchemy.Column("request_args", sqlalchemy.TEXT, nullable=False),
     sqlalchemy.Column(
         "origin_url",
@@ -52,9 +51,7 @@ tasks = sqlalchemy.Table(
         server_default=text('10'),
         nullable=False),
     sqlalchemy.Column("latest_result", sqlalchemy.TEXT),
-    sqlalchemy.Column(
-        "result_list", sqlalchemy.TEXT, nullable=False,
-        server_default='[]'),  # JSON list
+    sqlalchemy.Column("result_list", sqlalchemy.TEXT),  # JSON list
     sqlalchemy.Column(
         "last_check_time",
         sqlalchemy.DATETIME,
@@ -108,7 +105,7 @@ def create_tables(db_url):
         metadata.create_all(engine)
         # backward compatibility for tasks table without error column
         sqls = [
-            'ALTER TABLE `tasks` ADD COLUMN `error` TEXT NOT NULL DEFAULT ""',
+            'ALTER TABLE `tasks` ADD COLUMN `error` TEXT',
             'CREATE INDEX change_time_idx ON tasks (last_change_time)',
         ]
         if Config.db_url.startswith('mysql://'):
