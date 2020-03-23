@@ -5,17 +5,18 @@ from json import dumps, loads
 from logging.handlers import RotatingFileHandler
 
 from databases import Database
-from torequests.utils import (
-    curlparse, escape, guess_interval, itertools_chain, json, parse_qs,
-    parse_qsl, ptime, quote, quote_plus, slice_by_size, slice_into_pieces,
-    split_n, timeago, ttime, unescape, unique, unquote, unquote_plus, urljoin,
-    urlparse, urlsplit, urlunparse)
+from torequests.utils import (curlparse, escape, guess_interval,
+                              itertools_chain, json, parse_qs, parse_qsl,
+                              ptime, quote, quote_plus, slice_by_size,
+                              slice_into_pieces, split_n, timeago, ttime,
+                              unescape, unique, unquote, unquote_plus, urljoin,
+                              urlparse, urlsplit, urlunparse)
 from uniparser.config import GlobalConfig
 from uniparser.parsers import AsyncFrequency, UDFParser, Uniparser
 
 from .background import background_loop, db_backup_handler
 from .callbacks import CallbackHandler
-from .config import Config, md5
+from .config import Config, ensure_dir, md5
 from .crawler import crawl_once
 from .models import Metas, RuleStorageDB
 
@@ -271,9 +272,7 @@ async def default_db_backup_sqlite():
         if storage_path.name == 'storage.sqlite':
             import shutil
             from pathlib import Path
-            backup_dir: Path = Config.CONFIG_DIR / 'backups'
-            if not backup_dir.is_dir():
-                backup_dir.mkdir()
+            backup_dir: Path = ensure_dir(Config.CONFIG_DIR / 'backups')
             backup_path = backup_dir / f'storage-{current_time}.sqlite'
             # 3.6 has no get_running_loop
             loop = get_event_loop()

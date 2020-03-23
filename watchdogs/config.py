@@ -89,10 +89,23 @@ async def exception_handler(request: Request, exc: Exception):
     )
 
 
+def ensure_dir(path: Path):
+    if isinstance(path, str):
+        path = Path(path)
+    if path.is_dir():
+        return path
+    else:
+        paths = list(reversed(path.parents))
+        paths.append(path)
+        p: Path
+        for p in paths:
+            if not p.is_dir():
+                p.mkdir()
+        return path
+
+
 class Config:
-    CONFIG_DIR: Path = Path.home() / 'watchdogs'
-    if not CONFIG_DIR.is_dir():
-        CONFIG_DIR.mkdir()
+    CONFIG_DIR: Path = ensure_dir(Path.home() / 'watchdogs')
     ENCODING = 'utf-8'
     # db_url defaults to sqlite://
     db_url: str = ''
