@@ -15,7 +15,7 @@ from uniparser.parsers import AsyncFrequency, UDFParser, Uniparser
 
 from .background import background_loop, db_backup_handler
 from .callbacks import CallbackHandler
-from .config import Config, md5
+from .config import Config, ensure_dir, md5
 from .crawler import crawl_once
 from .models import Metas, RuleStorageDB
 
@@ -79,10 +79,12 @@ def init_logger():
 
 
 def setup_db(db_url=None):
-    if db_url is None:
+    if db_url:
+        Config.db_url = db_url
+    elif Config.db_url is None:
         sqlite_path = Config.CONFIG_DIR / 'storage.sqlite'
-        db_url = f'sqlite:///{sqlite_path}'
-    Config.db = Database(db_url)
+        Config.db_url = f'sqlite:///{sqlite_path}'
+    Config.db = Database(Config.db_url)
     Config.rule_db = RuleStorageDB(Config.db)
     Config.metas = Metas(Config.db)
 
@@ -245,17 +247,21 @@ def setup_exception_handlers(app):
 
 async def setup_app(app):
     mute_loggers()
-    await setup_uniparser()
     db = Config.db
-    if db:
-        await db.connect()
-        from .models import create_tables
-        create_tables(str(db.url))
-        await setup_background()
-        await setup_md5_salt()
-        await setup_crawler()
-        await refresh_token()
-        setup_exception_handlers(app)
+    if not db:
+        raise RuntimeError('No database?')
+    await db.connect()
+    from .models import create_tables
+    create_tables(str(db.url))
+    await setup_md5_salt()
+    await refresh_token()
+    setup_exception_handlers(app)
+    # 1
+    await setup_uniparser()
+    # 2
+    await setup_crawler()
+    # 3
+    await setup_background()
     Config.logger.info(f'App start success, CONFIG_DIR: {Config.CONFIG_DIR}')
 
 
@@ -270,9 +276,7 @@ async def default_db_backup_sqlite():
         if storage_path.name == 'storage.sqlite':
             import shutil
             from pathlib import Path
-            backup_dir: Path = Config.CONFIG_DIR / 'backups'
-            if not backup_dir.is_dir():
-                backup_dir.mkdir()
+            backup_dir: Path = ensure_dir(Config.CONFIG_DIR / 'backups')
             backup_path = backup_dir / f'storage-{current_time}.sqlite'
             # 3.6 has no get_running_loop
             loop = get_event_loop()
