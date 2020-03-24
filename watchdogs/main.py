@@ -32,9 +32,7 @@ def init_app(db_url=None,
              use_default_cdn=False,
              **uvicorn_kwargs):
     try:
-        uvicorn_kwargs.setdefault('port', 9901)
-        uvicorn_kwargs.setdefault('access_log', True)
-        Config.access_log = uvicorn_kwargs['access_log']
+        Config.access_log = uvicorn_kwargs.get('access_log', True)
         logger = init_logger()
         if config_dir:
             Config.CONFIG_DIR = ensure_dir(config_dir)
@@ -47,7 +45,7 @@ def init_app(db_url=None,
         ignore_file_log = uvicorn_kwargs.pop('ignore_file_log', NotSet)
         Config.mute_file_log = get_valid_value([ignore_file_log, mute_file_log],
                                                Config.mute_file_log)
-        Config.uvicorn_kwargs = uvicorn_kwargs
+        Config.uvicorn_kwargs.update(uvicorn_kwargs)
         setup(
             db_url=db_url,
             password=password,
