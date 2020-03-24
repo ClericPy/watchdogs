@@ -232,13 +232,6 @@ class RuleStorageDB(RuleStorage):
         return host_rule
 
 
-class TaskController:
-
-    def __init__(self, db):
-        self.db = db
-        self.logger = Config.logger
-
-
 class Task(BaseModel):
     task_id: Optional[int] = None
     name: str
