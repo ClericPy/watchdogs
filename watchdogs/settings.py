@@ -210,7 +210,7 @@ async def refresh_token():
 
 
 def mute_loggers():
-    names = ['', 'uvicorn', 'watchdogs', 'uniparser']
+    names = ['', 'uvicorn', 'uvicorn.access', 'watchdogs', 'uniparser']
     logger = Config.logger
     if Config.mute_std_log:
         logger.info('Mute std logs')
