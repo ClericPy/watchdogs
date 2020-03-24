@@ -12,7 +12,7 @@ from starlette.requests import Request
 from starlette.responses import (HTMLResponse, JSONResponse, RedirectResponse,
                                  Response)
 from starlette.templating import Jinja2Templates
-from torequests.utils import parse_qsl, quote_plus, timeago
+from torequests.utils import parse_qsl, quote_plus, timeago, urlparse
 from uniparser import CrawlerRule, Uniparser
 from uniparser.fastapi_ui import app as sub_app
 from uniparser.utils import get_host
@@ -49,10 +49,22 @@ async def shutdown():
     await release_app(app)
 
 
+def get_query_sign(query):
+    params = dict(parse_qsl(query, keep_blank_values=True))
+    given_sign = params.pop('sign', '')
+    sorted_query = sorted(params.items(), key=itemgetter(0))
+    valid_sign = md5(sorted_query)
+    return given_sign, valid_sign
+
+
+def get_url_sign(url):
+    return get_query_sign(urlparse(url).query)
+
+
 @app.middleware("http")
 async def add_auth_checker(request: Request, call_next):
     # {'type': 'http', 'http_version': '1.1', 'server': ('127.0.0.1', 9901), 'client': ('127.0.0.1', 7037), 'scheme': 'http', 'method': 'GET', 'root_path': '', 'path': '/auth', 'raw_path': b'/auth', 'query_string': b'', 'headers': [(b'host', b'127.0.0.1:9901'), (b'connection', b'keep-alive'), (b'sec-fetch-dest', b'image'), (b'user-agent', b'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36'), (b'dnt', b'1'), (b'accept', b'image/webp,image/apng,image/*,*/*;q=0.8'), (b'sec-fetch-site', b'same-origin'), (b'sec-fetch-mode', b'no-cors'), (b'referer', b'http://127.0.0.1:9901/auth'), (b'accept-encoding', b'gzip, deflate, br'), (b'accept-language', b'zh-CN,zh;q=0.9'), (b'cookie', b'ads_id=lakdsjflakjdf; _ga=GA1.1.1550108461.1583462251')], 'fastapi_astack': <contextlib.AsyncExitStack object at 0x00000165BE69EEB8>, 'app': <fastapi.applications.FastAPI object at 0x00000165A7B738D0>}
-    query_string = request.scope.get('query_string', b'')
+    query_string = request.scope.get('query_string', b'').decode('u8')
     path = request.scope['path']
     if path not in AUTH_PATH_WHITE_LIST and Config.watchdog_auth and request.cookies.get(
             'watchdog_auth') != Config.watchdog_auth:
@@ -60,13 +72,9 @@ async def add_auth_checker(request: Request, call_next):
             f'/auth?redirect={quote_plus(request.scope["path"])}', 302)
         resp.set_cookie('watchdog_auth', '')
         return resp
-    elif b'sign=' in query_string:
-        params = dict(
-            parse_qsl(query_string.decode('u8'), keep_blank_values=True))
-        sign = params.pop('sign', '')
-        sorted_query = sorted(params.items(), key=itemgetter(0))
-        valid = await md5_checker(sorted_query, sign, freq=False)
-        if not valid:
+    elif 'sign=' in query_string:
+        given_sign, valid_sign = get_query_sign(query_string)
+        if given_sign != valid_sign:
             return JSONResponse(
                 status_code=400,
                 content={
@@ -140,8 +148,9 @@ async def index(request: Request, tag: str = ''):
     kwargs: dict = {'request': request}
     kwargs['cdn_urls'] = Config.cdn_urls
     kwargs['version'] = __version__
-    kwargs['rss_url'] = f'/rss?tag={quote_plus(tag)}&sign={md5(tag)}'
-    kwargs['lite_url'] = f'/lite?tag={quote_plus(tag)}&sign={md5(tag)}'
+    sign = get_query_sign(f'tag={quote_plus(tag)}')[1]
+    kwargs['rss_url'] = f'/rss?tag={quote_plus(tag)}&sign={sign}'
+    kwargs['lite_url'] = f'/lite?tag={quote_plus(tag)}&sign={sign}'
     kwargs['callback_workers'] = dumps(Config.callback_handler.workers)
     return templates.TemplateResponse("index.html", context=kwargs)
 
