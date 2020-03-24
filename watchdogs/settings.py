@@ -250,6 +250,11 @@ def setup_exception_handlers(app):
         app.add_exception_handler(exc, callback)
 
 
+def setup_middleware(app):
+    for middleware in Config.middlewares:
+        app.add_middleware(**middleware)
+
+
 async def setup_app(app):
     mute_loggers()
     db = Config.db
@@ -261,6 +266,7 @@ async def setup_app(app):
     await setup_md5_salt()
     await refresh_token()
     setup_exception_handlers(app)
+    setup_middleware(app)
     # 1
     await setup_uniparser()
     # 2
