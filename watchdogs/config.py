@@ -35,44 +35,6 @@ async def md5_checker(obj, target, freq=False):
         return md5(obj) == target
 
 
-class InvalidCookieError(Exception):
-    '''bad cookie redirect to /auth'''
-
-
-async def check_cookie(watchdog_auth: str = Cookie('')):
-    if Config.watchdog_auth and watchdog_auth != Config.watchdog_auth:
-        raise InvalidCookieError()
-
-
-class InvalidTokenError(Exception):
-    '''bad token return text: signature expired'''
-
-
-async def check_token(tag: str = '',
-                      sign: str = '',
-                      host: str = Header('', alias='Host')):
-    valid = await md5_checker(tag, sign, freq=False)
-    if not valid:
-        raise InvalidTokenError()
-
-
-# @app.exception_handler(InvalidCookieError)
-async def cookie_error_handler(request: Request, exc: InvalidCookieError):
-    resp = RedirectResponse('/auth', 302)
-    resp.set_cookie('watchdog_auth', '')
-    return resp
-
-
-# @app.exception_handler(InvalidTokenError)
-async def token_error_handler(request: Request, exc: InvalidTokenError):
-    return JSONResponse(
-        status_code=400,
-        content={
-            "message": 'signature expired',
-        },
-    )
-
-
 # @app.exception_handler(Exception)
 async def exception_handler(request: Request, exc: Exception):
     trace_id = str(int(time() * 1000))
@@ -136,10 +98,6 @@ class Config:
     db_backup_time: str = '%H:%M==00:00|%H:%M==12:00'
     backup_count: int = 4
     db_backup_function: Callable[..., Any] = None
-    check_cookie = check_cookie
-    check_token = check_token
     exception_handlers: list = [
-        (InvalidCookieError, cookie_error_handler),
-        (InvalidTokenError, token_error_handler),
         (Exception, exception_handler),
     ]
