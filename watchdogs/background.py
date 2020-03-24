@@ -8,7 +8,7 @@ async def crawl_chunks(crawl_once):
     while 1:
         loop_num += 1
         has_more = await crawl_once()
-        Config.logger.info(f'crawl_once [{loop_num}] finished, has_more: {has_more}')
+        Config.logger.info(f'({loop_num}) crawl_once finished, has_more: {has_more}')
         if not has_more:
             break
 

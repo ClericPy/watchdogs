@@ -81,7 +81,7 @@ def init_logger():
 def setup_db(db_url=None):
     if db_url:
         Config.db_url = db_url
-    elif Config.db_url is None:
+    elif not Config.db_url:
         sqlite_path = Config.CONFIG_DIR / 'storage.sqlite'
         Config.db_url = f'sqlite:///{sqlite_path}'
     Config.db = Database(Config.db_url)
@@ -201,7 +201,9 @@ async def update_password(password=None):
 async def refresh_token():
     if Config.password:
         await update_password()
-    password = await Config.metas.get('admin', '')
+        password = Config.password
+    else:
+        password = await Config.metas.get('admin', '')
     if password:
         Config.watchdog_auth = md5(password)
 
