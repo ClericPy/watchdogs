@@ -5,9 +5,9 @@ from traceback import format_exc
 from typing import Any, Callable
 
 from databases import Database
-from fastapi import Cookie, Header, Request
+from fastapi import Request
 from frequency_controller import AsyncFrequency
-from starlette.responses import JSONResponse, RedirectResponse
+from starlette.responses import JSONResponse
 from torequests.utils import md5 as _md5
 from uniparser.crawler import RuleStorage
 
@@ -95,7 +95,8 @@ class Config:
     LOG_FILE_SIZE_MB = {'info': 2, 'error': 5, 'server': 2}
     uvicorn_kwargs: dict = {}
     # check interval 60s, so format do use %M , backup every 12 hours. this pattern may miss for crawl cost more than 60s.
-    db_backup_time: str = '%H:%M==00:00|%H:%M==12:00'
+    # db_backup_time: str = '%H:%M==00:00|%H:%M==12:00'
+    db_backup_time: str = '%H:%M==00:00'
     backup_count: int = 4
     db_backup_function: Callable[..., Any] = None
     exception_handlers: list = [
