@@ -67,9 +67,8 @@ async def add_auth_checker(request: Request, call_next):
     query_string = request.scope.get('query_string', b'').decode('u8')
     path = request.scope['path']
     if path not in AUTH_PATH_WHITE_LIST and (
-            Config.watchdog_auth and
-            request.cookies.get('watchdog_auth') != Config.watchdog_auth or
-            not Config.watchdog_auth):
+            not Config.watchdog_auth or
+            Config.watchdog_auth != request.cookies.get('watchdog_auth', '')):
         resp = RedirectResponse(
             f'/auth?redirect={quote_plus(request.scope["path"])}', 302)
         resp.set_cookie('watchdog_auth', '')
