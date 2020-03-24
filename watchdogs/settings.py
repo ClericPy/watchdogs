@@ -30,12 +30,18 @@ def get_valid_value(values: list, default=None, invalid=NotSet):
 
 
 def init_logger():
+    # remove repetitive root logger parrot
+    logging.getLogger('').handlers.clear()
     logger = logging.getLogger('watchdogs')
     uniparser_logger = logging.getLogger('uniparser')
     uvicorn_logger = logging.getLogger('uvicorn')
+    uvicorn_logger.handlers.clear()
     if Config.access_log:
         # fix https://github.com/encode/uvicorn/issues/523
-        logging.getLogger('uvicorn.access').propagate = True
+        access_logger = logging.getLogger('uvicorn.access')
+        access_logger.propagate = True
+        # clear default format handler
+        access_logger.handlers.clear()
     formatter_str = "%(asctime)s %(levelname)-5s [%(name)s] %(filename)s(%(lineno)s): %(message)s"
     formatter = logging.Formatter(formatter_str, datefmt="%Y-%m-%d %H:%M:%S")
     logger.setLevel(logging.INFO)
@@ -75,6 +81,7 @@ def init_logger():
         handler.setFormatter(formatter)
         logger.addHandler(handler)
         uniparser_logger.addHandler(handler)
+        uvicorn_logger.addHandler(handler)
     return logger
 
 
@@ -210,8 +217,8 @@ async def refresh_token():
 
 
 def mute_loggers():
-    names = ['', 'uvicorn', 'uvicorn.access', 'watchdogs', 'uniparser']
-    logger = Config.logger
+    names = ['', 'uvicorn', 'uvicorn.access', 'uniparser', 'watchdogs']
+    logger = init_logger()
     if Config.mute_std_log:
         logger.info('Mute std logs')
         for name in names:

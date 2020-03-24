@@ -4,7 +4,7 @@ from traceback import format_exc
 from fire import Fire
 from uvicorn import run
 
-from .settings import Config, NotSet, get_valid_value, init_logger, setup
+from .settings import Config, NotSet, get_valid_value, setup
 from .config import ensure_dir
 
 
@@ -33,7 +33,6 @@ def init_app(db_url=None,
              **uvicorn_kwargs):
     try:
         Config.access_log = uvicorn_kwargs.get('access_log', True)
-        logger = init_logger()
         if config_dir:
             Config.CONFIG_DIR = ensure_dir(config_dir)
         if uninstall:
@@ -55,7 +54,7 @@ def init_app(db_url=None,
         return app
 
     except Exception:
-        logger.error(f'Start server error:\n{format_exc()}')
+        Config.logger.error(f'Start server error:\n{format_exc()}')
 
 
 def start_app(db_url=None,
