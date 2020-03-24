@@ -131,7 +131,7 @@ class Config:
     mute_std_log = False
     mute_file_log = False
     LOG_FILE_SIZE_MB = {'info': 2, 'error': 5, 'server': 2}
-    uvicorn_kwargs: dict = {}
+    uvicorn_kwargs: dict = {'access_log': True, 'port': 9901}
     # check interval 60s, so format do use %M , backup every 12 hours. this pattern may miss for crawl cost more than 60s.
     # db_backup_time: str = '%H:%M==00:00|%H:%M==12:00'
     db_backup_time: str = '%H:%M==00:00'
