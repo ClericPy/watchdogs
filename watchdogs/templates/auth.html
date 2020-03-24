@@ -8,15 +8,44 @@
     <link rel="shortcut icon" href="/static/img/favicon.ico" type="image/icon" />
     <title>{{action}} Watchdogs v{{version}}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        html,
+        body,
+        button {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
 </head>
 
 <body>
-    <button onclick="prompt_password()">Login</button>
+    <button onclick="prompt_password()">
+        <h1>Login</h1>
+    </button>
     <script>
-        function prompt_password() {
+        async function prompt_password() {
             var pwd = prompt("{{prompt_title}}", "");
             if (pwd != null && pwd != "") {
-                window.location.href = '?password=' + encodeURIComponent(pwd)
+                let redirect = window.location.href.match(/(&|\?)redirect=[^&]*/) || ''
+                if (redirect) {
+                    redirect = '?' + redirect[0].slice(1)
+                }
+                let api = '/auth' + redirect
+                let response = await fetch(api, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        'password': pwd
+                    })
+                });
+                let result = await response.json();
+                if (result.ok) {
+                    window.location.href = result.redirect
+                } else {
+                    alert('invalid password.')
+                }
             }
         }
         prompt_password()
