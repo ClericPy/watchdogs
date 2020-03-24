@@ -158,6 +158,9 @@
         </div>
         <div class="tasks-main">
             <div class="tasks">
+                {%- if not tasks -%}
+                <p style="text-align: center;">No Tasks.</p>
+                {% endif %}
                 {% for task in tasks %}
                 <div class="task{{' error-task' if task.error else ''}}" id="task-{{task.task_id}}">
                     <h3 class="title"><a href="{{task.url}}" target="_blank">{{task.name}}</a></h3>

@@ -152,9 +152,10 @@ def setup(
                 'CLIPBOARDJS_CDN': '/static/js/clipboard.min.js',
             }
 
-    setup_db(db_url)
-    if Config.db_backup_function is None:
+    if Config.db_backup_function is None and db_url is None and Config.db_url is None:
+        #  and Config.db_url.startswith('sqlite:///')
         Config.db_backup_function = default_db_backup_sqlite
+    setup_db(db_url)
 
 
 async def setup_md5_salt():
@@ -238,13 +239,20 @@ def mute_loggers():
 
 
 async def setup_background():
-    loop_funcs = [db_backup_handler, crawl_once]
+    loop_funcs = [crawl_once]
+    if Config.db_backup_function:
+        loop_funcs.append(db_backup_handler)
     ensure_future(background_loop(loop_funcs))
 
 
 def setup_exception_handlers(app):
     for exc, callback in Config.exception_handlers:
         app.add_exception_handler(exc, callback)
+
+
+def setup_middleware(app):
+    for middleware in Config.middlewares:
+        app.add_middleware(**middleware)
 
 
 async def setup_app(app):
@@ -258,6 +266,7 @@ async def setup_app(app):
     await setup_md5_salt()
     await refresh_token()
     setup_exception_handlers(app)
+    setup_middleware(app)
     # 1
     await setup_uniparser()
     # 2
