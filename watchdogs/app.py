@@ -66,8 +66,10 @@ async def add_auth_checker(request: Request, call_next):
     # {'type': 'http', 'http_version': '1.1', 'server': ('127.0.0.1', 9901), 'client': ('127.0.0.1', 7037), 'scheme': 'http', 'method': 'GET', 'root_path': '', 'path': '/auth', 'raw_path': b'/auth', 'query_string': b'', 'headers': [(b'host', b'127.0.0.1:9901'), (b'connection', b'keep-alive'), (b'sec-fetch-dest', b'image'), (b'user-agent', b'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36'), (b'dnt', b'1'), (b'accept', b'image/webp,image/apng,image/*,*/*;q=0.8'), (b'sec-fetch-site', b'same-origin'), (b'sec-fetch-mode', b'no-cors'), (b'referer', b'http://127.0.0.1:9901/auth'), (b'accept-encoding', b'gzip, deflate, br'), (b'accept-language', b'zh-CN,zh;q=0.9'), (b'cookie', b'ads_id=lakdsjflakjdf; _ga=GA1.1.1550108461.1583462251')], 'fastapi_astack': <contextlib.AsyncExitStack object at 0x00000165BE69EEB8>, 'app': <fastapi.applications.FastAPI object at 0x00000165A7B738D0>}
     query_string = request.scope.get('query_string', b'').decode('u8')
     path = request.scope['path']
-    if path not in AUTH_PATH_WHITE_LIST and Config.watchdog_auth and request.cookies.get(
-            'watchdog_auth') != Config.watchdog_auth:
+    if path not in AUTH_PATH_WHITE_LIST and (
+            Config.watchdog_auth and
+            request.cookies.get('watchdog_auth') != Config.watchdog_auth or
+            not Config.watchdog_auth):
         resp = RedirectResponse(
             f'/auth?redirect={quote_plus(request.scope["path"])}', 302)
         resp.set_cookie('watchdog_auth', '')
