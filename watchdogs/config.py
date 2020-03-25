@@ -1,5 +1,5 @@
+from functools import lru_cache
 from logging import getLogger
-from operator import itemgetter
 from pathlib import Path
 from time import time
 from traceback import format_exc
@@ -11,7 +11,7 @@ from frequency_controller import AsyncFrequency
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse, RedirectResponse
 from torequests.utils import md5 as _md5
-from torequests.utils import parse_qsl, quote_plus, urlparse
+from torequests.utils import parse_qsl, quote_plus
 from uniparser.crawler import RuleStorage
 
 from .callbacks import CallbackHandlerBase
@@ -50,16 +50,16 @@ def ensure_dir(path: Path):
         return path
 
 
-def get_query_sign(query):
-    params = dict(parse_qsl(query, keep_blank_values=True))
-    given_sign = params.pop('sign', '')
-    sorted_query = sorted(params.items(), key=itemgetter(0))
-    valid_sign = md5(sorted_query)
+def get_sign(path, query):
+    given_sign = ''
+    query_list = []
+    for key, value in parse_qsl(query, keep_blank_values=True):
+        if key == 'sign':
+            given_sign = value
+        else:
+            query_list.append(f'{key}={value}')
+    valid_sign = md5(f'{path}?{"&".join(query_list)}')
     return given_sign, valid_sign
-
-
-def get_url_sign(url):
-    return get_query_sign(urlparse(url).query)
 
 
 async def auth_checker(request: Request, call_next):
@@ -68,13 +68,8 @@ async def auth_checker(request: Request, call_next):
     path = request.scope['path']
     is_valid_cookie = Config.watchdog_auth != request.cookies.get(
         'watchdog_auth', '')
-    if path != '/auth' and (not Config.watchdog_auth or is_valid_cookie):
-        resp = RedirectResponse(
-            f'/auth?redirect={quote_plus(request.scope["path"])}', 302)
-        resp.set_cookie('watchdog_auth', '')
-        return resp
-    elif 'sign=' in query_string:
-        given_sign, valid_sign = get_query_sign(query_string)
+    if 'sign=' in query_string:
+        given_sign, valid_sign = Config.get_sign(path, query_string)
         if given_sign != valid_sign:
             return JSONResponse(
                 status_code=400,
@@ -82,6 +77,11 @@ async def auth_checker(request: Request, call_next):
                     "message": 'signature expired',
                 },
             )
+    elif path != '/auth' and (not Config.watchdog_auth or is_valid_cookie):
+        resp = RedirectResponse(
+            f'/auth?redirect={quote_plus(request.scope["path"])}', 302)
+        resp.set_cookie('watchdog_auth', '')
+        return resp
     return await call_next(request)
 
 
@@ -128,7 +128,9 @@ class Config:
     md5_cache_maxsize = 128
     query_tasks_cache_maxsize = 128
     metas_cache_maxsize = 128
+    sign_cache_maxsize = 128
     _md5 = _md5
+    get_sign = get_sign
 
 
 def md5(obj, n=32, with_salt=True):
