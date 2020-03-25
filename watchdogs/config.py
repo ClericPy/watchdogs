@@ -108,7 +108,7 @@ class Config:
     CONFIG_DIR: Path = ensure_dir(Path.home() / 'watchdogs')
     ENCODING = 'utf-8'
     # db_url defaults to sqlite://
-    db_url: str = ''
+    db_url: str = f'sqlite:///{CONFIG_DIR / "storage.sqlite"}'
     db: Database = None
     logger = logger
     password: str = ''

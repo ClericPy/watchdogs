@@ -85,15 +85,13 @@ def init_logger():
     return logger
 
 
-def setup_db(db_url=None):
-    if db_url:
-        Config.db_url = db_url
-    elif not Config.db_url:
-        sqlite_path = Config.CONFIG_DIR / 'storage.sqlite'
-        Config.db_url = f'sqlite:///{sqlite_path}'
+def setup_db():
     Config.db = Database(Config.db_url)
     Config.rule_db = RuleStorageDB(Config.db)
     Config.metas = Metas(Config.db)
+    if Config.db_backup_function is None and Config.db_url.startswith(
+            'sqlite:///'):
+        Config.db_backup_function = default_db_backup_sqlite
 
 
 async def setup_uniparser():
@@ -128,18 +126,11 @@ async def setup_uniparser():
     await load_host_freqs()
 
 
-def setup(
-        db_url=None,
-        password='',
-        md5_salt='',
-        use_default_cdn=False,
-):
+def setup_cdn_urls(use_default_cdn=False):
     from uniparser.fastapi_ui.views import cdn_urls
 
-    cdn_urls.update(Config.cdn_urls)
-    Config.password = password
-    Config.md5_salt = md5_salt
     if not Config.cdn_urls:
+        # while cdn_urls not set, check use default cdn or static files.
         if use_default_cdn:
             # default online cdn
             Config.cdn_urls = {
@@ -158,11 +149,13 @@ def setup(
                 'VUE_RESOURCE_CDN': '/static/js/vue-resource.min.js',
                 'CLIPBOARDJS_CDN': '/static/js/clipboard.min.js',
             }
+    # overwrite uniparser's cdn
+    cdn_urls.update(Config.cdn_urls)
 
-    if Config.db_backup_function is None and db_url is None and Config.db_url is None:
-        #  and Config.db_url.startswith('sqlite:///')
-        Config.db_backup_function = default_db_backup_sqlite
-    setup_db(db_url)
+
+def setup(use_default_cdn=False):
+    setup_cdn_urls(use_default_cdn=use_default_cdn)
+    setup_db()
 
 
 async def setup_md5_salt():

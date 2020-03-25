@@ -15,9 +15,10 @@ def clear_dir(dir_path):
     print(f'Cleaning {dir_path}...')
     for f in dir_path.iterdir():
         if f.is_dir():
-            return clear_dir(f)
-        f.unlink()
-        print(f'File removed: {f}')
+            clear_dir(f)
+        else:
+            f.unlink()
+            print(f'File removed: {f}')
     dir_path.rmdir()
     print(f'Folder removed: {dir_path}')
 
@@ -36,7 +37,8 @@ def init_app(db_url=None,
         if config_dir:
             Config.CONFIG_DIR = ensure_dir(config_dir)
         if uninstall:
-            return clear_dir(Config.CONFIG_DIR)
+            clear_dir(Config.CONFIG_DIR)
+            sys.exit('Config dir cleared.')
         # backward compatibility
         ignore_stdout_log = uvicorn_kwargs.pop('ignore_stdout_log', NotSet)
         Config.mute_std_log = get_valid_value([ignore_stdout_log, mute_std_log],
@@ -45,10 +47,11 @@ def init_app(db_url=None,
         Config.mute_file_log = get_valid_value([ignore_file_log, mute_file_log],
                                                Config.mute_file_log)
         Config.uvicorn_kwargs.update(uvicorn_kwargs)
+        if db_url:
+            Config.db_url = db_url
+        Config.password = password
+        Config.md5_salt = md5_salt or ''
         setup(
-            db_url=db_url,
-            password=password,
-            md5_salt=md5_salt,
             use_default_cdn=use_default_cdn)
         from .app import app
         return app
