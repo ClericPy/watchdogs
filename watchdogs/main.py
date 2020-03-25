@@ -39,20 +39,21 @@ def init_app(db_url=None,
         if uninstall:
             clear_dir(Config.CONFIG_DIR)
             sys.exit('Config dir cleared.')
-        # backward compatibility
-        ignore_stdout_log = uvicorn_kwargs.pop('ignore_stdout_log', NotSet)
-        Config.mute_std_log = get_valid_value([ignore_stdout_log, mute_std_log],
-                                              Config.mute_std_log)
-        ignore_file_log = uvicorn_kwargs.pop('ignore_file_log', NotSet)
-        Config.mute_file_log = get_valid_value([ignore_file_log, mute_file_log],
-                                               Config.mute_file_log)
+        # backward compatibility for ignore_stdout_log & ignore_file_log
+        Config.mute_std_log = get_valid_value(
+            [uvicorn_kwargs.pop('ignore_stdout_log', NotSet), mute_std_log],
+            Config.mute_std_log)
+        Config.mute_file_log = get_valid_value(
+            [uvicorn_kwargs.pop('ignore_file_log', NotSet), mute_file_log],
+            Config.mute_file_log)
+        # update by given uvicorn_kwargs
         Config.uvicorn_kwargs.update(uvicorn_kwargs)
         if db_url:
+            # update by given db_url
             Config.db_url = db_url
         Config.password = password
         Config.md5_salt = md5_salt or ''
-        setup(
-            use_default_cdn=use_default_cdn)
+        setup(use_default_cdn=use_default_cdn)
         from .app import app
         return app
 
