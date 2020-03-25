@@ -22,14 +22,14 @@ tasks = sqlalchemy.Table(
     sqlalchemy.Column(
         'task_id', sqlalchemy.Integer, primary_key=True, autoincrement=True),
     sqlalchemy.Column(
-        "name", sqlalchemy.String(64), nullable=False, index=True, unique=True),
+        "name", sqlalchemy.String(64, collation='utf8_general_ci'), nullable=False, index=True, unique=True),
     sqlalchemy.Column(
         "enable", sqlalchemy.Integer, server_default=text('1'), nullable=False),
     sqlalchemy.Column(
-        "tag", sqlalchemy.String(128), server_default="default",
+        "tag", sqlalchemy.String(128, collation='utf8_general_ci'), server_default="default",
         nullable=False),
-    sqlalchemy.Column("error", sqlalchemy.TEXT),
-    sqlalchemy.Column("request_args", sqlalchemy.TEXT, nullable=False),
+    sqlalchemy.Column("error", sqlalchemy.TEXT(collation='utf8_general_ci')),
+    sqlalchemy.Column("request_args", sqlalchemy.TEXT(collation='utf8_general_ci'), nullable=False),
     sqlalchemy.Column(
         "origin_url",
         sqlalchemy.String(1024),
@@ -68,7 +68,7 @@ tasks = sqlalchemy.Table(
         server_default="1970-01-01 08:00:00",
         index=True,
         nullable=False),
-    sqlalchemy.Column("custom_info", sqlalchemy.TEXT),
+    sqlalchemy.Column("custom_info", sqlalchemy.TEXT(collation='utf8_general_ci')),
 )
 host_rules = sqlalchemy.Table(
     "host_rules",
@@ -80,7 +80,7 @@ metas = sqlalchemy.Table(
     "metas",
     metadata,
     sqlalchemy.Column('key', sqlalchemy.String(64), primary_key=True),
-    sqlalchemy.Column('value', sqlalchemy.TEXT),
+    sqlalchemy.Column('value', sqlalchemy.TEXT(collation='utf8_general_ci')),
 )
 if Config.db_url.startswith('mysql://'):
     for table in [tasks, host_rules, metas]:
@@ -320,7 +320,7 @@ class Metas(object):
         else:
             return False
 
-    @alru_cache()
+    @alru_cache(maxsize=Config.metas_cache_maxsize)
     async def _get(self, key, default=None):
         query = 'select `value` from metas where `key`=:key'
         result = await self.db.fetch_one(query, values={'key': key})
