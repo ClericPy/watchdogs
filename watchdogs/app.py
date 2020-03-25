@@ -17,7 +17,7 @@ from uniparser.fastapi_ui import app as sub_app
 from uniparser.utils import get_host
 
 from . import __version__
-from .config import get_query_sign, md5_checker
+from .config import md5_checker
 from .crawler import crawl_once
 from .models import Task, query_tasks, tasks
 from .settings import (Config, get_host_freq_list, refresh_token, release_app,
@@ -111,9 +111,11 @@ async def index(request: Request, tag: str = ''):
     kwargs: dict = {'request': request}
     kwargs['cdn_urls'] = Config.cdn_urls
     kwargs['version'] = __version__
-    sign = get_query_sign(f'tag={quote_plus(tag)}')[1]
-    kwargs['rss_url'] = f'/rss?tag={quote_plus(tag)}&sign={sign}'
-    kwargs['lite_url'] = f'/lite?tag={quote_plus(tag)}&sign={sign}'
+    quoted_tag = quote_plus(tag)
+    rss_sign = Config.get_sign('/rss', f'tag={quoted_tag}')[1]
+    lite_sign = Config.get_sign('/lite', f'tag={quoted_tag}')[1]
+    kwargs['rss_url'] = f'/rss?tag={quoted_tag}&sign={rss_sign}'
+    kwargs['lite_url'] = f'/lite?tag={quoted_tag}&sign={lite_sign}'
     kwargs['callback_workers'] = dumps(Config.callback_handler.workers)
     return templates.TemplateResponse("index.html", context=kwargs)
 

@@ -157,12 +157,13 @@ def setup_cdn_urls(use_default_cdn=False):
     cdn_urls.update(Config.cdn_urls)
 
 
-def setup_md5():
+def setup_lru_cache():
     Config._md5 = lru_cache(maxsize=Config.md5_cache_maxsize)(Config._md5)
+    Config.get_sign = lru_cache(maxsize=Config.sign_cache_maxsize)(Config.get_sign)
 
 
 def setup(use_default_cdn=False):
-    setup_md5()
+    setup_lru_cache()
     setup_cdn_urls(use_default_cdn=use_default_cdn)
     setup_models()
 
