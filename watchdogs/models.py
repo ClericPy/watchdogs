@@ -106,9 +106,8 @@ def create_tables(db_url):
         # backward compatibility for tasks table without error column
         sqls = [
             'ALTER TABLE `tasks` ADD COLUMN `error` TEXT',
-            'CREATE INDEX change_time_idx ON tasks (last_change_time)',
         ]
-        if Config.db_url.startswith('mysql://'):
+        if Config.db_url.startswith('mysql'):
             sqls.extend([
                 'ALTER TABLE `tasks` ADD COLUMN `ts_create` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP',
                 'ALTER TABLE `host_rules` ADD COLUMN `ts_create` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP',
