@@ -253,7 +253,7 @@ class Task(BaseModel):
         ts_update: Optional[datetime] = datetime.now()
 
 
-@alru_cache()
+@alru_cache(maxsize=Config.query_tasks_cache_maxsize)
 async def query_tasks(
         task_name: Optional[str] = None,
         task_id: Optional[int] = None,

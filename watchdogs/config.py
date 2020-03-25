@@ -1,3 +1,4 @@
+from functools import lru_cache
 from logging import getLogger
 from operator import itemgetter
 from pathlib import Path
@@ -17,25 +18,6 @@ from uniparser.crawler import RuleStorage
 from .callbacks import CallbackHandlerBase
 
 logger = getLogger('watchdogs')
-
-
-def md5(obj, n=32, with_salt=True):
-    if not with_salt:
-        return _md5(obj, n=n)
-    salt = Config.md5_salt
-    if not salt:
-        raise ValueError('Config.md5_salt should not be null')
-    return _md5(f'{obj}{salt}', n=n)
-
-
-async def md5_checker(obj, target, freq=False):
-    if freq:
-        async with Config.check_pwd_freq:
-            # anti guessing password
-            return md5(obj) == target
-    else:
-        # may get a cache
-        return md5(obj) == target
 
 
 # @app.exception_handler(Exception)
@@ -144,3 +126,25 @@ class Config:
         'middleware_class': BaseHTTPMiddleware,
         'dispatch': auth_checker
     }]
+    md5_cache_maxsize = 128
+    query_tasks_cache_maxsize = 128
+
+
+@lru_cache(maxsize=Config.md5_cache_maxsize)
+def md5(obj, n=32, with_salt=True):
+    if not with_salt:
+        return _md5(obj, n=n)
+    salt = Config.md5_salt
+    if not salt:
+        raise ValueError('Config.md5_salt should not be null')
+    return _md5(f'{obj}{salt}', n=n)
+
+
+async def md5_checker(obj, target, freq=False):
+    if freq:
+        async with Config.check_pwd_freq:
+            # anti guessing password
+            return md5(obj) == target
+    else:
+        # may get a cache
+        return md5(obj) == target
