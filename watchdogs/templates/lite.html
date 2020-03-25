@@ -186,21 +186,27 @@
     </div>
     <script>
         async function show_more(task_id) {
-            let url = new URL(document.location)
-            url.searchParams.set('task_id', task_id)
-            let response = await fetch(url);
+            let node = document.querySelector('#task-' + task_id + '>.task-time>.result-list')
+            if (!node) {
+                node = document.createElement('p')
+                node.className = 'result-list'
+                document.querySelector('#task-' + task_id + '>.task-time').appendChild(node)
+            }
+            if (node.innerHTML) {
+                node.innerHTML = ''
+                return
+            }
+            let response = await fetch(document.location, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    'task_id': task_id
+                })
+            });
             if (response.ok) {
                 let result_list = (await response.json()).result_list
-                let node = document.querySelector('#task-' + task_id + '>.task-time>.result-list')
-                if (!node) {
-                    node = document.createElement('p')
-                    node.className = 'result-list'
-                    document.querySelector('#task-' + task_id + '>.task-time').appendChild(node)
-                }
-                if (node.innerHTML) {
-                    node.innerHTML = ''
-                    return
-                }
                 let html = '<ol>'
                 result_list.forEach(item => {
                     let text = item.result.text || ''
