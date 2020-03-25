@@ -19,7 +19,7 @@
 </head>
 
 <body>
-    <button onclick="prompt_password()">
+    <button id="login" onclick="prompt_password()">
         <h1>Login</h1>
     </button>
     <script>
@@ -42,6 +42,7 @@
                 });
                 let result = await response.json();
                 if (result.ok) {
+                    document.getElementById('login').remove()
                     window.location.href = result.redirect
                 } else {
                     alert('invalid password.')
