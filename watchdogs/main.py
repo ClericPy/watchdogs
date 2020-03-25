@@ -4,7 +4,7 @@ from traceback import format_exc
 from fire import Fire
 from uvicorn import run
 
-from .settings import Config, NotSet, get_valid_value, init_logger, setup
+from .settings import Config, NotSet, get_valid_value, setup
 from .config import ensure_dir
 
 
@@ -15,9 +15,10 @@ def clear_dir(dir_path):
     print(f'Cleaning {dir_path}...')
     for f in dir_path.iterdir():
         if f.is_dir():
-            return clear_dir(f)
-        f.unlink()
-        print(f'File removed: {f}')
+            clear_dir(f)
+        else:
+            f.unlink()
+            print(f'File removed: {f}')
     dir_path.rmdir()
     print(f'Folder removed: {dir_path}')
 
@@ -32,32 +33,32 @@ def init_app(db_url=None,
              use_default_cdn=False,
              **uvicorn_kwargs):
     try:
-        uvicorn_kwargs.setdefault('port', 9901)
-        uvicorn_kwargs.setdefault('access_log', True)
-        Config.access_log = uvicorn_kwargs['access_log']
-        logger = init_logger()
+        Config.access_log = uvicorn_kwargs.get('access_log', True)
         if config_dir:
             Config.CONFIG_DIR = ensure_dir(config_dir)
         if uninstall:
-            return clear_dir(Config.CONFIG_DIR)
-        # backward compatibility
-        ignore_stdout_log = uvicorn_kwargs.pop('ignore_stdout_log', NotSet)
-        Config.mute_std_log = get_valid_value([ignore_stdout_log, mute_std_log],
-                                              Config.mute_std_log)
-        ignore_file_log = uvicorn_kwargs.pop('ignore_file_log', NotSet)
-        Config.mute_file_log = get_valid_value([ignore_file_log, mute_file_log],
-                                               Config.mute_file_log)
-        Config.uvicorn_kwargs = uvicorn_kwargs
-        setup(
-            db_url=db_url,
-            password=password,
-            md5_salt=md5_salt,
-            use_default_cdn=use_default_cdn)
+            clear_dir(Config.CONFIG_DIR)
+            sys.exit('Config dir cleared.')
+        # backward compatibility for ignore_stdout_log & ignore_file_log
+        Config.mute_std_log = get_valid_value(
+            [uvicorn_kwargs.pop('ignore_stdout_log', NotSet), mute_std_log],
+            Config.mute_std_log)
+        Config.mute_file_log = get_valid_value(
+            [uvicorn_kwargs.pop('ignore_file_log', NotSet), mute_file_log],
+            Config.mute_file_log)
+        # update by given uvicorn_kwargs
+        Config.uvicorn_kwargs.update(uvicorn_kwargs)
+        if db_url:
+            # update by given db_url
+            Config.db_url = db_url
+        Config.password = password
+        Config.md5_salt = md5_salt or ''
+        setup(use_default_cdn=use_default_cdn)
         from .app import app
         return app
 
     except Exception:
-        logger.error(f'Start server error:\n{format_exc()}')
+        Config.logger.error(f'Start server error:\n{format_exc()}')
 
 
 def start_app(db_url=None,

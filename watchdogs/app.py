@@ -399,7 +399,7 @@ async def rss(request: Request,
     response = Response(
         content=xml,
         media_type="application/xml",
-        headers={'Content-Type': 'text/xml; charset=utf-8'})
+        headers={'Content-Type': 'application/xml; charset="utf-8"'})
     return response
 
 

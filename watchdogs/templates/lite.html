@@ -166,6 +166,7 @@
                     <h3 class="title"><a href="{{task.url}}" target="_blank">{{task.name}}</a></h3>
                     <p class="desc">{{task.text}}</p>
                     <p title="Click to show more" class="task-time" onclick="show_more({{task.task_id}})">
+                        <span>{{ '✔' if task.enable else '✖'}}</span>
                         <span class="ts_create">{{task.last_change_time.strftime('%Y-%m-%d %H:%M:%S')}}</span>
                         <!-- <span class="source">{{task.name}}</span> -->
                         <span class="timeago"> - {{task.timeago}} ago</span>
