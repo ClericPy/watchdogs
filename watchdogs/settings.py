@@ -4,13 +4,6 @@ from datetime import datetime
 from json import dumps, loads
 from logging.handlers import RotatingFileHandler
 
-from databases import Database
-from torequests.utils import (
-    curlparse, escape, guess_interval, itertools_chain, json, parse_qs,
-    parse_qsl, ptime, quote, quote_plus, slice_by_size, slice_into_pieces,
-    split_n, timeago, ttime, unescape, unique, unquote, unquote_plus, urljoin,
-    urlparse, urlsplit, urlunparse)
-from uniparser.config import GlobalConfig
 from uniparser.parsers import AsyncFrequency, UDFParser, Uniparser
 
 from .background import background_loop, db_backup_handler
@@ -30,12 +23,18 @@ def get_valid_value(values: list, default=None, invalid=NotSet):
 
 
 def init_logger():
+    # remove repetitive root logger parrot
+    logging.getLogger('').handlers.clear()
     logger = logging.getLogger('watchdogs')
     uniparser_logger = logging.getLogger('uniparser')
     uvicorn_logger = logging.getLogger('uvicorn')
+    uvicorn_logger.handlers.clear()
     if Config.access_log:
         # fix https://github.com/encode/uvicorn/issues/523
-        logging.getLogger('uvicorn.access').propagate = True
+        access_logger = logging.getLogger('uvicorn.access')
+        access_logger.propagate = True
+        # clear default format handler
+        access_logger.handlers.clear()
     formatter_str = "%(asctime)s %(levelname)-5s [%(name)s] %(filename)s(%(lineno)s): %(message)s"
     formatter = logging.Formatter(formatter_str, datefmt="%Y-%m-%d %H:%M:%S")
     logger.setLevel(logging.INFO)
@@ -75,21 +74,29 @@ def init_logger():
         handler.setFormatter(formatter)
         logger.addHandler(handler)
         uniparser_logger.addHandler(handler)
+        uvicorn_logger.addHandler(handler)
     return logger
 
 
-def setup_db(db_url=None):
-    if db_url:
-        Config.db_url = db_url
-    elif not Config.db_url:
-        sqlite_path = Config.CONFIG_DIR / 'storage.sqlite'
-        Config.db_url = f'sqlite:///{sqlite_path}'
+def setup_db():
+    from databases import Database
     Config.db = Database(Config.db_url)
     Config.rule_db = RuleStorageDB(Config.db)
     Config.metas = Metas(Config.db)
+    if Config.db_backup_function is None and Config.db_url.startswith(
+            'sqlite:///'):
+        Config.db_backup_function = default_db_backup_sqlite
+    from .models import create_tables
+    create_tables(str(Config.db.url))
 
 
 async def setup_uniparser():
+    from uniparser.config import GlobalConfig
+    from torequests.utils import (
+        curlparse, escape, guess_interval, itertools_chain, json, parse_qs,
+        parse_qsl, ptime, quote, quote_plus, slice_by_size, slice_into_pieces,
+        split_n, timeago, ttime, unescape, unique, unquote, unquote_plus,
+        urljoin, urlparse, urlsplit, urlunparse)
     UDFParser._GLOBALS_ARGS.update({
         'curlparse': curlparse,
         'escape': escape,
@@ -121,18 +128,11 @@ async def setup_uniparser():
     await load_host_freqs()
 
 
-def setup(
-        db_url=None,
-        password='',
-        md5_salt='',
-        use_default_cdn=False,
-):
+def setup_cdn_urls(use_default_cdn=False):
     from uniparser.fastapi_ui.views import cdn_urls
 
-    cdn_urls.update(Config.cdn_urls)
-    Config.password = password
-    Config.md5_salt = md5_salt
     if not Config.cdn_urls:
+        # while cdn_urls not set, check use default cdn or static files.
         if use_default_cdn:
             # default online cdn
             Config.cdn_urls = {
@@ -151,11 +151,13 @@ def setup(
                 'VUE_RESOURCE_CDN': '/static/js/vue-resource.min.js',
                 'CLIPBOARDJS_CDN': '/static/js/clipboard.min.js',
             }
+    # overwrite uniparser's cdn
+    cdn_urls.update(Config.cdn_urls)
 
-    if Config.db_backup_function is None and db_url is None and Config.db_url is None:
-        #  and Config.db_url.startswith('sqlite:///')
-        Config.db_backup_function = default_db_backup_sqlite
-    setup_db(db_url)
+
+def setup(use_default_cdn=False):
+    setup_cdn_urls(use_default_cdn=use_default_cdn)
+    setup_db()
 
 
 async def setup_md5_salt():
@@ -210,8 +212,8 @@ async def refresh_token():
 
 
 def mute_loggers():
-    names = ['', 'uvicorn', 'watchdogs', 'uniparser']
-    logger = Config.logger
+    names = ['', 'uvicorn', 'uvicorn.access', 'uniparser', 'watchdogs']
+    logger = init_logger()
     if Config.mute_std_log:
         logger.info('Mute std logs')
         for name in names:
@@ -261,8 +263,6 @@ async def setup_app(app):
     if not db:
         raise RuntimeError('No database?')
     await db.connect()
-    from .models import create_tables
-    create_tables(str(db.url))
     await setup_md5_salt()
     await refresh_token()
     setup_exception_handlers(app)
