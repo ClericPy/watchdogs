@@ -1,4 +1,3 @@
-from functools import lru_cache
 from logging import getLogger
 from operator import itemgetter
 from pathlib import Path
@@ -128,16 +127,17 @@ class Config:
     }]
     md5_cache_maxsize = 128
     query_tasks_cache_maxsize = 128
+    metas_cache_maxsize = 128
+    _md5 = _md5
 
 
-@lru_cache(maxsize=Config.md5_cache_maxsize)
 def md5(obj, n=32, with_salt=True):
     if not with_salt:
-        return _md5(obj, n=n)
+        return Config._md5(str(obj).encode('utf-8'), n=n, skip_encode=True)
     salt = Config.md5_salt
     if not salt:
         raise ValueError('Config.md5_salt should not be null')
-    return _md5(f'{obj}{salt}', n=n)
+    return Config._md5(f'{obj}{salt}'.encode('utf-8'), n=n)
 
 
 async def md5_checker(obj, target, freq=False):

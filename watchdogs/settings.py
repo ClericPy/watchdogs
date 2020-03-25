@@ -1,6 +1,7 @@
 import logging
 from asyncio import ensure_future, get_event_loop
 from datetime import datetime
+from functools import lru_cache
 from json import dumps, loads
 from logging.handlers import RotatingFileHandler
 
@@ -10,7 +11,6 @@ from .background import background_loop, db_backup_handler
 from .callbacks import CallbackHandler
 from .config import Config, ensure_dir, md5
 from .crawler import crawl_once
-from .models import Metas, RuleStorageDB
 
 NotSet = object()
 
@@ -78,15 +78,17 @@ def init_logger():
     return logger
 
 
-def setup_db():
+def setup_models():
     from databases import Database
+    # lazy import models to config cache size, means set cache after run main.init_app
+    from .models import Metas, RuleStorageDB, create_tables
+
     Config.db = Database(Config.db_url)
     Config.rule_db = RuleStorageDB(Config.db)
     Config.metas = Metas(Config.db)
     if Config.db_backup_function is None and Config.db_url.startswith(
             'sqlite:///'):
         Config.db_backup_function = default_db_backup_sqlite
-    from .models import create_tables
     create_tables(str(Config.db.url))
 
 
@@ -155,9 +157,14 @@ def setup_cdn_urls(use_default_cdn=False):
     cdn_urls.update(Config.cdn_urls)
 
 
+def setup_md5():
+    Config._md5 = lru_cache(maxsize=Config.md5_cache_maxsize)(Config._md5)
+
+
 def setup(use_default_cdn=False):
+    setup_md5()
     setup_cdn_urls(use_default_cdn=use_default_cdn)
-    setup_db()
+    setup_models()
 
 
 async def setup_md5_salt():
@@ -264,6 +271,7 @@ async def setup_app(app):
         raise RuntimeError('No database?')
     await db.connect()
     await setup_md5_salt()
+    # refresh_token should be after setup_md5_salt
     await refresh_token()
     setup_exception_handlers(app)
     setup_middleware(app)
