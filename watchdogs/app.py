@@ -405,33 +405,36 @@ async def rss(request: Request,
     return response
 
 
+@app.post("/lite")
+async def post_lite(request: Request, tag: str = '', sign: str = ''):
+    task_id = loads(await request.body())['task_id']
+    tasks, _ = await query_tasks(tag=tag, task_id=task_id)
+    if tasks:
+        task = tasks[0]
+        try:
+            result_list = loads(
+                task['result_list']) if task['result_list'] else []
+        except JSONDecodeError:
+            result_list = []
+        return {'result_list': result_list}
+    else:
+        return {'result_list': []}
+
+
 @app.get("/lite")
 async def lite(request: Request,
                tag: str = '',
                sign: str = '',
                task_id: Optional[int] = None):
-    tasks, _ = await query_tasks(tag=tag, task_id=task_id)
-    if task_id is None:
-        now = datetime.now()
-        for task in tasks:
-            result = loads(task['latest_result'] or '{}')
-            # for cache...
-            task['url'] = task.get('url') or result.get(
-                'url') or task['origin_url']
-            task['text'] = task.get('text') or result.get('text') or ''
-            task['timeago'] = timeago(
-                (now - task['last_change_time']).seconds, 1, 1, short_name=True)
-        kwargs = {'tasks': tasks, 'request': request}
-        kwargs['version'] = __version__
-        return templates.TemplateResponse("lite.html", context=kwargs)
-    else:
-        if tasks:
-            task = tasks[0]
-            try:
-                result_list = loads(
-                    task['result_list']) if task['result_list'] else []
-            except JSONDecodeError:
-                result_list = []
-            return {'result_list': result_list}
-        else:
-            return {'result_list': []}
+    tasks, _ = await query_tasks(tag=tag)
+    now = datetime.now()
+    for task in tasks:
+        result = loads(task['latest_result'] or '{}')
+        # for cache...
+        task['url'] = task.get('url') or result.get('url') or task['origin_url']
+        task['text'] = task.get('text') or result.get('text') or ''
+        task['timeago'] = timeago(
+            (now - task['last_change_time']).seconds, 1, 1, short_name=True)
+    kwargs = {'tasks': tasks, 'request': request}
+    kwargs['version'] = __version__
+    return templates.TemplateResponse("lite.html", context=kwargs)
