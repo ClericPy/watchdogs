@@ -17,7 +17,7 @@ class Callback(ABC):
     """
     logger = getLogger('watchdogs')
     # reset by subclass
-    name = None
+    name: str = None
     doc = ''
 
     @abstractmethod
