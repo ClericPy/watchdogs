@@ -141,6 +141,16 @@ class Config:
     sign_cache_maxsize = 128
     _md5 = _md5
     get_sign = get_sign
+    custom_links = [
+        {
+            'text': 'Auth',
+            'href': '/auth'
+        },
+        {
+            'text': 'Logs',
+            'href': '/log'
+        },
+    ]
 
 
 def md5(obj, n=32, with_salt=True):
