@@ -255,7 +255,7 @@
             </el-tabs>
         </template>
         <el-dialog title="Task Info" :visible.sync="task_info_visible" :close-on-click-modal="false">
-            <el-form :model="new_task_form">
+            <el-form :model="new_task_form" :rules="task_validate_rules">
                 <el-form-item label="Task ID" title="Unique task id">
                     <el-input v-model="new_task_form.task_id" disabled autocomplete="off"
                         placeholder="Task ID, for new task is null"></el-input>
@@ -277,16 +277,17 @@
                     <el-input v-model="new_task_form.error" disabled autocomplete="off" placeholder="No errors.">
                     </el-input>
                 </el-form-item>
-                <el-form-item title="Input the url, or request_args JSON, or cURL string" label="request_args">
+                <el-form-item title="Input the url, or request_args JSON, or cURL string" label="request_args"
+                    prop="new_task_form_request_args">
                     <el-button @click="view_crawler_rule_by_req(new_task_form.request_args)" size='mini'
                         icon="el-icon-view"><b>Rule</b></el-button>
                     <el-button @click="view_host_by_req(new_task_form.request_args)" size='mini' icon="el-icon-view">
                         <b>Host</b></el-button>
-                    <span> | "retry": 2, "timeout": 3, "ssl": False, and other args refer to <a
+                    <span> | "retry": 2, "timeout": 3, "ssl": false, and other args refer to <a
                             href="https://docs.aiohttp.org/en/stable/client_reference.html#aiohttp.ClientSession.request"
                             target="_blank" rel="noopener noreferrer">aiohttp</a> </span>
-                    <el-input type="textarea" :autosize="{ minRows: 2, maxRows: 4}" v-model="new_task_form.request_args"
-                        autocomplete="off"></el-input>
+                    <el-input type="textarea" :validate-event='true' :autosize="{ minRows: 2, maxRows: 4}"
+                        v-model="new_task_form.request_args" autocomplete="off"></el-input>
                 </el-form-item>
                 <el-form-item title="The url for tracing the source" label="origin_url">
                     <el-input v-model="new_task_form.origin_url" autocomplete="off" title="Press enter to submit"
@@ -317,7 +318,7 @@
                     <el-input v-model="new_task_form.max_result_count" autocomplete="off" title="Press enter to submit"
                         @keyup.enter.native="add_new_task"></el-input>
                 </el-form-item>
-                <el-form-item title="History of the result list." label="result_list">
+                <el-form-item title="History of the result list." label="result_list" prop="new_task_form_result_list">
                     <el-input v-model="new_task_form.result_list" type="textarea" title="Standard JSON list.">
                     </el-input>
                 </el-form-item>
@@ -401,6 +402,14 @@
     <script>
         var Main = {
             data() {
+                var validateJSON = (rule, value, callback) => {
+                    try {
+                        JSON.parse(value)
+                        callback()
+                    } catch (error) {
+                        callback(new Error('Bad JSON!'));
+                    }
+                };
                 return {
                     activeName: 'tasks',
                     iframe_loaded: false,
@@ -423,6 +432,16 @@
                     callback_workers: {},
                     custom_links: [],
                     current_cb_doc: '',
+                    task_validate_rules: {
+                        new_task_form_request_args: [{
+                            validator: validateJSON,
+                            trigger: 'blur'
+                        }],
+                        new_task_form_result_list: [{
+                            validator: validateJSON,
+                            trigger: 'blur'
+                        }],
+                    }
                 }
             },
             methods: {
@@ -430,8 +449,9 @@
                     // {"name":"get demo","request_args":{"method":"get","url":"http://httpbin.org/get","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[{"name":"text","chain_rules":[["css","p","$text"],["python","getitem","[0]"]],"child_rules":""}],"regex":"http://httpbin.org/get","encoding":""}
                     try {
                         JSON.parse(this.new_task_form.result_list)
+                        JSON.parse(this.new_task_form.request_args)
                     } catch (error) {
-                        this.$alert('Bad JSON of result_list')
+                        this.$alert('Bad JSON!')
                         return
                     }
                     this.task_info_visible = false
@@ -441,14 +461,16 @@
                             var result = r.body
                             if (result.msg == 'ok') {
                                 this.$message({
-                                    message: 'Update task ' + this.new_task_form.name + ' success: ' +
+                                    message: 'Update task ' + this.new_task_form.name +
+                                        ' success: ' +
                                         result.msg,
                                     type: 'success'
                                 });
                                 this.reload_tasks()
                             } else {
                                 this.$message.error({
-                                    message: 'Update task ' + this.new_task_form.name + ' failed: ' +
+                                    message: 'Update task ' + this.new_task_form.name +
+                                        ' failed: ' +
                                         result.msg,
                                     duration: 0,
                                     showClose: true,
