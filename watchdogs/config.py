@@ -2,7 +2,7 @@ from logging import getLogger
 from pathlib import Path
 from time import time
 from traceback import format_exc
-from typing import Any, Callable
+from typing import Any, Callable, List
 
 from databases import Database
 from fastapi import Request
@@ -141,6 +141,7 @@ class Config:
     _md5 = _md5
     get_sign = get_sign
     background_task = None
+    background_funcs: List[Callable] = []
     is_shutdown = False
     custom_links = [{
         'text': 'Auth',
