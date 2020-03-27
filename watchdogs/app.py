@@ -429,10 +429,7 @@ async def post_lite(request: Request, tag: str = '', sign: str = ''):
 
 
 @app.get("/lite")
-async def lite(request: Request,
-               tag: str = '',
-               sign: str = '',
-               task_id: Optional[int] = None):
+async def lite(request: Request, tag: str = '', sign: str = ''):
     tasks, _ = await query_tasks(tag=tag)
     now = datetime.now()
     for task in tasks:
