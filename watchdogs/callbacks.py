@@ -100,12 +100,8 @@ class CallbackHandler(CallbackHandlerBase):
 
     async def callback(self, task):
         custom_info: str = task.custom_info.strip()
-        if custom_info:
-            name = custom_info.split(':', 1)[0]
-            cb = self.get_callback(name) or self.get_callback('')
-        else:
-            name = ''
-            cb = self.get_callback('')
+        name = custom_info.split(':', 1)[0]
+        cb = self.get_callback(name) or self.get_callback('')
         if not cb:
             # not found callback, ignore
             return

@@ -117,6 +117,7 @@ async def index(request: Request, tag: str = ''):
     kwargs['rss_url'] = f'/rss?tag={quoted_tag}&sign={rss_sign}'
     kwargs['lite_url'] = f'/lite?tag={quoted_tag}&sign={lite_sign}'
     kwargs['callback_workers'] = dumps(Config.callback_handler.workers)
+    kwargs['custom_links'] = dumps(Config.custom_links)
     return templates.TemplateResponse("index.html", context=kwargs)
 
 
