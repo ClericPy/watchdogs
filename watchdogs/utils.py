@@ -11,6 +11,17 @@ from xml.sax.saxutils import escape
 logger = getLogger('watchdogs')
 
 
+def format_size(size, rounded=2):
+    unit = 'B'
+    for _unit in ['B', 'KB', 'MB', 'GB']:
+        unit = _unit
+        if size > 1024:
+            size = size / 1024
+        else:
+            break
+    return f'{round(size, rounded)} {unit}'
+
+
 async def ensure_await_result(result):
     if isawaitable(result):
         return await result
