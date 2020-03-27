@@ -5,7 +5,7 @@ from .config import Config
 
 async def crawl_chunks(crawl_once):
     loop_num = 0
-    for _ in range(1000):
+    while not Config.is_shutdown:
         loop_num += 1
         has_more = await crawl_once()
         if isinstance(has_more, Exception):
@@ -18,7 +18,7 @@ async def crawl_chunks(crawl_once):
 
 
 async def background_loop(coro_funcs: list = None):
-    while 1:
+    while not Config.is_shutdown:
         # non-block running, and be constrained by SoloLock class
         for func in coro_funcs:
             if func.__name__ == 'crawl_once':

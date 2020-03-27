@@ -159,7 +159,8 @@ def setup_cdn_urls(use_default_cdn=False):
 
 def setup_lru_cache():
     Config._md5 = lru_cache(maxsize=Config.md5_cache_maxsize)(Config._md5)
-    Config.get_sign = lru_cache(maxsize=Config.sign_cache_maxsize)(Config.get_sign)
+    Config.get_sign = lru_cache(maxsize=Config.sign_cache_maxsize)(
+        Config.get_sign)
 
 
 def setup(use_default_cdn=False):
@@ -252,7 +253,7 @@ async def setup_background():
     loop_funcs = [crawl_once]
     if Config.db_backup_function:
         loop_funcs.append(db_backup_handler)
-    ensure_future(background_loop(loop_funcs))
+    Config.background_task = ensure_future(background_loop(loop_funcs))
 
 
 def setup_exception_handlers(app):
@@ -286,6 +287,9 @@ async def setup_app(app):
 
 
 async def release_app(app):
+    Config.is_shutdown = True
+    if Config.background_task and not Config.background_task.done():
+        Config.background_task.cancel()
     if Config.db:
         await Config.db.disconnect()
 
