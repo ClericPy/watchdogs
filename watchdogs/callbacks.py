@@ -12,12 +12,12 @@ class Callback(ABC):
     Constraint: Callback object should has this attribute:
         cls.name: str
         self.callback(task)
-
+    if name == '': It's the default callback for null custom info.
     More common notify middleware is coming.
     """
     logger = getLogger('watchdogs')
     # reset by subclass
-    name = ''
+    name = None
     doc = ''
 
     @abstractmethod
@@ -70,7 +70,7 @@ class CallbackHandlerBase(ABC):
         self.callbacks_dict: Dict[str, Type[Callback]] = {}
         for cls in Callback.__subclasses__():
             try:
-                assert cls.name
+                assert cls.name is not None
                 cls.doc = cls.doc or cls.__doc__
                 self.callbacks_dict[cls.name] = cls
             except Exception as err:
@@ -82,7 +82,10 @@ class CallbackHandlerBase(ABC):
         pass
 
     def get_callback(self, name):
-        obj = self.callbacks_dict[name]
+        obj = self.callbacks_dict.get(name)
+        if not obj:
+            # not found callback
+            return None
         if not isinstance(obj, Callback):
             # here for lazy init
             obj = obj()
@@ -97,16 +100,21 @@ class CallbackHandler(CallbackHandlerBase):
 
     async def callback(self, task):
         custom_info: str = task.custom_info.strip()
-        if not custom_info:
+        if custom_info:
+            name = custom_info.split(':', 1)[0]
+            cb = self.get_callback(name) or self.get_callback('')
+        else:
+            name = ''
+            cb = self.get_callback('')
+        if not cb:
+            # not found callback, ignore
             return
-        name, arg = custom_info.split(':', 1)
-        cb = self.get_callback(name)
         try:
             call_result = await ensure_await_result(cb.callback(task))
             self.logger.info(
-                f'{cb.name} callback({arg}) for task {task.name} {call_result}: '
+                f'{cb.name or "default"} callback({custom_info}) for task {task.name} {call_result}: '
             )
         except Exception:
             self.logger.error(
-                f'{cb.name} callback({arg}) for task {task.name} error:\n{format_exc()}'
+                f'{cb.name or "default"} callback({custom_info}) for task {task.name} error:\n{format_exc()}'
             )
