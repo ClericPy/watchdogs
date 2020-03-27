@@ -11,7 +11,7 @@ from starlette.requests import Request
 from starlette.responses import (HTMLResponse, JSONResponse, RedirectResponse,
                                  Response)
 from starlette.templating import Jinja2Templates
-from torequests.utils import quote_plus, timeago
+from torequests.utils import quote_plus, timeago, ttime
 from uniparser import CrawlerRule, Uniparser
 from uniparser.fastapi_ui import app as sub_app
 from uniparser.utils import get_host
@@ -22,9 +22,9 @@ from .crawler import crawl_once
 from .models import Task, query_tasks, tasks
 from .settings import (Config, get_host_freq_list, refresh_token, release_app,
                        set_host_freq, setup_app)
-from .utils import gen_rss
+from .utils import format_size, gen_rss
 
-description = f"Watchdogs to keep an eye on the world's change.\nRead more: [https://github.com/ClericPy/watchdogs](https://github.com/ClericPy/watchdogs)\n\n[View Logs](/log)"
+description = f"Watchdogs to keep an eye on the world's change.\nRead more: [https://github.com/ClericPy/watchdogs](https://github.com/ClericPy/watchdogs)"
 app = FastAPI(title="Watchdogs", description=description, version=__version__)
 sub_app.openapi_prefix = '/uniparser'
 app.mount("/uniparser", sub_app)
@@ -117,6 +117,7 @@ async def index(request: Request, tag: str = ''):
     kwargs['rss_url'] = f'/rss?tag={quoted_tag}&sign={rss_sign}'
     kwargs['lite_url'] = f'/lite?tag={quoted_tag}&sign={lite_sign}'
     kwargs['callback_workers'] = dumps(Config.callback_handler.workers)
+    kwargs['custom_links'] = dumps(Config.custom_links)
     return templates.TemplateResponse("index.html", context=kwargs)
 
 
@@ -332,18 +333,24 @@ async def delete_host_rule(host: str):
 async def log(max_lines: int = 100,
               refresh_every: int = 0,
               log_names: str = 'info-server-error'):
-    html = '<style>body{background-color:#FAFAFA;padding:1em;}pre,p{background-color:#ECEFF1;padding: 1em;}</style>'
+    html = '<style>body{background-color:#FAFAFA;padding:1em;}pre{background-color:#ECEFF1;padding: 1em;}p{font-size:0.8em;}</style>'
     html += f'<meta http-equiv="refresh" content="{refresh_every};">' if refresh_every else ''
     html += f'<p><a href="?max_lines={max_lines}&refresh_every={refresh_every}&log_names={log_names}">?max_lines={max_lines}&refresh_every={refresh_every}&log_names={log_names}</a></p>'
     window: deque = deque((), max_lines)
     names: list = log_names.split('-')
     for name in names:
-        async with aiofiles.open(
-                Config.CONFIG_DIR / f'{name}.log',
-                encoding=Config.ENCODING) as f:
+        fp: Path = Config.CONFIG_DIR / f'{name}.log'
+        if not fp.is_file():
+            continue
+        fp_stat = fp.stat()
+        file_size = format_size(fp_stat.st_size)
+        last_change_time = ttime(fp_stat.st_mtime)
+        line_no = 0
+        async with aiofiles.open(fp, encoding=Config.ENCODING) as f:
             async for line in f:
+                line_no += 1
                 window.append(line)
-        html += f'<hr><h3>{name}.log</h3><hr><pre><code>{"".join(window)}</code></pre>'
+        html += f'<hr><h3>{name}.log</h3><p>{line_no} lines ({file_size}), st_mtime: {last_change_time}</p><hr><pre><code>{"".join(window)}</code></pre>'
         window.clear()
     response = HTMLResponse(html)
     return response
@@ -422,10 +429,7 @@ async def post_lite(request: Request, tag: str = '', sign: str = ''):
 
 
 @app.get("/lite")
-async def lite(request: Request,
-               tag: str = '',
-               sign: str = '',
-               task_id: Optional[int] = None):
+async def lite(request: Request, tag: str = '', sign: str = ''):
     tasks, _ = await query_tasks(tag=tag)
     now = datetime.now()
     for task in tasks:

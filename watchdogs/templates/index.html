@@ -75,11 +75,20 @@
             cursor: pointer;
             padding-left: 1em;
         }
+
+        p.custom_links {
+            text-align: center;
+            color: black;
+            background-color: rgba(223, 223, 223, 0.5);
+            padding: 0.5em 0 0.5em 0;
+            box-shadow: 3px 3px 5px #888888
+        }
     </style>
 </head>
 
 <body>
-    <template id="tmp_vars">{{callback_workers|safe}}</template>
+    <template id="tmp_vars_callback_workers">{{callback_workers|safe}}</template>
+    <template id="tmp_vars_custom_links">{{custom_links|safe}}</template>
     <div id="app" class="full-screen">
         <template>
             <el-tabs @tab-click="handleClick" v-model="activeName" class="full-screen" stretch='true'>
@@ -170,6 +179,13 @@
                             </el-table-column>
                         </el-table>
                         <div class="foot">
+                            <el-popover placement="top-start" title="" width="200" trigger="hover" content="">
+                                <a v-for="(a,index) in custom_links" :href="a.href" target="_blank">
+                                    <p class="custom_links"> ${ a.text }</p>
+                                </a>
+                                <el-button type="plain" size="" style="margin: 0;" title="Refresh" icon="el-icon-menu"
+                                    slot="reference"></el-button>
+                            </el-popover>
                             <el-button type="success" style="margin: 0; width: 20%;" :disabled="!has_more" plain>
                                 Page: ${current_page} - Load More</el-button>
                             <el-button type="primary" @click="reload_tasks" size="" style="margin: 0;" title="Refresh"
@@ -310,7 +326,7 @@
                         placeholder="string split by ':' as callback_name:arg" autocomplete="off"></el-input>
                     <b>Callbacks:</b>
                     <div style="display: inline;" v-for="(value, name) in callback_workers">
-                        <span class="cb_name" @click="click_cb_name(name)">${name}</span>
+                        <span class="cb_name" @click="click_cb_name(name)">${name||'default-callback'}</span>
                     </div>
                     <pre
                         style="margin: 0px;border: 1px solid #8080802b;padding-left: 1em;"><code style="margin: 0;">${current_cb_doc}</code></pre>
@@ -405,6 +421,7 @@
                         tag: '',
                     },
                     callback_workers: {},
+                    custom_links: [],
                     current_cb_doc: '',
                 }
             },
@@ -1068,10 +1085,15 @@ Three kinds of format:
         }).$mount('#app')
         app.load_tasks()
 
-        function init_vars() {
-            let node = document.getElementById('tmp_vars')
-            app.callback_workers = JSON.parse(node.innerHTML)
+        function init_var(name) {
+            let node = document.getElementById('tmp_vars_' + name)
+            app[name] = JSON.parse(node.innerHTML)
             node.parentNode.removeChild(node)
+        }
+
+        function init_vars() {
+            init_var('callback_workers')
+            init_var('custom_links')
         }
         init_vars()
     </script>
