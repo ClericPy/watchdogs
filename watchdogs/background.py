@@ -5,16 +5,20 @@ from .config import Config
 
 async def crawl_chunks(crawl_once):
     loop_num = 0
-    while 1:
+    while not Config.is_shutdown:
         loop_num += 1
         has_more = await crawl_once()
-        Config.logger.info(f'crawl_once finished, has_more: {has_more}, loop: {loop_num}')
+        if isinstance(has_more, Exception):
+            Config.logger.error(f'crawl_once error, {has_more!r}')
+            break
+        Config.logger.info(
+            f'crawl_once finished, has_more: {has_more}, loop: {loop_num}')
         if not has_more:
             break
 
 
 async def background_loop(coro_funcs: list = None):
-    while 1:
+    while not Config.is_shutdown:
         # non-block running, and be constrained by SoloLock class
         for func in coro_funcs:
             if func.__name__ == 'crawl_once':
