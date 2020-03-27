@@ -1,4 +1,3 @@
-from functools import lru_cache
 from logging import getLogger
 from pathlib import Path
 from time import time
@@ -64,30 +63,40 @@ def get_sign(path, query):
 
 async def auth_checker(request: Request, call_next):
     # {'type': 'http', 'http_version': '1.1', 'server': ('127.0.0.1', 9901), 'client': ('127.0.0.1', 7037), 'scheme': 'http', 'method': 'GET', 'root_path': '', 'path': '/auth', 'raw_path': b'/auth', 'query_string': b'', 'headers': [(b'host', b'127.0.0.1:9901'), (b'connection', b'keep-alive'), (b'sec-fetch-dest', b'image'), (b'user-agent', b'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.132 Safari/537.36'), (b'dnt', b'1'), (b'accept', b'image/webp,image/apng,image/*,*/*;q=0.8'), (b'sec-fetch-site', b'same-origin'), (b'sec-fetch-mode', b'no-cors'), (b'referer', b'http://127.0.0.1:9901/auth'), (b'accept-encoding', b'gzip, deflate, br'), (b'accept-language', b'zh-CN,zh;q=0.9'), (b'cookie', b'ads_id=lakdsjflakjdf; _ga=GA1.1.1550108461.1583462251')], 'fastapi_astack': <contextlib.AsyncExitStack object at 0x00000165BE69EEB8>, 'app': <fastapi.applications.FastAPI object at 0x00000165A7B738D0>}
-    query_string = request.scope.get('query_string', b'').decode('u8')
     path = request.scope['path']
-    is_valid_cookie = Config.watchdog_auth != request.cookies.get(
-        'watchdog_auth', '')
-    if 'sign=' in query_string:
+    if path in Config.AUTH_PATH_WHITE_LIST:
+        # ignore auth check
+        return await call_next(request)
+    query_string = request.scope.get('query_string', b'').decode('u8')
+    query_has_sign = 'sign=' in query_string
+    if query_has_sign:
+        # try checking sign
         given_sign, valid_sign = Config.get_sign(path, query_string)
-        if given_sign != valid_sign:
-            return JSONResponse(
-                status_code=400,
-                content={
-                    "message": 'signature expired',
-                },
-            )
-    elif path != '/auth' and (not Config.watchdog_auth or is_valid_cookie):
+        if given_sign == valid_sign:
+            return await call_next(request)
+    if not Config.watchdog_auth or Config.watchdog_auth == request.cookies.get(
+            'watchdog_auth', ''):
+        # no watchdog_auth or cookie is valid
+        return await call_next(request)
+    if query_has_sign:
+        # request with sign will not redirect
+        return JSONResponse(
+            status_code=400,
+            content={
+                "message": 'signature expired',
+            },
+        )
+    else:
         resp = RedirectResponse(
             f'/auth?redirect={quote_plus(request.scope["path"])}', 302)
         resp.set_cookie('watchdog_auth', '')
         return resp
-    return await call_next(request)
 
 
 class Config:
     CONFIG_DIR: Path = ensure_dir(Path.home() / 'watchdogs')
     ENCODING = 'utf-8'
+    AUTH_PATH_WHITE_LIST = {'/auth'}
     # db_url defaults to sqlite://
     db_url: str = f'sqlite:///{CONFIG_DIR / "storage.sqlite"}'
     db: Database = None
@@ -131,6 +140,13 @@ class Config:
     sign_cache_maxsize = 128
     _md5 = _md5
     get_sign = get_sign
+    custom_links = [{
+        'text': 'Auth',
+        'href': '/auth'
+    }, {
+        'text': 'Logs',
+        'href': '/log'
+    }]
 
 
 def md5(obj, n=32, with_salt=True):
