@@ -566,10 +566,10 @@
                         value
                     }) => {
                         this.process_crawler_rule('add', JSON.parse(value), 0)
-                    }).catch(() => {
+                    }).catch((err) => {
                         this.$message({
-                            type: 'info',
-                            message: 'Cancel'
+                            type: 'error',
+                            message: err
                         });
                     });
                 },
