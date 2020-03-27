@@ -104,6 +104,10 @@ async def crawl(task):
         if len(crawl_result) == 1:
             # chain result for __request__ which fetch a new request
             result_list = get_watchdog_result(item=crawl_result.popitem()[1])
+            if result_list == {'text': 'text not found'}:
+                logger.warning(
+                    f'{task.name} text not found, crawl result given: {crawl_result}'
+                )
             if not isinstance(result_list, list):
                 result_list = [result_list]
             # use force crawl one web UI for more log
@@ -123,8 +127,7 @@ async def _crawl_once(task_name: Optional[str] = None, chunk_size: int = 20):
     logger.info(f'crawl_once task_name={task_name} start.')
     # sqlite do not has datediff...
     if task_name:
-        query = tasks.select().where(
-            tasks.c.name == task_name)
+        query = tasks.select().where(tasks.c.name == task_name)
     else:
         query = tasks.select().where(tasks.c.enable == 1).where(
             tasks.c.next_check_time <= now)

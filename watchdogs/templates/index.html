@@ -75,6 +75,13 @@
             cursor: pointer;
             padding-left: 1em;
         }
+
+        p.custom_links {
+            text-align: center;
+            color: black;
+            background-color: rgba(223, 223, 223, 0.5);
+            padding: 0.2em 0 0.2em 0;
+        }
     </style>
 </head>
 
@@ -173,10 +180,10 @@
                         <div class="foot">
                             <el-popover placement="top-start" title="" width="200" trigger="hover" content="">
                                 <a v-for="(a,index) in custom_links" :href="a.href" target="_blank">
-                                    <p>${ a.text }</p>
+                                    <p class="custom_links"> ${ a.text }</p>
                                 </a>
-                                <el-button if="" type="plain" size="" style="margin: 0;" title="Refresh"
-                                    icon="el-icon-menu" slot="reference"></el-button>
+                                <el-button type="plain" size="" style="margin: 0;" title="Refresh" icon="el-icon-menu"
+                                    slot="reference"></el-button>
                             </el-popover>
                             <el-button type="success" style="margin: 0; width: 20%;" :disabled="!has_more" plain>
                                 Page: ${current_page} - Load More</el-button>
