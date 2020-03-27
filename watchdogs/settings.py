@@ -250,10 +250,10 @@ def mute_loggers():
 
 
 async def setup_background():
-    loop_funcs = [crawl_once]
+    Config.background_funcs.append(crawl_once)
     if Config.db_backup_function:
-        loop_funcs.append(db_backup_handler)
-    Config.background_task = ensure_future(background_loop(loop_funcs))
+        Config.background_funcs.append(db_backup_handler)
+    Config.background_task = ensure_future(background_loop(Config.background_funcs))
 
 
 def setup_exception_handlers(app):

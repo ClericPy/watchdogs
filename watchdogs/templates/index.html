@@ -1065,6 +1065,11 @@ Three kinds of format:
                         }
                     });
                 },
+                task_info_visible: function (val) {
+                    if (!val) {
+                        this.current_cb_doc = ''
+                    }
+                }
             },
             computed: {
                 uni_iframe() {
