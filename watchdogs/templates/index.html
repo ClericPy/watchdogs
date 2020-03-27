@@ -179,15 +179,9 @@
                             </el-table-column>
                         </el-table>
                         <div class="foot">
-                            <el-popover placement="top-start" title="" width="200" trigger="hover" content="">
-                                <a v-for="(a,index) in custom_links" :href="a.href" target="_blank">
-                                    <p class="custom_links"> ${ a.text }</p>
-                                </a>
-                                <el-button type="plain" size="" style="margin: 0;" title="Refresh" icon="el-icon-menu"
-                                    slot="reference"></el-button>
-                            </el-popover>
                             <el-button type="success" style="margin: 0; width: 20%;" :disabled="!has_more" plain>
                                 Page: ${current_page} - Load More</el-button>
+
                             <el-button type="primary" @click="reload_tasks" size="" style="margin: 0;" title="Refresh"
                                 icon="el-icon-refresh-right"></el-button>
                             <a href="{{rss_url}}" target="_blank" rel="noopener noreferrer" style="margin: 0;">
@@ -198,6 +192,13 @@
                                 <el-button title="Lite page for mobile view" size="" style="margin: 0;"
                                     icon="el-icon-mobile-phone"></el-button>
                             </a>
+                            <el-popover placement="top-start" title="" width="200" trigger="hover" content="">
+                                <a v-for="(a,index) in custom_links" :href="a.href" target="_blank">
+                                    <p class="custom_links"> ${ a.text }</p>
+                                </a>
+                                <el-button type="plain" size="" style="margin: 0;" title="Refresh" icon="el-icon-menu"
+                                    slot="reference"></el-button>
+                            </el-popover>
                         </div>
                     </template>
                 </el-tab-pane>
