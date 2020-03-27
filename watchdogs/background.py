@@ -5,10 +5,14 @@ from .config import Config
 
 async def crawl_chunks(crawl_once):
     loop_num = 0
-    while 1:
+    for _ in range(1000):
         loop_num += 1
         has_more = await crawl_once()
-        Config.logger.info(f'crawl_once finished, has_more: {has_more}, loop: {loop_num}')
+        if isinstance(has_more, Exception):
+            Config.logger.error(f'crawl_once error, {has_more!r}')
+            break
+        Config.logger.info(
+            f'crawl_once finished, has_more: {has_more}, loop: {loop_num}')
         if not has_more:
             break
 
