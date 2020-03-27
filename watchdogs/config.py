@@ -140,6 +140,8 @@ class Config:
     sign_cache_maxsize = 128
     _md5 = _md5
     get_sign = get_sign
+    background_task = None
+    is_shutdown = False
     custom_links = [{
         'text': 'Auth',
         'href': '/auth'
