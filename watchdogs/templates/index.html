@@ -189,14 +189,14 @@
                                     icon="el-icon-star-off"></el-button>
                             </a>
                             <a href="{{lite_url}}" target="_blank" rel="noopener noreferrer" style="margin: 0;">
-                                <el-button title="Lite page for mobile view" size="" style="margin: 0;"
+                                <el-button title="Lite page for mobile view" size="" type="info" style="margin: 0;"
                                     icon="el-icon-mobile-phone"></el-button>
                             </a>
                             <el-popover placement="top-start" title="" width="200" trigger="hover" content="">
                                 <a v-for="(a,index) in custom_links" :href="a.href" target="_blank">
                                     <p class="custom_links"> ${ a.text }</p>
                                 </a>
-                                <el-button type="plain" size="" style="margin: 0;" title="Refresh" icon="el-icon-menu"
+                                <el-button size="" style="margin: 0;" title="Refresh" icon="el-icon-menu"
                                     slot="reference"></el-button>
                             </el-popover>
                         </div>
