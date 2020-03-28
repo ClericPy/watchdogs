@@ -95,7 +95,7 @@ host_rules = sqlalchemy.Table(
 metas = sqlalchemy.Table(
     "metas",
     metadata,
-    sqlalchemy.Column('key', sqlalchemy.String(64), primary_key=True),
+    sqlalchemy.Column('key', sqlalchemy.String(64, collation=Config.COLLATION), primary_key=True),
     sqlalchemy.Column('value', sqlalchemy.TEXT(collation=Config.COLLATION)),
 )
 if Config.db_url.startswith('mysql'):
