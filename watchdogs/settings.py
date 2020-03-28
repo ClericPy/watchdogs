@@ -27,10 +27,6 @@ def init_logger():
     uniparser_logger = logging.getLogger('uniparser')
     uvicorn_logger = logging.getLogger('uvicorn')
     uvicorn_logger.handlers.clear()
-    if Config.access_log:
-        # fix https://github.com/encode/uvicorn/issues/523
-        access_logger = logging.getLogger('uvicorn.access')
-        access_logger.propagate = True
     formatter_str = "%(asctime)s %(levelname)-5s [%(name)s] %(filename)s(%(lineno)s): %(message)s"
     formatter = logging.Formatter(formatter_str, datefmt="%Y-%m-%d %H:%M:%S")
     logger.setLevel(logging.INFO)
@@ -235,10 +231,18 @@ def setup_middleware(app):
         app.add_middleware(**middleware)
 
 
-async def setup_app(app):
+def mute_noise_logger():
     # uvicorn log issue
     logging.getLogger('').handlers.clear()
-    logging.getLogger('uvicorn.access').handlers.clear()
+    if Config.access_log:
+        # fix https://github.com/encode/uvicorn/issues/523
+        access_logger = logging.getLogger('uvicorn.access')
+        access_logger.propagate = True
+        access_logger.handlers.clear()
+
+
+async def setup_app(app):
+    mute_noise_logger()
     db = Config.db
     if not db:
         raise RuntimeError('No database?')
