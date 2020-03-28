@@ -13,6 +13,12 @@ from uniparser.crawler import RuleStorage, get_host
 from .config import Config
 from .utils import ignore_error
 
+if Config.COLLATION is None:
+    if Config.db_url.startswith('sqlite'):
+        Config.COLLATION = None
+    else:
+        Config.COLLATION = 'utf8_unicode_ci'
+
 metadata = sqlalchemy.MetaData()
 date0 = datetime.strptime('1970-01-01 08:00:00', '%Y-%m-%d %H:%M:%S')
 # server_default works instead of default, issue: https://github.com/encode/databases/issues/72
@@ -22,14 +28,23 @@ tasks = sqlalchemy.Table(
     sqlalchemy.Column(
         'task_id', sqlalchemy.Integer, primary_key=True, autoincrement=True),
     sqlalchemy.Column(
-        "name", sqlalchemy.String(64, collation='utf8_general_ci'), nullable=False, index=True, unique=True),
+        "name",
+        sqlalchemy.String(64, collation=Config.COLLATION),
+        nullable=False,
+        index=True,
+        unique=True),
     sqlalchemy.Column(
         "enable", sqlalchemy.Integer, server_default=text('1'), nullable=False),
     sqlalchemy.Column(
-        "tag", sqlalchemy.String(128, collation='utf8_general_ci'), server_default="default",
+        "tag",
+        sqlalchemy.String(128, collation=Config.COLLATION),
+        server_default="default",
         nullable=False),
-    sqlalchemy.Column("error", sqlalchemy.TEXT(collation='utf8_general_ci')),
-    sqlalchemy.Column("request_args", sqlalchemy.TEXT(collation='utf8_general_ci'), nullable=False),
+    sqlalchemy.Column("error", sqlalchemy.TEXT(collation=Config.COLLATION)),
+    sqlalchemy.Column(
+        "request_args",
+        sqlalchemy.TEXT(collation=Config.COLLATION),
+        nullable=False),
     sqlalchemy.Column(
         "origin_url",
         sqlalchemy.String(1024),
@@ -54,21 +69,22 @@ tasks = sqlalchemy.Table(
     sqlalchemy.Column("result_list", sqlalchemy.TEXT),  # JSON list
     sqlalchemy.Column(
         "last_check_time",
-        sqlalchemy.DATETIME,
+        sqlalchemy.TIMESTAMP,
         server_default="1970-01-01 08:00:00",
         nullable=False),
     sqlalchemy.Column(
         "next_check_time",
-        sqlalchemy.DATETIME,
+        sqlalchemy.TIMESTAMP,
         server_default="1970-01-01 08:00:00",
         nullable=False),
     sqlalchemy.Column(
         "last_change_time",
-        sqlalchemy.DATETIME,
+        sqlalchemy.TIMESTAMP,
         server_default="1970-01-01 08:00:00",
         index=True,
         nullable=False),
-    sqlalchemy.Column("custom_info", sqlalchemy.TEXT(collation='utf8_general_ci')),
+    sqlalchemy.Column("custom_info",
+                      sqlalchemy.TEXT(collation=Config.COLLATION)),
 )
 host_rules = sqlalchemy.Table(
     "host_rules",
@@ -80,20 +96,20 @@ metas = sqlalchemy.Table(
     "metas",
     metadata,
     sqlalchemy.Column('key', sqlalchemy.String(64), primary_key=True),
-    sqlalchemy.Column('value', sqlalchemy.TEXT(collation='utf8_general_ci')),
+    sqlalchemy.Column('value', sqlalchemy.TEXT(collation=Config.COLLATION)),
 )
-if Config.db_url.startswith('mysql://'):
+if Config.db_url.startswith('mysql'):
     for table in [tasks, host_rules, metas]:
         table.append_column(
             sqlalchemy.Column(
                 "ts_create",
-                sqlalchemy.DATETIME,
+                sqlalchemy.TIMESTAMP,
                 server_default=func.now(),
                 nullable=False))
         table.append_column(
             sqlalchemy.Column(
                 "ts_update",
-                sqlalchemy.DATETIME,
+                sqlalchemy.TIMESTAMP,
                 server_default=func.now(),
                 onupdate=func.now(),
                 nullable=False))
@@ -119,7 +135,7 @@ def create_tables(db_url):
         for sql in sqls:
             ignore_error(engine.execute, sql)
     except Exception:
-        Config.logger.critical(f'Fatal error on creating Table: {format_exc()}')
+        print(f'Fatal error on creating Table: {format_exc()}')
         import os
         os._exit(1)
 

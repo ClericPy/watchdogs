@@ -150,6 +150,7 @@ class Config:
         'text': 'Logs',
         'href': '/log'
     }]
+    COLLATION: str = None
 
 
 def md5(obj, n=32, with_salt=True):
