@@ -23,8 +23,6 @@ def get_valid_value(values: list, default=None, invalid=NotSet):
 
 
 def init_logger():
-    # remove repetitive root logger parrot
-    logging.getLogger('').handlers.clear()
     logger = logging.getLogger('watchdogs')
     uniparser_logger = logging.getLogger('uniparser')
     uvicorn_logger = logging.getLogger('uvicorn')
@@ -33,8 +31,6 @@ def init_logger():
         # fix https://github.com/encode/uvicorn/issues/523
         access_logger = logging.getLogger('uvicorn.access')
         access_logger.propagate = True
-        # clear default format handler
-        access_logger.handlers.clear()
     formatter_str = "%(asctime)s %(levelname)-5s [%(name)s] %(filename)s(%(lineno)s): %(message)s"
     formatter = logging.Formatter(formatter_str, datefmt="%Y-%m-%d %H:%M:%S")
     logger.setLevel(logging.INFO)
@@ -164,6 +160,7 @@ def setup_lru_cache():
 
 
 def setup(use_default_cdn=False):
+    init_logger()
     setup_lru_cache()
     setup_cdn_urls(use_default_cdn=use_default_cdn)
     setup_models()
@@ -201,7 +198,7 @@ async def setup_crawler():
     if Config.callback_handler is None:
         Config.callback_handler = CallbackHandler()
     workers = ', '.join(Config.callback_handler.callbacks_dict.keys())
-    Config.logger.info(f'Current online callbacks:\n{workers}')
+    Config.logger.info(f'Current online callbacks: {workers}')
 
 
 async def update_password(password=None):
@@ -220,40 +217,12 @@ async def refresh_token():
         Config.watchdog_auth = md5(password)
 
 
-def mute_loggers():
-    names = ['', 'uvicorn', 'uvicorn.access', 'uniparser', 'watchdogs']
-    logger = init_logger()
-    if Config.mute_std_log:
-        logger.info('Mute std logs')
-        for name in names:
-            _logger = logging.getLogger(name)
-            old_handlers = _logger.handlers
-            _logger.handlers = [
-                i for i in old_handlers
-                if i.__class__ is not logging.StreamHandler
-            ]
-            logger.info(
-                f'[MUTE] log {name or "root"}: {old_handlers} => {_logger.handlers}'
-            )
-    if Config.mute_file_log:
-        logger.info('Mute std logs')
-        for name in names:
-            _logger = logging.getLogger(name)
-            old_handlers = _logger.handlers
-            _logger.handlers = [
-                i for i in old_handlers
-                if i.__class__ is not RotatingFileHandler
-            ]
-            logger.info(
-                f'[MUTE] log {name or "root"}: {old_handlers} => {_logger.handlers}'
-            )
-
-
 async def setup_background():
     Config.background_funcs.append(crawl_once)
     if Config.db_backup_function:
         Config.background_funcs.append(db_backup_handler)
-    Config.background_task = ensure_future(background_loop(Config.background_funcs))
+    Config.background_task = ensure_future(
+        background_loop(Config.background_funcs))
 
 
 def setup_exception_handlers(app):
@@ -267,7 +236,9 @@ def setup_middleware(app):
 
 
 async def setup_app(app):
-    mute_loggers()
+    # uvicorn log issue
+    logging.getLogger('').handlers.clear()
+    logging.getLogger('uvicorn.access').handlers.clear()
     db = Config.db
     if not db:
         raise RuntimeError('No database?')
