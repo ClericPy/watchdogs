@@ -116,8 +116,11 @@ async def index(request: Request, tag: str = ''):
     lite_sign = Config.get_sign('/lite', f'tag={quoted_tag}')[1]
     kwargs['rss_url'] = f'/rss?tag={quoted_tag}&sign={rss_sign}'
     kwargs['lite_url'] = f'/lite?tag={quoted_tag}&sign={lite_sign}'
-    kwargs['callback_workers'] = dumps(Config.callback_handler.workers)
-    kwargs['custom_links'] = dumps(Config.custom_links)
+    kwargs['init_vars'] = dumps({
+        'custom_links': Config.custom_links,
+        'callback_workers': Config.callback_handler.workers,
+        'custom_tabs': Config.custom_tabs,
+    })
     return templates.TemplateResponse("index.html", context=kwargs)
 
 

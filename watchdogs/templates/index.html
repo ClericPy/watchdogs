@@ -87,8 +87,7 @@
 </head>
 
 <body>
-    <template id="tmp_vars_callback_workers">{{callback_workers|safe}}</template>
-    <template id="tmp_vars_custom_links">{{custom_links|safe}}</template>
+    <template id="init_vars">{{init_vars|safe}}</template>
     <div id="app" class="full-screen">
         <template>
             <el-tabs @tab-click="handleClick" v-model="activeName" class="full-screen" stretch='true'>
@@ -249,8 +248,8 @@
                         </div>
                     </div>
                 </el-tab-pane>
-                <el-tab-pane label="API" name="apis">
-                    <iframe v-if="activeName=='apis'" src="/docs" frameborder="0"
+                <el-tab-pane v-for="tab in custom_tabs" :label="tab.label || tab.name" :name="tab.name">
+                    <iframe v-if="activeName==tab.name" :src="tab.url" frameborder="0"
                         style="width: 100%; height: 90%;"></iframe>
                 </el-tab-pane>
             </el-tabs>
@@ -1111,19 +1110,16 @@ Three kinds of format:
         var app = new vue_app({
             delimiters: ['${', '}']
         }).$mount('#app')
-        app.load_tasks()
-
-        function init_var(name) {
-            let node = document.getElementById('tmp_vars_' + name)
-            app[name] = JSON.parse(node.innerHTML)
+        app.load_tasks();
+        (() => {
+            // init_vars
+            let node = document.getElementById('init_vars')
+            let args = JSON.parse(node.innerHTML)
+            Object.keys(args).forEach(name => {
+                app[name] = args[name]
+            });
             node.parentNode.removeChild(node)
-        }
-
-        function init_vars() {
-            init_var('callback_workers')
-            init_var('custom_links')
-        }
-        init_vars()
+        })()
     </script>
 </body>
 
