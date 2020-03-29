@@ -22,52 +22,52 @@ def get_valid_value(values: list, default=None, invalid=NotSet):
     return default
 
 
-def init_logger():
-    logger = logging.getLogger('watchdogs')
+def get_file_handler(file_name,
+                     file_size_mb=2,
+                     backup_count=1,
+                     level=logging.INFO):
+    handler = RotatingFileHandler(
+        Config.CONFIG_DIR / file_name,
+        maxBytes=1024 * 1024 * Config.LOGGING_FILE_CONFIG.get(
+            file_name, {}).get('file_size_mb', file_size_mb),
+        backupCount=Config.LOGGING_FILE_CONFIG.get(file_name, {}).get(
+            'backup_count', backup_count),
+        encoding=Config.ENCODING)
+    handler.setLevel(
+        Config.LOGGING_FILE_CONFIG.get(file_name, {}).get('level', level))
+    handler.setFormatter(Config.DEFAULT_LOGGER_FORMATTER)
+    return handler
+
+
+def get_stream_handler(level=logging.INFO):
+    handler = logging.StreamHandler()
+    handler.setLevel(level)
+    handler.setFormatter(Config.DEFAULT_LOGGER_FORMATTER)
+    return handler
+
+
+def setup_logger():
+    watchdogs_logger = logging.getLogger('watchdogs')
     uniparser_logger = logging.getLogger('uniparser')
     uvicorn_logger = logging.getLogger('uvicorn')
-    uvicorn_logger.handlers.clear()
-    formatter_str = "%(asctime)s %(levelname)-5s [%(name)s] %(filename)s(%(lineno)s): %(message)s"
-    formatter = logging.Formatter(formatter_str, datefmt="%Y-%m-%d %H:%M:%S")
-    logger.setLevel(logging.INFO)
     if not Config.mute_file_log:
-        info_handler = RotatingFileHandler(
-            Config.CONFIG_DIR / 'info.log',
-            maxBytes=1024 * 1024 * Config.LOG_FILE_SIZE_MB['info'],
-            backupCount=1,
-            encoding=Config.ENCODING)
-        info_handler.setLevel(logging.INFO)
-        info_handler.setFormatter(formatter)
-        logger.addHandler(info_handler)
+        info_handler = get_file_handler('info.log')
+        watchdogs_logger.addHandler(info_handler)
         uniparser_logger.addHandler(info_handler)
 
-        error_handler = RotatingFileHandler(
-            Config.CONFIG_DIR / 'error.log',
-            maxBytes=1024 * 1024 * Config.LOG_FILE_SIZE_MB['error'],
-            backupCount=1,
-            encoding=Config.ENCODING)
-        error_handler.setLevel(logging.ERROR)
-        error_handler.setFormatter(formatter)
-        logger.addHandler(error_handler)
+        error_handler = get_file_handler('error.log')
+        watchdogs_logger.addHandler(error_handler)
         uniparser_logger.addHandler(error_handler)
 
-        server_handler = RotatingFileHandler(
-            Config.CONFIG_DIR / 'server.log',
-            maxBytes=1024 * 1024 * Config.LOG_FILE_SIZE_MB['server'],
-            backupCount=1,
-            encoding=Config.ENCODING)
-        server_handler.setLevel(logging.INFO)
-        server_handler.setFormatter(formatter)
+        server_handler = get_file_handler('server.log')
         uvicorn_logger.addHandler(server_handler)
 
     if not Config.mute_std_log:
-        handler = logging.StreamHandler()
-        handler.setLevel(logging.INFO)
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
+        handler = get_stream_handler()
+        watchdogs_logger.addHandler(handler)
         uniparser_logger.addHandler(handler)
         uvicorn_logger.addHandler(handler)
-    return logger
+    return watchdogs_logger
 
 
 def setup_models():
@@ -156,7 +156,7 @@ def setup_lru_cache():
 
 
 def setup(use_default_cdn=False):
-    init_logger()
+    setup_logger()
     setup_lru_cache()
     setup_cdn_urls(use_default_cdn=use_default_cdn)
     setup_models()
@@ -232,7 +232,7 @@ def setup_middleware(app):
 
 
 def mute_noise_logger():
-    # uvicorn log issue
+    # uvicorn will set new handler for root logger and access logger after app launched.
     logging.getLogger('').handlers.clear()
     if Config.access_log:
         # fix https://github.com/encode/uvicorn/issues/523
@@ -287,7 +287,7 @@ async def default_db_backup_sqlite():
             backup_file_paths = sorted([i for i in backup_dir.iterdir()],
                                        key=lambda path: path.name,
                                        reverse=True)
-            path_to_del = backup_file_paths[Config.backup_count:]
+            path_to_del = backup_file_paths[Config.db_backup_count:]
             for p in path_to_del:
                 p.unlink()
 
