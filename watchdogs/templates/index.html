@@ -202,7 +202,7 @@
                     </template>
                 </el-tab-pane>
                 <el-tab-pane label="New" name="new">
-                    <iframe @load='init_iframe()' src="/uniparser/" frameborder="0" id="uni_iframe"
+                    <iframe v-if="uniparser_iframe_loaded" @load='init_iframe()' src="/uniparser/" frameborder="0" id="uni_iframe"
                         style="width: 100%; height: 90%;"></iframe>
                     <el-popover v-on:dblclick.native="window.open('/auth')" title="Double click to change password"
                         style="margin: 0 0 0 20%;" placement="top-start" title="WARNING" width="200" trigger="hover"
@@ -412,7 +412,7 @@
                 };
                 return {
                     activeName: 'tasks',
-                    iframe_loaded: false,
+                    uniparser_iframe_loaded: false,
                     task_info_visible: false,
                     rule_info_visible: false,
                     current_host_rule: {},
@@ -743,8 +743,9 @@
                 },
                 handleClick(tab, event) {
                     if (tab.name == 'new') {
-                        if (!this.iframe_loaded) {
+                        if (!this.uniparser_iframe_loaded) {
                             // for autosize bug in iframe if not seen
+                            this.uniparser_iframe_loaded = true
                             setTimeout(() => {
                                 for (const text of this.uni_iframe.contentWindow.document
                                         .getElementsByTagName(
@@ -752,7 +753,6 @@
                                     text.style.height = 'auto';
                                     text.style.height = text.scrollHeight + 'px';
                                 };
-                                this.iframe_loaded = true
                             }, 0);
                         }
                     }
