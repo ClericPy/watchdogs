@@ -333,9 +333,9 @@ async def delete_host_rule(host: str):
 async def log(max_lines: int = 100,
               refresh_every: int = 0,
               log_names: str = 'info-server-error'):
-    html = '<style>body{background-color:#FAFAFA;padding:1em;}pre{background-color:#ECEFF1;padding: 1em;}p{font-size:0.8em;}</style>'
+    html = '<style>body{background-color:#FAFAFA;padding:1em;}pre{background-color:#ECEFF1;padding: 1em;}p{font-size:0.8em;}input{outline-style: none;border: 1px solid #ccc; border-radius: 3px;}</style>'
     html += f'<meta http-equiv="refresh" content="{refresh_every};">' if refresh_every else ''
-    html += f'<p><a href="?max_lines={max_lines}&refresh_every={refresh_every}&log_names={log_names}">?max_lines={max_lines}&refresh_every={refresh_every}&log_names={log_names}</a></p>'
+    html += f'<form>max_lines: <input type="text" name="max_lines" onClick="this.select();" value="{max_lines}"> refresh_every: <input type="text" name="refresh_every" onClick="this.select();" value="{refresh_every}"> log_names: <input type="text" name="log_names" onClick="this.select();" value="{log_names}"> <input type="submit" value="Submit"></form>'
     window: deque = deque((), max_lines)
     names: list = log_names.split('-')
     for name in names:
@@ -350,7 +350,7 @@ async def log(max_lines: int = 100,
             async for line in f:
                 line_no += 1
                 window.append(line)
-        html += f'<hr><h3>{name}.log</h3><p>{line_no} lines ({file_size}), st_mtime: {last_change_time}</p><hr><pre><code>{"".join(window)}</code></pre>'
+        html += f'<hr><a href="?log_names={name}" target="_blank"><h3>{name}.log</h3></a><p>{line_no} lines ({file_size}), st_mtime: {last_change_time}</p><hr><pre><code>{"".join(window)}</code></pre>'
         window.clear()
     response = HTMLResponse(html)
     return response
