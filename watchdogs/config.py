@@ -150,6 +150,7 @@ class Config:
         'text': 'Logs',
         'href': '/log'
     }]
+    custom_tabs = [{'name': 'apis', 'label': 'API', 'url': '/docs'}]
     COLLATION: str = None
 
 
