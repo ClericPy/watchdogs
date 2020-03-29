@@ -452,7 +452,7 @@
                         JSON.parse(this.new_task_form.result_list)
                         JSON.parse(this.new_task_form.request_args)
                     } catch (error) {
-                        this.$alert('Bad JSON!')
+                        this.$alert('Invalid JSON for result_list or request_args.')
                         return
                     }
                     this.task_info_visible = false
