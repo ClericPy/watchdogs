@@ -31,7 +31,6 @@ def init_app(db_url=None,
              config_dir=None,
              use_default_cdn=False,
              **uvicorn_kwargs):
-    Config.access_log = uvicorn_kwargs.get('access_log', True)
     if config_dir:
         Config.CONFIG_DIR = ensure_dir(config_dir)
     if uninstall:

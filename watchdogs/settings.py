@@ -234,7 +234,7 @@ def setup_middleware(app):
 def mute_noise_logger():
     # uvicorn will set new handler for root logger and access logger after app launched.
     logging.getLogger('').handlers.clear()
-    if Config.access_log:
+    if Config.uvicorn_kwargs['access_log']:
         # fix https://github.com/encode/uvicorn/issues/523
         access_logger = logging.getLogger('uvicorn.access')
         access_logger.propagate = True
