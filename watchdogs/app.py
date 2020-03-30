@@ -336,7 +336,7 @@ async def delete_host_rule(host: str):
 async def log(max_lines: int = 100,
               refresh_every: int = 0,
               log_names: str = 'info-server-error'):
-    html = '<style>body{background-color:#FAFAFA;padding:1em;}pre{background-color:#ECEFF1;padding: 1em;}p{font-size:0.8em;}input{outline-style: none;border: 1px solid #ccc; border-radius: 3px;}</style>'
+    html = '<style>body{background-color:#FAFAFA;padding:1em;}pre{background-color:#ECEFF1;padding: 1em;}p{font-size:0.8em;}input, button{outline-style: none;border: 1px solid #ccc; border-radius: 3px;}a.clear_log>button{font-size:0.3em;color:#003cb8}</style>'
     html += f'<meta http-equiv="refresh" content="{refresh_every};">' if refresh_every else ''
     html += f'<form>max_lines: <input type="text" name="max_lines" onClick="this.select();" value="{max_lines}"> refresh_every: <input type="text" name="refresh_every" onClick="this.select();" value="{refresh_every}"> log_names: <input type="text" name="log_names" onClick="this.select();" value="{log_names}"> <input type="submit" value="Submit"></form>'
     window: deque = deque((), max_lines)
@@ -353,10 +353,24 @@ async def log(max_lines: int = 100,
             async for line in f:
                 line_no += 1
                 window.append(line)
-        html += f'<hr><a href="?log_names={name}" target="_blank"><h3>{name}.log</h3></a><p>{line_no} lines ({file_size}), st_mtime: {last_change_time}</p><hr><pre><code>{"".join(window)}</code></pre>'
+        html += f'<hr><h3><a href="?log_names={name}" target="_blank">{name}.log</a></h3><p>{line_no} lines ({file_size}), st_mtime: {last_change_time} <a href="/log.clear?log_names={name}&current_names={log_names}" class="clear_log"><button>Clear</button></a></p><hr><pre><code>{"".join(window)}</code></pre>'
         window.clear()
-    response = HTMLResponse(html)
-    return response
+    return HTMLResponse(html)
+
+
+@app.get("/log.clear")
+async def log_clear(log_names: str = 'info-server-error',
+                    current_names: str = 'info-server-error'):
+    names: list = log_names.split('-')
+    for name in names:
+        fp: Path = Config.CONFIG_DIR / f'{name}.log'
+        if not fp.is_file():
+            continue
+        # use sync writing to block the main thread
+        fp.write_bytes(b'')
+        logger.info(f'{name}.log cleared')
+    html = f'<meta http-equiv="refresh" content="1; url=/log?log_names={current_names}" />{log_names} log cleared. Redirect back in 1 second.'
+    return HTMLResponse(html)
 
 
 @app.get("/update_host_freq")
