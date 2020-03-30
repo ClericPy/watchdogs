@@ -192,7 +192,7 @@
                                     icon="el-icon-mobile-phone"></el-button>
                             </a>
                             <el-popover placement="top-start" title="" width="200" trigger="hover" content="">
-                                <a v-for="(a,index) in custom_links" :href="a.href" target="_blank">
+                                <a v-for="(a,index) in custom_links" :href="a.href" :title="a.title || ''" target="_blank">
                                     <p class="custom_links"> ${ a.text }</p>
                                 </a>
                                 <el-button size="" style="margin: 0;" title="Refresh" icon="el-icon-menu"

@@ -165,10 +165,12 @@ class Config:
     is_shutdown = False
     custom_links = [{
         'text': 'Auth',
-        'href': '/auth'
+        'href': '/auth',
+        'title': 'change your password',
     }, {
         'text': 'Logs',
-        'href': '/log'
+        'href': '/log',
+        'title': 'view the logs',
     }]
     custom_tabs = [{'name': 'apis', 'label': 'API', 'url': '/docs'}]
     COLLATION: str = None
