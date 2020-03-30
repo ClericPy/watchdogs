@@ -144,7 +144,7 @@
                             <el-table-column prop="custom_info" label="custom_info" width="160"></el-table-column>
                             <el-table-column label="latest_result" min-width="160">
                                 <template slot-scope="scope">
-                                    <i type="warn" v-if="scope.row.error" class="el-icon-warning" circle size="mini"
+                                    <i v-if="scope.row.error" class="el-icon-warning" circle size="mini"
                                         style="margin: 0;" @click='show_task_error(scope.row)'>
                                     </i>
                                     <el-link style="display: inline;"
@@ -168,7 +168,7 @@
                                     <el-button type="primary" icon="el-icon-caret-right"
                                         @click="force_crawl(scope.$index, scope.row)" size='mini' style="margin: 0;"
                                         circle title="Force Crawl"></el-button>
-                                    <el-button type="warn" icon="el-icon-edit" @click="update_task(scope.row)"
+                                    <el-button type="warning" icon="el-icon-edit" @click="update_task(scope.row)"
                                         size='mini' style="margin: 0;" circle
                                         title="Edit Task. Double click the row for shortcut."></el-button>
                                     <el-button type="danger" icon="el-icon-delete" circle title="Delete Task"
@@ -202,7 +202,7 @@
                     </template>
                 </el-tab-pane>
                 <el-tab-pane label="New" name="new">
-                    <iframe v-if="uniparser_iframe_loaded" @load='init_iframe()' src="/uniparser/" frameborder="0"
+                    <iframe v-if="tab_new_clicked" @load='init_iframe()' src="/uniparser/" frameborder="0"
                         id="uni_iframe" style="width: 100%; height: 90%;"></iframe>
                     <el-popover v-on:dblclick.native="window.open('/auth')" title="Double click to change password"
                         style="margin: 0 0 0 20%;" placement="top-start" title="WARNING" width="200" trigger="hover"
@@ -413,6 +413,7 @@
                 return {
                     activeName: 'tasks',
                     uniparser_iframe_loaded: false,
+                    tab_new_clicked: false,
                     task_info_visible: false,
                     rule_info_visible: false,
                     current_host_rule: {},
@@ -551,7 +552,11 @@
                 view_crawler_rule(rule) {
                     this.rule_info_visible = false
                     document.getElementById('tab-new').click()
-                    this.init_iframe_rule_json = JSON.stringify(rule)
+                    if (this.uniparser_iframe_loaded) {
+                        this.init_iframe_crawler_rule(JSON.stringify(rule))
+                    } else {
+                        this.init_iframe_rule_json = JSON.stringify(rule)
+                    }
                 },
                 edit_crawler_rule(rule) {
                     this.$prompt('', 'Edit Crawler JSON', {
@@ -744,13 +749,14 @@
                             });
                             this.init_iframe_rule_json = ''
                         }
+                        this.uniparser_iframe_loaded = true
                     }
                 },
                 handleClick(tab, event) {
                     if (tab.name == 'new') {
-                        if (!this.uniparser_iframe_loaded) {
+                        if (!this.tab_new_clicked) {
                             // for autosize bug in iframe if not seen
-                            this.uniparser_iframe_loaded = true
+                            this.tab_new_clicked = true
                             setTimeout(() => {
                                 for (const text of this.uni_iframe.contentWindow.document
                                         .getElementsByTagName(
