@@ -1,4 +1,4 @@
-from logging import getLogger
+from logging import getLogger, Formatter, INFO, ERROR
 from pathlib import Path
 from time import time
 from traceback import format_exc
@@ -16,6 +16,7 @@ from uniparser.crawler import RuleStorage
 from .callbacks import CallbackHandlerBase
 
 logger = getLogger('watchdogs')
+logger.setLevel(INFO)
 
 
 # @app.exception_handler(Exception)
@@ -120,12 +121,31 @@ class Config:
     access_log: bool = True
     mute_std_log = False
     mute_file_log = False
-    LOG_FILE_SIZE_MB = {'info': 2, 'error': 5, 'server': 2}
+    LOGGING_FILE_CONFIG = {
+        'info.log': {
+            'file_size_mb': 2,
+            'level': INFO,
+            'backup_count': 1,
+        },
+        'error.log': {
+            'file_size_mb': 2,
+            'level': ERROR,
+            'backup_count': 1,
+        },
+        'server.log': {
+            'file_size_mb': 2,
+            'level': INFO,
+            'backup_count': 1,
+        },
+    }
+    DEFAULT_LOGGER_FORMATTER = Formatter(
+        "%(asctime)s %(levelname)-5s [%(name)s] %(filename)s(%(lineno)s): %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S")
     uvicorn_kwargs: dict = {'access_log': True, 'port': 9901}
     # check interval 60s, so format do use %M , backup every 12 hours. this pattern may miss for crawl cost more than 60s.
     # db_backup_time: str = '%H:%M==00:00|%H:%M==12:00'
     db_backup_time: str = '%H:%M==00:00'
-    backup_count: int = 4
+    db_backup_count: int = 4
     db_backup_function: Callable[..., Any] = None
     exception_handlers: list = [
         (Exception, exception_handler),
