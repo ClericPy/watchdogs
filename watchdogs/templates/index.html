@@ -192,7 +192,8 @@
                                     icon="el-icon-mobile-phone"></el-button>
                             </a>
                             <el-popover placement="top-start" title="" width="200" trigger="hover" content="">
-                                <a v-for="(a,index) in custom_links" :href="a.href" :title="a.title || ''" target="_blank">
+                                <a v-for="(a,index) in custom_links" :href="a.href" :title="a.title || ''"
+                                    target="_blank">
                                     <p class="custom_links"> ${ a.text }</p>
                                 </a>
                                 <el-button size="" style="margin: 0;" title="Refresh" icon="el-icon-menu"
@@ -255,7 +256,7 @@
             </el-tabs>
         </template>
         <el-dialog title="Task Info" :visible.sync="task_info_visible" :close-on-click-modal="false">
-            <el-form :model="new_task_form" :rules="task_validate_rules">
+            <el-form :model="new_task_form">
                 <el-form-item label="Task ID" title="Unique task id">
                     <el-input v-model="new_task_form.task_id" disabled autocomplete="off"
                         placeholder="Task ID, for new task is null"></el-input>
@@ -277,8 +278,7 @@
                     <el-input v-model="new_task_form.error" disabled autocomplete="off" placeholder="No errors.">
                     </el-input>
                 </el-form-item>
-                <el-form-item title="Input the url, or request_args JSON, or cURL string" label="request_args"
-                    prop="new_task_form_request_args">
+                <el-form-item title="Input the url, or request_args JSON, or cURL string" label="request_args">
                     <el-button @click="view_crawler_rule_by_req(new_task_form.request_args)" size='mini'
                         icon="el-icon-view"><b>Rule</b></el-button>
                     <el-button @click="view_host_by_req(new_task_form.request_args)" size='mini' icon="el-icon-view">
@@ -318,7 +318,7 @@
                     <el-input v-model="new_task_form.max_result_count" autocomplete="off" title="Press enter to submit"
                         @keyup.enter.native="add_new_task"></el-input>
                 </el-form-item>
-                <el-form-item title="History of the result list." label="result_list" prop="new_task_form_result_list">
+                <el-form-item title="History of the result list." label="result_list">
                     <el-input v-model="new_task_form.result_list" type="textarea" title="Standard JSON list.">
                     </el-input>
                 </el-form-item>
@@ -402,14 +402,6 @@
     <script>
         var Main = {
             data() {
-                var validateJSON = (rule, value, callback) => {
-                    try {
-                        JSON.parse(value)
-                        callback()
-                    } catch (error) {
-                        callback(new Error('Bad JSON!'));
-                    }
-                };
                 return {
                     activeName: 'tasks',
                     uniparser_iframe_loaded: false,
@@ -434,16 +426,6 @@
                     custom_links: [],
                     custom_tabs: [],
                     current_cb_doc: '',
-                    task_validate_rules: {
-                        new_task_form_request_args: [{
-                            validator: validateJSON,
-                            trigger: 'blur'
-                        }],
-                        new_task_form_result_list: [{
-                            validator: validateJSON,
-                            trigger: 'blur'
-                        }],
-                    },
                     init_iframe_rule_json: '',
                 }
             },
