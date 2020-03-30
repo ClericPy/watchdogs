@@ -118,7 +118,6 @@ class Config:
     DEFAULT_HOST_FREQUENCY = (1, 1)
     cdn_urls: dict = {}
     callback_handler: CallbackHandlerBase = None
-    access_log: bool = True
     mute_std_log = False
     mute_file_log = False
     LOGGING_FILE_CONFIG = {
