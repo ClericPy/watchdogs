@@ -65,6 +65,7 @@
 
         .host-tag {
             margin: 0.5em;
+            cursor: pointer;
         }
 
         .el-table .warning-row {
@@ -83,12 +84,16 @@
             padding: 0.5em 0 0.5em 0;
             box-shadow: 3px 3px 5px #888888
         }
+
+        [v-cloak] {
+            display: none;
+        }
     </style>
 </head>
 
 <body>
     <template id="init_vars">{{init_vars|safe}}</template>
-    <div id="app" class="full-screen">
+    <div id="app" class="full-screen" v-cloak>
         <template>
             <el-tabs @tab-click="handleClick" v-model="activeName" class="full-screen" stretch='true'>
                 <el-tab-pane label="Tasks" name="tasks">
@@ -181,22 +186,22 @@
                             <el-button type="success" style="margin: 0; width: 20%;" :disabled="!has_more" plain>
                                 Page: ${current_page} - Load More</el-button>
 
-                            <el-button type="primary" @click="reload_tasks" size="" style="margin: 0;" title="Refresh"
+                            <el-button type="primary" @click="reload_tasks" style="margin: 0;" title="Refresh"
                                 icon="el-icon-refresh-right"></el-button>
                             <a href="{{rss_url}}" target="_blank" rel="noopener noreferrer" style="margin: 0;">
-                                <el-button title="RSS Feed" size="" style="margin: 0;" type="warning"
-                                    icon="el-icon-star-off"></el-button>
+                                <el-button title="RSS Feed" style="margin: 0;" type="warning" icon="el-icon-star-off">
+                                </el-button>
                             </a>
                             <a href="{{lite_url}}" target="_blank" rel="noopener noreferrer" style="margin: 0;">
-                                <el-button title="Lite page for mobile view" size="" type="info" style="margin: 0;"
+                                <el-button title="Lite page for mobile view" type="success" style="margin: 0;"
                                     icon="el-icon-mobile-phone"></el-button>
                             </a>
-                            <el-popover placement="top-start" title="" width="200" trigger="hover" content="">
+                            <el-popover placement="top-start" width="200" trigger="hover">
                                 <a v-for="(a,index) in custom_links" :href="a.href" :title="a.title || ''"
                                     target="_blank">
                                     <p class="custom_links"> ${ a.text }</p>
                                 </a>
-                                <el-button size="" style="margin: 0;" title="Refresh" icon="el-icon-menu"
+                                <el-button style="margin: 0;" title="Config.custom_links" icon="el-icon-menu"
                                     slot="reference"></el-button>
                             </el-popover>
                         </div>
@@ -205,9 +210,8 @@
                 <el-tab-pane label="New" name="new">
                     <iframe v-if="tab_new_clicked" @load='init_iframe()' src="/uniparser/" frameborder="0"
                         id="uni_iframe" style="width: 100%; height: 90%;"></iframe>
-                    <el-popover v-on:dblclick.native="window.open('/auth')" title="Double click to change password"
-                        style="margin: 0 0 0 20%;" placement="top-start" title="WARNING" width="200" trigger="hover"
-                        content=""><span style="font-size: 1em;">
+                    <el-popover style="margin: 0 0 0 20%;" placement="top-start" title="WARNING" width="200"
+                        trigger="hover"><span style="font-size: 1em;">
                             ParseRule's name should have the keys to generate RSS:
                             <br>
                             <b>text</b>
@@ -265,7 +269,7 @@
                     <el-input v-model="new_task_form.name" autocomplete="off" title="Press enter to submit"
                         @keyup.enter.native="add_new_task" placeholder="Task name, Press enter to submit."></el-input>
                 </el-form-item>
-                <el-form-item label="">
+                <el-form-item>
                     <el-switch active-text="Enable" :active-value='1' :inactive-value='0' inactive-text="Disable"
                         v-model="new_task_form.enable" active-color="#13ce66" inactive-color="#ff4949">
                     </el-switch>
@@ -338,7 +342,7 @@
                 <el-button type="primary" @click="add_new_task">Submit</el-button>
             </div>
         </el-dialog>
-        <el-dialog :title="'Rule Info: '+current_host_rule.host||''" :close-on-click-modal="true"
+        <el-dialog :title="'HostRule: '+current_host_rule.host||''" :close-on-click-modal="true"
             :visible.sync="rule_info_visible" :close-on-click-modal="false">
             <el-button type="danger" icon="el-icon-delete" @click="delete_host_rule(current_host_rule.host)">Delete
             </el-button>
@@ -773,7 +777,7 @@
                     )
                 },
                 show_time(row) {
-                    var text = '<table style="text-align: left;margin: 0 0 0 20%;">'
+                    var text = '<table style="text-align: left;margin: 0 0 0 20%;font-weight: bold;">'
                     var items = JSON.parse(row.result_list || '[]')
                     text += '<tr><td>last_check_time</td><td class="time-td">' + row.last_check_time
                         .replace(/\..*/,
@@ -783,7 +787,7 @@
                         .replace(/\..*/,
                             '').replace('T', ' ') +
                         '</td></tr>'
-                    text += '<tr style="font-weight: bold;"><td>last_change_time</td><td class="time-td">' +
+                    text += '<tr><td>last_change_time</td><td class="time-td">' +
                         row
                         .last_change_time.replace(
                             /\..*/, '').replace('T', ' ') +
