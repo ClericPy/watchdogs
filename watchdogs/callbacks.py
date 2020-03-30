@@ -53,13 +53,20 @@ Wechat notify toolkit.
         url = latest_result.get('url') or task.origin_url
         title = f'{task.name}#{text[:80]}'
         body = f'{url}\n\n{text}'
-        r = await self.req.post(
-            f'https://sc.ftqq.com/{arg}.send',
-            data={
-                'text': title,
-                'desp': body
-            })
-        return r.text
+        oks = []
+        for key in set(arg.strip().split()):
+            if not key or not key.strip():
+                continue
+            key = key.strip()
+            r = await self.req.post(
+                f'https://sc.ftqq.com/{key}.send',
+                data={
+                    'text': title,
+                    'desp': body
+                })
+            self.logger.info(f'ServerChanCallback ({key}): {r.text}')
+            oks.append((key, bool(r)))
+        return f'{len(oks)} sended, {oks}'
 
 
 class CallbackHandlerBase(ABC):
