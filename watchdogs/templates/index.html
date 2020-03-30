@@ -120,16 +120,20 @@
                             <el-table-column label="request_args" width="180">
                                 <template slot-scope="scope">
                                     <el-popover trigger="hover" placement="bottom-start">
-                                        <h4>${ new URL(JSON.parse(scope.row.request_args).url).host }</h4>
-                                        <pre><code>${JSON.stringify(JSON.parse(scope.row.request_args), null, 2)}</code></pre>
+                                        <h3>${(scope.request_args_dict =
+                                            JSON.parse(scope.row.request_args))&&(scope._url = new
+                                            URL(scope.request_args_dict.url)) &&
+                                            scope._url.host }</h3>
+                                        <pre><code>${JSON.stringify(scope.request_args_dict, null, 2)}</code></pre>
                                         <el-button @click="view_crawler_rule_by_req(scope.row.request_args)" size='mini'
                                             icon="el-icon-view"><b>Rule</b></el-button>
                                         <el-button @click="view_host_by_req(scope.row.request_args)" size='mini'
                                             icon="el-icon-view"><b>Host</b></el-button>
                                         <div slot="reference" class="name-wrapper">
-                                            <el-tag size="medium">${ new
-                                                URL(JSON.parse(scope.row.request_args).url).host }</el-tag>
+                                            <el-tag size="medium">${ scope._url.host }</el-tag>
                                         </div>
+                                        : <a :href="scope._url" target="_blank"
+                                            rel="noopener noreferrer">${scope._url}</a>
                                     </el-popover>
                                 </template>
                             </el-table-column>
@@ -159,7 +163,7 @@
                                     </el-link>
                                     <el-link style="display: inline;" @click="show_result_list(scope.row)" type="info"
                                         :underline="false" title="Click to read more.">
-                                        <i class="el-icon-more-outline" style="zoom: 1.4;"></i>
+                                        <i class="el-icon-more-outline" style="margin-left: 0.1em;"></i>
                                     </el-link>
                                 </template>
                             </el-table-column>
