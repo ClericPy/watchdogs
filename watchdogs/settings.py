@@ -78,9 +78,9 @@ def setup_models():
     Config.db = Database(Config.db_url)
     Config.rule_db = RuleStorageDB(Config.db)
     Config.metas = Metas(Config.db)
-    if Config.db_backup_function is None and Config.db_url.startswith(
-            'sqlite:///'):
-        Config.db_backup_function = default_db_backup_sqlite
+    # if Config.db_backup_function is None and Config.db_url.startswith(
+    #         'sqlite:///'):
+    #     Config.db_backup_function = default_db_backup_sqlite
     create_tables(str(Config.db.url))
 
 

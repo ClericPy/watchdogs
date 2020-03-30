@@ -363,8 +363,6 @@
                     <el-button @click="update_frequency" type="warning">Update Frequency</el-button>
                 </el-col>
             </el-row>
-
-
             <el-row :gutter="20">
                 <el-col :span="8">
                     <h4>Name</h4>
@@ -434,9 +432,14 @@
                     // {"name":"get demo","request_args":{"method":"get","url":"http://httpbin.org/get","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[{"name":"text","chain_rules":[["css","p","$text"],["python","getitem","[0]"]],"child_rules":""}],"regex":"http://httpbin.org/get","encoding":""}
                     try {
                         JSON.parse(this.new_task_form.result_list)
+                    } catch (error) {
+                        this.$alert('Invalid JSON for result_list.')
+                        return
+                    }
+                    try {
                         JSON.parse(this.new_task_form.request_args)
                     } catch (error) {
-                        this.$alert('Invalid JSON for result_list or request_args.')
+                        this.$alert('Invalid JSON for request_args.')
                         return
                     }
                     this.task_info_visible = false
