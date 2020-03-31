@@ -1,1 +1,718 @@
-"use strict";var Main={data:function(){return{activeName:"tasks",uniparser_iframe_loaded:!1,tab_new_clicked:!1,task_info_visible:!1,rule_info_visible:!1,current_host_rule:{},new_task_form:{},has_more:!0,task_list:[],current_page:0,host_list:[],visible_host_list:[],current_host:"",tag_types:["","success","info","warning","danger"],query_tasks_args:{order_by:"last_change_time",sort:"desc",tag:""},callback_workers:{},custom_links:[],custom_tabs:[],current_cb_doc:"",init_iframe_rule_json:""}},methods:{add_new_task:function(){var e=this;try{JSON.parse(this.new_task_form.result_list)}catch(e){return void this.$alert("Invalid JSON for result_list.")}try{JSON.parse(this.new_task_form.request_args)}catch(e){return void this.$alert("Invalid JSON for request_args.")}this.task_info_visible=!1;var t=JSON.stringify(this.new_task_form);this.$http.post("add_new_task",t).then(function(t){var s=t.body;"ok"==s.msg?(e.$message({message:"Update task "+e.new_task_form.name+" success: "+s.msg,type:"success"}),e.reload_tasks()):e.$message.error({message:"Update task "+e.new_task_form.name+" failed: "+s.msg,duration:0,showClose:!0})},function(t){e.$message.error({message:"connect failed: "+t.status,duration:0,showClose:!0})})},init_iframe_crawler_rule:function(e){e?this.sub_app.new_rule_json=e:/httpbin\.org\/html/g.test(this.sub_app.new_rule_json)?this.sub_app.new_rule_json='{"name":"","request_args":{"method":"get","url":"https://importpython.com/blog/feed/","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[{"name":"text","chain_rules":[["xml","channel>item>title","$text"],["python","getitem","[0]"]],"child_rules":""},{"name":"url","chain_rules":[["xml","channel>item>link","$text"],["python","getitem","[0]"]],"child_rules":""}],"regex":"^https?://importpython.com/blog/feed/$","encoding":""}':this.sub_app.new_rule_json='{"name":"","request_args":{"method":"get","url":"http://httpbin.org/html","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[{"name":"text","chain_rules":[["css","body h1","$text"],["python","getitem","[0]"]],"child_rules":""}],"regex":"^http://httpbin.org/html$","encoding":""}',this.sub_app.input_object="",this.sub_app.request_status="",this.sub_app.load_rule()},load_rule:function(e){this.sub_app.new_rule_json=e,this.sub_app.load_rule()},view_host_by_req:function(e){var t=JSON.parse(e).url;if(!t)return void this.$alert("request_args.url should not be null");this.current_host=new URL(t).hostname,document.getElementById("tab-rules").click(),this.task_info_visible=!1},view_crawler_rule_by_req:function(e){var t=this;if(!e)return void this.$alert("request_args should not be null");this.$http.post("find_crawler_rule",e).then(function(e){var s=e.body;if("ok"==s.msg){var r=JSON.parse(s.result);t.view_crawler_rule(r),t.task_info_visible=!1}else t.$message.error({message:"rule not find in db: "+s.msg,duration:0,showClose:!0})},function(e){t.$message.error({message:"connect failed: "+e.status,duration:0,showClose:!0})})},view_crawler_rule:function(e){this.rule_info_visible=!1,document.getElementById("tab-new").click(),this.uniparser_iframe_loaded?this.init_iframe_crawler_rule(JSON.stringify(e)):this.init_iframe_rule_json=JSON.stringify(e)},edit_crawler_rule:function(e){var t=this;this.$prompt("","Edit Crawler JSON",{confirmButtonText:"OK",cancelButtonText:"Cancel",center:!0,inputType:"textarea",closeOnClickModal:!1,inputValue:JSON.stringify(e,null,2)}).then(function(e){var s=e.value;t.process_crawler_rule("add",JSON.parse(s),0)}).catch(function(e){t.$message({type:"error",message:e})})},process_crawler_rule:function(e,t,s){var r=this,a=t||JSON.parse(this.sub_app.current_crawler_rule_json),n=JSON.stringify(a),i="crawler_rule."+e;1==s&&(i+="?force=1"),this.$http.post(i,n).then(function(s){var a=s.body;"ok"==a.msg?(r.$message({message:e+" rule success",type:"success"}),"pop"==e&&a.result&&r.show_host_rule(r.current_host_rule.host)):"add"==e&&/matched more than 1 rule/g.test(a.msg)?r.$confirm("Failed for url matched more than 1 rule, overwrite it?","Confirm",{confirmButtonText:"Yes",cancelButtonText:"No",type:"error"}).then(function(){r.process_crawler_rule(e,t,1)}).catch(function(){r.$message({type:"info",message:"Adding rule canceled."})}):r.$message.error({message:e+" rule failed: "+a.msg,duration:0,showClose:!0})},function(e){r.$message.error({message:"connect failed: "+e.status,duration:0,showClose:!0})})},show_form_add_new_task:function(e){if(e){var t="";try{t=this.sub_app.crawler_rule.name}catch(e){console.log(e)}this.new_task_form={task_id:null,name:t,enable:1,tag:"default",error:"",request_args:"",origin_url:"",interval:300,work_hours:"0, 24",max_result_count:10,result_list:"[]",custom_info:""};var s=JSON.parse(this.sub_app.current_crawler_rule_json);this.new_task_form.request_args=JSON.stringify(s.request_args),this.new_task_form.origin_url=s.request_args.url||""}this.task_info_visible=!0},change_enable:function(e){var t=this;this.$http.get("enable_task",{params:{task_id:e.task_id,enable:e.enable}}).then(function(e){var s=e.body;"ok"!=s.msg&&t.$message.error({message:"Update enable failed: "+s.msg})},function(e){t.$message.error({message:"connect failed: "+e.status})})},sort_change:function(e){this.query_tasks_args={order_by:e.column.label,sort:(e.column.order||"").replace("ending","")},this.reload_tasks()},reload_tasks:function(){this.task_list=[],this.current_page=0,this.load_tasks()},load_tasks:function(){var e=this,t=new URLSearchParams(window.location.search).get("tag");this.query_tasks_args.tag=t||"",this.$http.get("load_tasks",{params:this.query_tasks_args}).then(function(t){var s=t.body;"ok"==s.msg?(s.tasks.forEach(function(t){e.task_list.push(t)}),e.has_more=s.has_more,e.current_page+=1):(e.$message.error({message:"Loading tasks failed: "+s.msg}),e.has_more=s.has_more)},function(t){e.$message.error({message:"connect failed: "+t.status})})},load_hosts:function(){var e=this;this.$http.get("load_hosts",{params:{host:this.current_host}}).then(function(t){var s=t.body;e.current_host=s.host||"",e.host_list=s.hosts,e.visible_host_list=e.host_list},function(t){e.$message.error({message:"connect failed: "+t.status})})},init_iframe:function(){this.sub_app&&(this.init_iframe_crawler_rule(this.init_iframe_rule_json),this.init_iframe_rule_json&&(this.$message.success({message:"Rule loaded."}),this.init_iframe_rule_json=""),this.uniparser_iframe_loaded=!0)},handleClick:function(e,t){var s=this;"new"==e.name&&(this.tab_new_clicked||(this.tab_new_clicked=!0,setTimeout(function(){var e=!0,t=!1,r=void 0;try{for(var a,n=s.uni_iframe.contentWindow.document.getElementsByTagName("textarea")[Symbol.iterator]();!(e=(a=n.next()).done);e=!0){var i=a.value;i.style.height="auto",i.style.height=i.scrollHeight+"px"}}catch(e){t=!0,r=e}finally{try{!e&&n.return&&n.return()}finally{if(t)throw r}}},0))),"rules"==e.name&&this.load_hosts()},escape_html:function(e){return e?e.replace(/[&<>'"]/g,function(e){return{"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[e]||e}):""},show_time:function(e){var t='<table style="text-align: left;margin: 0 0 0 20%;font-weight: bold;">';JSON.parse(e.result_list||"[]");t+='<tr><td>last_check_time</td><td class="time-td">'+e.last_check_time.replace(/\..*/,"").replace("T"," ")+"</td></tr>",t+='<tr><td>next_check_time</td><td class="time-td">'+e.next_check_time.replace(/\..*/,"").replace("T"," ")+"</td></tr>",t+='<tr><td>last_change_time</td><td class="time-td">'+e.last_change_time.replace(/\..*/,"").replace("T"," ")+"</td></tr>",t+="</table>",this.$alert(t,"Task result list: "+e.name,{confirmButtonText:"OK",center:!0,dangerouslyUseHTMLString:!0,closeOnClickModal:!0,closeOnPressEscape:!0})},get_latest_result:function(e){var t=arguments.length>1&&void 0!==arguments[1]?arguments[1]:80;try{return JSON.parse(e).text.slice(0,t)}catch(t){return e}},show_result_list:function(e){var t=this,s="<table>";JSON.parse(e.result_list||"[]").forEach(function(e){if(result=e.result,result.url)var r='href="'+(result.url||"")+'"';else var r="";s+='<tr><td class="time-td">'+e.time+'</td><td><a target="_blank" '+r+">"+t.escape_html(result.text)+"</a></td></tr>"}),s+="</table>",this.$alert(s,"Task result list: "+e.name,{confirmButtonText:"OK",center:!0,dangerouslyUseHTMLString:!0,closeOnClickModal:!0,closeOnPressEscape:!0})},force_crawl:function(e,t){var s=this;this.$http.get("force_crawl",{params:{task_name:t.name}}).then(function(r){var a=r.body;if("ok"==a.msg){var n=a.task;Vue.set(s.task_list,e,n),n.error?s.$message.error({message:"Crawl task "+t.name+" "+n.error}):s.$message.success({message:"Crawl task "+t.name+" success"})}else s.$message.error({message:"Crawl task "+t.name+" failed: "+a.msg})},function(e){s.$message.error({message:"force_crawl connect failed: "+e.status})})},row_db_click:function(e){this.update_task(e)},show_task_error:function(e){app.$alert(e.error,"Crawler Error",{closeOnClickModal:!0,closeOnPressEscape:!0,center:!0})},update_task:function(e){this.new_task_form={task_id:e.task_id,name:e.name,enable:e.enable,tag:e.tag,request_args:e.request_args,origin_url:e.origin_url,interval:e.interval,work_hours:e.work_hours,max_result_count:e.max_result_count,result_list:e.result_list||"[]",custom_info:e.custom_info},this.show_form_add_new_task(!1)},delete_task:function(e,t){var s=this;this.$confirm("Are you sure?","Confirm",{confirmButtonText:"Delete",cancelButtonText:"Cancel",type:"warning"}).then(function(){s.$http.get("delete_task",{params:{task_id:t.task_id}}).then(function(r){var a=r.body;"ok"==a.msg?(s.$message.success({message:"Delete task "+t.name+" success"}),s.task_list.splice(e,1)):s.$message.error({message:"Delete task "+t.name+" failed: "+a.msg})},function(e){s.$message.error({message:"connect failed: "+e.status})})}).catch(function(){s.$message({type:"info",message:"Canceled"})})},delete_host_rule:function(e){var t=this;this.$confirm("Are you sure?","Confirm",{confirmButtonText:"Delete",cancelButtonText:"Cancel",type:"warning"}).then(function(){t.$http.get("delete_host_rule",{params:{host:e}}).then(function(s){var r=s.body;"ok"==r.msg?(t.$message.success({message:"Delete host "+e+" rule success"}),t.current_host_rule={},t.rule_info_visible=!1,t.load_hosts()):t.$message.error({message:"Delete host "+e+" rule failed: "+JSON.stringify(r)})},function(e){t.$message.error({message:"connect failed: "+e.status})})}).catch(function(){t.$message({type:"info",message:"Canceled"})})},show_host_rule:function(e){var t=this;this.$http.get("get_host_rule",{params:{host:e}}).then(function(s){var r=s.body;"ok"==r.msg?(t.current_host_rule=r.host_rule,t.rule_info_visible=!0):t.$message.error({message:"get_host_rule "+e+" failed: "+JSON.stringify(r)})},function(e){t.$message.error({message:"connect failed: "+e.status})})},show_work_hours_doc:function(){this.$alert("<pre><code>\nThree kinds of format:\n\n1. Tow numbers splited by ', ', as work_hours:\n0, 24           means from 00:00 ~ 23:59, for everyday\n2. JSON list of int, as work_hours:\n[1, 19]         means 01:00~01:59 a.m.  07:00~07:59 p.m. for everyday\n3. Standard strftime format, as work_days:\n> Split work_hours by '==', then check\n    if datetime.now().strftime(wh[0]) == wh[1]\n%A==Friday      means each Friday\n%m-%d==03-13    means every year 03-13\n%H==05          means everyday morning 05:00 ~ 05:59\n4. Mix up work_days and work_hours:\n> Split work_days and work_hours with ';'/'&' => 'and', '|' => 'or'.\n> Support == for equal, != for unequal.\n%w==5;20, 24        means every Friday 20:00 ~ 23:59\n[1, 2, 15];%w==5    means every Friday 1 a.m. 2 a.m. 3 p.m., the work_hours is on the left side.\n%w==5|20, 24        means every Friday or everyday 20:00 ~ 23:59\n%w==5|%w==2         means every Friday or Tuesday\n%w!=6&%w!=0         means everyday except Saturday & Sunday.\n</code></pre>","work_hours format doc",{dangerouslyUseHTMLString:!0,closeOnClickModal:!0,closeOnPressEscape:!0})},check_error_task:function(e){var t=e.row;e.rowIndex;if(t.error)return"warning-row"},click_cb_name:function(e){this.current_cb_doc=this.callback_workers[e],this.new_task_form.custom_info=e+":"},update_frequency:function(){var e=this,t=this.current_host_rule.host,s=this.current_host_rule.n||0,r=this.current_host_rule.interval||0;this.$http.get("update_host_freq",{params:{host:t,n:s,interval:r}}).then(function(a){var n=a.body;"ok"==n.msg?(e.$message({message:"Update frequency "+t+": "+n.msg,type:"success"}),e.current_host_rule.n=s,e.current_host_rule.interval=r):e.$message.error({message:"update_frequency "+t+" failed: "+JSON.stringify(n)})},function(t){e.$message.error({message:"connect failed: "+t.status})})}},watch:{current_host:function(e){var t=this;this.visible_host_list=[],/^https?:\/\//g.test(e)&&(e=new URL(e).hostname,this.current_host=e),this.host_list.forEach(function(s){s.name.includes(e)&&t.visible_host_list.push(s)})},task_info_visible:function(e){e||(this.current_cb_doc="")}},computed:{uni_iframe:function(){return document.getElementById("uni_iframe")},sub_app:function(){var e=this.uni_iframe;if(e)return e.contentWindow.app}}},vue_app=Vue.extend(Main),app=new vue_app({delimiters:["${","}"]}).$mount("#app");app.load_tasks(),function(){var e=document.getElementById("init_vars"),t=JSON.parse(e.innerHTML);Object.keys(t).forEach(function(e){app[e]=t[e]}),e.parentNode.removeChild(e)}();
+var Main = {
+    data() {
+        return {
+            activeName: 'tasks',
+            uniparser_iframe_loaded: false,
+            tab_new_clicked: false,
+            task_info_visible: false,
+            rule_info_visible: false,
+            current_host_rule: {},
+            new_task_form: {},
+            has_more: true,
+            task_list: [],
+            current_page: 0,
+            host_list: [],
+            visible_host_list: [],
+            current_host: '',
+            tag_types: ['', 'success', 'info', 'warning', 'danger'],
+            query_tasks_args: {
+                order_by: 'last_change_time',
+                sort: 'desc',
+                tag: '',
+            },
+            callback_workers: {},
+            custom_links: [],
+            custom_tabs: [],
+            current_cb_doc: '',
+            init_iframe_rule_json: '',
+        }
+    },
+    methods: {
+        add_new_task() {
+            // {"name":"get demo","request_args":{"method":"get","url":"http://httpbin.org/get","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[{"name":"text","chain_rules":[["css","p","$text"],["python","getitem","[0]"]],"child_rules":""}],"regex":"http://httpbin.org/get","encoding":""}
+            try {
+                JSON.parse(this.new_task_form.result_list)
+            } catch (error) {
+                this.$alert('Invalid JSON for result_list.')
+                return
+            }
+            try {
+                JSON.parse(this.new_task_form.request_args)
+            } catch (error) {
+                this.$alert('Invalid JSON for request_args.')
+                return
+            }
+            this.task_info_visible = false
+            let data = JSON.stringify(this.new_task_form)
+            this.$http.post('add_new_task', data).then(
+                r => {
+                    var result = r.body
+                    if (result.msg == 'ok') {
+                        this.$message({
+                            message: 'Update task ' + this.new_task_form.name +
+                                ' success: ' +
+                                result.msg,
+                            type: 'success'
+                        });
+                        this.reload_tasks()
+                    } else {
+                        this.$message.error({
+                            message: 'Update task ' + this.new_task_form.name +
+                                ' failed: ' +
+                                result.msg,
+                            duration: 0,
+                            showClose: true,
+                        });
+                    }
+                }, r => {
+                    this.$message.error({
+                        message: 'connect failed: ' + r.status,
+                        duration: 0,
+                        showClose: true,
+                    });
+                }
+            )
+        },
+        init_iframe_crawler_rule(rule_json) {
+            if (rule_json) {
+                this.sub_app.new_rule_json = rule_json
+            } else {
+                if (!(/httpbin\.org\/html/g.test(this.sub_app.new_rule_json))) {
+                    this.sub_app.new_rule_json =
+                        '{"name":"","request_args":{"method":"get","url":"http://httpbin.org/html","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[{"name":"text","chain_rules":[["css","body h1","$text"],["python","getitem","[0]"]],"child_rules":""}],"regex":"^http://httpbin.org/html$","encoding":""}'
+                } else {
+                    this.sub_app.new_rule_json =
+                        '{"name":"","request_args":{"method":"get","url":"https://importpython.com/blog/feed/","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[{"name":"text","chain_rules":[["xml","channel>item>title","$text"],["python","getitem","[0]"]],"child_rules":""},{"name":"url","chain_rules":[["xml","channel>item>link","$text"],["python","getitem","[0]"]],"child_rules":""}],"regex":"^https?://importpython\.com/blog/feed/$","encoding":""}'
+                }
+            }
+            this.sub_app.input_object = ''
+            this.sub_app.request_status = ''
+            this.sub_app.load_rule()
+        },
+        load_rule(crawler_rule_json) {
+            // crawler_rule_json = '{"name":"HelloWorld222","request_args":{"method":"get","url":"http://httpbin.org/forms/post","headers":{"User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/79.0.3945.130 Safari/537.36"}},"parse_rules":[],"regex":"","encoding":""}'
+            this.sub_app.new_rule_json = crawler_rule_json
+            this.sub_app.load_rule()
+        },
+        view_host_by_req(request_args) {
+            let url = JSON.parse(request_args).url
+            if (!url) {
+                this.$alert('request_args.url should not be null')
+                return
+            }
+            // this.activeName = 'rules'
+            // Vue.set(this, 'activeName', 'rules')
+            this.current_host = (new URL(url)).hostname
+            document.getElementById('tab-rules').click()
+            this.task_info_visible = false
+        },
+        view_crawler_rule_by_req(request_args) {
+            if (!request_args) {
+                this.$alert('request_args should not be null')
+                return
+            }
+            this.$http.post('find_crawler_rule', request_args).then(
+                r => {
+                    var result = r.body
+                    if (result.msg == 'ok') {
+                        let rule = JSON.parse(result.result)
+                        this.view_crawler_rule(rule)
+                        this.task_info_visible = false
+                    } else {
+                        this.$message.error({
+                            message: 'rule not find in db: ' + result.msg,
+                            duration: 0,
+                            showClose: true,
+                        });
+                    }
+                }, r => {
+                    this.$message.error({
+                        message: 'connect failed: ' + r.status,
+                        duration: 0,
+                        showClose: true,
+                    });
+                }
+            )
+        },
+        view_crawler_rule(rule) {
+            this.rule_info_visible = false
+            document.getElementById('tab-new').click()
+            if (this.uniparser_iframe_loaded) {
+                this.init_iframe_crawler_rule(JSON.stringify(rule))
+            } else {
+                this.init_iframe_rule_json = JSON.stringify(rule)
+            }
+        },
+        edit_crawler_rule(rule) {
+            this.$prompt('', 'Edit Crawler JSON', {
+                confirmButtonText: 'OK',
+                cancelButtonText: 'Cancel',
+                center: true,
+                inputType: 'textarea',
+                closeOnClickModal: false,
+                inputValue: JSON.stringify(rule, null, 2)
+            }).then(({
+                value
+            }) => {
+                this.process_crawler_rule('add', JSON.parse(value), 0)
+            }).catch((err) => {
+                this.$message({
+                    type: 'error',
+                    message: err
+                });
+            });
+        },
+        process_crawler_rule(method, rule, force) {
+            let current_crawler_rule = rule || JSON.parse(this.sub_app
+                .current_crawler_rule_json)
+            let data = JSON.stringify(current_crawler_rule)
+            let api = 'crawler_rule.' + method
+            if (force == 1) {
+                api += '?force=1'
+            }
+            this.$http.post(api, data).then(
+                r => {
+                    var result = r.body
+                    if (result.msg == 'ok') {
+                        this.$message({
+                            message: method + ' rule success',
+                            type: 'success'
+                        });
+                        if (method == 'pop' && result.result) {
+                            this.show_host_rule(this.current_host_rule.host)
+                        }
+                    } else {
+                        if (method == 'add' && /matched more than 1 rule/g.test(result.msg)) {
+                            this.$confirm(
+                                'Failed for url matched more than 1 rule, overwrite it?',
+                                'Confirm', {
+                                    confirmButtonText: 'Yes',
+                                    cancelButtonText: 'No',
+                                    type: 'error'
+                                }).then(() => {
+                                this.process_crawler_rule(method, rule, 1)
+                            }).catch(() => {
+                                this.$message({
+                                    type: 'info',
+                                    message: 'Adding rule canceled.'
+                                });
+                            });
+                        } else {
+                            this.$message.error({
+                                message: method + ' rule failed: ' + result.msg,
+                                duration: 0,
+                                showClose: true,
+                            });
+                        }
+                    }
+                }, r => {
+                    this.$message.error({
+                        message: 'connect failed: ' + r.status,
+                        duration: 0,
+                        showClose: true,
+                    });
+                }
+            )
+        },
+        show_form_add_new_task(create_new_task) {
+            if (create_new_task) {
+                let init_name = ''
+                try {
+                    init_name = this.sub_app.crawler_rule.name
+                } catch (error) {
+                    console.log(error);
+                }
+                this.new_task_form = {
+                    task_id: null,
+                    name: init_name,
+                    enable: 1,
+                    tag: 'default',
+                    error: '',
+                    request_args: '',
+                    origin_url: '',
+                    interval: 300,
+                    work_hours: '0, 24',
+                    max_result_count: 10,
+                    result_list: '[]',
+                    custom_info: '',
+                }
+                let current_crawler_rule = JSON.parse(this.sub_app.current_crawler_rule_json)
+                this.new_task_form.request_args = JSON.stringify(current_crawler_rule.request_args)
+                this.new_task_form.origin_url = current_crawler_rule.request_args.url || ''
+            }
+            this.task_info_visible = true
+        },
+        change_enable(row) {
+            this.$http.get('enable_task', {
+                params: {
+                    task_id: row.task_id,
+                    enable: row.enable
+                }
+            }).then(
+                r => {
+                    var result = r.body
+                    if (result.msg != 'ok') {
+                        this.$message.error({
+                            message: 'Update enable failed: ' + result.msg,
+                        });
+                    }
+                }, r => {
+                    this.$message.error({
+                        message: 'connect failed: ' + r.status,
+                    });
+                }
+            )
+        },
+        sort_change(col) {
+            this.query_tasks_args = {
+                order_by: col.column.label,
+                sort: (col.column.order || '').replace('ending', ''),
+            }
+            this.reload_tasks()
+        },
+        reload_tasks() {
+            this.task_list = []
+            this.current_page = 0
+            this.load_tasks()
+        },
+        load_tasks() {
+            let tag = new URLSearchParams(window.location.search).get('tag')
+            if (tag) {
+                this.query_tasks_args['tag'] = tag
+            } else {
+                this.query_tasks_args['tag'] = ''
+            }
+            this.$http.get('load_tasks', {
+                params: this.query_tasks_args
+            }).then(
+                r => {
+                    var result = r.body
+                    if (result.msg == 'ok') {
+                        result.tasks.forEach(item => {
+                            this.task_list.push(item)
+                        });
+                        this.has_more = result.has_more
+                        this.current_page += 1
+                    } else {
+                        this.$message.error({
+                            message: 'Loading tasks failed: ' + result.msg,
+                        });
+                        this.has_more = result.has_more
+                    }
+                }, r => {
+                    this.$message.error({
+                        message: 'connect failed: ' + r.status,
+                    });
+                }
+            )
+        },
+        load_hosts() {
+            // (this.current_host)
+            this.$http.get('load_hosts', {
+                params: {
+                    host: this.current_host
+                }
+            }).then(
+                r => {
+                    var result = r.body
+                    this.current_host = result.host || ''
+                    this.host_list = result.hosts
+                    this.visible_host_list = this.host_list
+                }, r => {
+                    this.$message.error({
+                        message: 'connect failed: ' + r.status,
+                    });
+                }
+            )
+        },
+        init_iframe() {
+            if (this.sub_app) {
+                this.init_iframe_crawler_rule(this.init_iframe_rule_json)
+                if (this.init_iframe_rule_json) {
+                    this.$message.success({
+                        message: 'Rule loaded.',
+                    });
+                    this.init_iframe_rule_json = ''
+                }
+                this.uniparser_iframe_loaded = true
+            }
+        },
+        handleClick(tab, event) {
+            if (tab.name == 'new') {
+                if (!this.tab_new_clicked) {
+                    // for autosize bug in iframe if not seen
+                    this.tab_new_clicked = true
+                    setTimeout(() => {
+                        for (const text of this.uni_iframe.contentWindow.document
+                                .getElementsByTagName(
+                                    'textarea')) {
+                            text.style.height = 'auto';
+                            text.style.height = text.scrollHeight + 'px';
+                        };
+                    }, 0);
+                }
+            }
+            if (tab.name == 'rules') {
+                this.load_hosts()
+            }
+        },
+        escape_html(string) {
+            if (!string) {
+                return ''
+            }
+            return string.replace(
+                /[&<>'"]/g,
+                tag =>
+                ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    "'": '&#39;',
+                    '"': '&quot;'
+                } [tag] || tag)
+            )
+        },
+        show_time(row) {
+            var text = '<table style="text-align: left;margin: 0 0 0 20%;font-weight: bold;">'
+            var items = JSON.parse(row.result_list || '[]')
+            text += '<tr><td>last_check_time</td><td class="time-td">' + row.last_check_time
+                .replace(/\..*/,
+                    '').replace('T', ' ') +
+                '</td></tr>'
+            text += '<tr><td>next_check_time</td><td class="time-td">' + row.next_check_time
+                .replace(/\..*/,
+                    '').replace('T', ' ') +
+                '</td></tr>'
+            text += '<tr><td>last_change_time</td><td class="time-td">' +
+                row
+                .last_change_time.replace(
+                    /\..*/, '').replace('T', ' ') +
+                '</td></tr>'
+            text += '</table>'
+            this.$alert(text, 'Task result list: ' + row.name, {
+                confirmButtonText: 'OK',
+                center: true,
+                dangerouslyUseHTMLString: true,
+                closeOnClickModal: true,
+                closeOnPressEscape: true
+            });
+        },
+        get_latest_result(latest_result, max_length = 80) {
+            try {
+                return JSON.parse(latest_result).text.slice(0, max_length)
+            } catch (error) {
+                return latest_result
+            }
+        },
+        show_result_list(row) {
+            var text = '<table>'
+            var items = JSON.parse(row.result_list || '[]')
+            items.forEach(item => {
+                result = item.result
+                if (result.url) {
+                    var href = 'href="' + (result.url || '') + '"'
+                } else {
+                    var href = ''
+                }
+                text += '<tr><td class="time-td">' + item.time +
+                    '</td><td><a target="_blank" ' + href + '>' + this
+                    .escape_html(
+                        result.text) + '</a></td></tr>'
+            });
+            text += '</table>'
+            this.$alert(text, 'Task result list: ' + row.name, {
+                confirmButtonText: 'OK',
+                center: true,
+                dangerouslyUseHTMLString: true,
+                closeOnClickModal: true,
+                closeOnPressEscape: true
+            });
+        },
+        force_crawl(index, row) {
+            this.$http.get('force_crawl', {
+                params: {
+                    task_name: row.name,
+                }
+            }).then(
+                r => {
+                    var result = r.body
+                    if (result.msg == 'ok') {
+
+                        let task = result.task
+                        Vue.set(this.task_list, index, task)
+                        if (task.error) {
+                            this.$message.error({
+                                message: 'Crawl task ' + row.name + ' ' + task.error,
+                            });
+                        } else {
+                            this.$message.success({
+                                message: 'Crawl task ' + row.name + ' success',
+                            });
+                        }
+                    } else {
+                        this.$message.error({
+                            message: 'Crawl task ' + row.name + ' failed: ' + result
+                                .msg,
+                        });
+                    }
+                }, r => {
+                    this.$message.error({
+                        message: 'force_crawl connect failed: ' + r.status,
+                    });
+                }
+            )
+        },
+        row_db_click(row) {
+            this.update_task(row)
+        },
+        show_task_error(row) {
+            app.$alert(row.error, "Crawler Error", {
+                closeOnClickModal: true,
+                closeOnPressEscape: true,
+                center: true
+            })
+        },
+        update_task(row) {
+            this.new_task_form = {
+                task_id: row.task_id,
+                name: row.name,
+                enable: row.enable,
+                tag: row.tag,
+                request_args: row.request_args,
+                origin_url: row.origin_url,
+                interval: row.interval,
+                work_hours: row.work_hours,
+                max_result_count: row.max_result_count,
+                result_list: row.result_list || '[]',
+                custom_info: row.custom_info,
+            }
+            this.show_form_add_new_task(false)
+        },
+        delete_task(index, row) {
+            this.$confirm('Are you sure?', 'Confirm', {
+                confirmButtonText: 'Delete',
+                cancelButtonText: 'Cancel',
+                type: 'warning'
+            }).then(() => {
+                this.$http.get('delete_task', {
+                    params: {
+                        task_id: row.task_id,
+                    }
+                }).then(
+                    r => {
+                        var result = r.body
+                        if (result.msg == 'ok') {
+                            this.$message.success({
+                                message: 'Delete task ' + row.name + ' success',
+                            });
+                            this.task_list.splice(index, 1)
+                        } else {
+                            this.$message.error({
+                                message: 'Delete task ' + row.name +
+                                    ' failed: ' +
+                                    result.msg,
+                            });
+                        }
+                    }, r => {
+                        this.$message.error({
+                            message: 'connect failed: ' + r.status,
+                        });
+                    }
+                )
+            }).catch(() => {
+                this.$message({
+                    type: 'info',
+                    message: 'Canceled'
+                });
+            });
+        },
+        delete_host_rule(host) {
+            this.$confirm('Are you sure?', 'Confirm', {
+                confirmButtonText: 'Delete',
+                cancelButtonText: 'Cancel',
+                type: 'warning'
+            }).then(() => {
+                this.$http.get('delete_host_rule', {
+                    params: {
+                        host: host,
+                    }
+                }).then(
+                    r => {
+                        var result = r.body
+                        if (result.msg == 'ok') {
+                            this.$message.success({
+                                message: 'Delete host ' + host +
+                                    ' rule success',
+                            });
+                            this.current_host_rule = {}
+                            this.rule_info_visible = false
+                            this.load_hosts()
+                        } else {
+                            this.$message.error({
+                                message: 'Delete host ' + host +
+                                    ' rule failed: ' + JSON
+                                    .stringify(
+                                        result),
+                            });
+                        }
+                    }, r => {
+                        this.$message.error({
+                            message: 'connect failed: ' + r.status,
+                        });
+                    }
+                )
+            }).catch(() => {
+                this.$message({
+                    type: 'info',
+                    message: 'Canceled'
+                });
+            })
+        },
+        show_host_rule(host) {
+            this.$http.get('get_host_rule', {
+                params: {
+                    host: host,
+                }
+            }).then(
+                r => {
+                    var result = r.body
+                    if (result.msg == 'ok') {
+                        this.current_host_rule = result.host_rule
+                        this.rule_info_visible = true
+                    } else {
+                        this.$message.error({
+                            message: 'get_host_rule ' + host + ' failed: ' + JSON
+                                .stringify(
+                                    result),
+                        });
+                    }
+                }, r => {
+                    this.$message.error({
+                        message: 'connect failed: ' + r.status,
+                    });
+                }
+            )
+        },
+        show_work_hours_doc() {
+            let html = `<pre><code>
+Three kinds of format:
+
+1. Tow numbers splited by ', ', as work_hours:
+0, 24           means from 00:00 ~ 23:59, for everyday
+2. JSON list of int, as work_hours:
+[1, 19]         means 01:00~01:59 a.m.  07:00~07:59 p.m. for everyday
+3. Standard strftime format, as work_days:
+> Split work_hours by '==', then check
+    if datetime.now().strftime(wh[0]) == wh[1]
+%A==Friday      means each Friday
+%m-%d==03-13    means every year 03-13
+%H==05          means everyday morning 05:00 ~ 05:59
+4. Mix up work_days and work_hours:
+> Split work_days and work_hours with ';'/'&' => 'and', '|' => 'or'.
+> Support == for equal, != for unequal.
+%w==5;20, 24        means every Friday 20:00 ~ 23:59
+[1, 2, 15];%w==5    means every Friday 1 a.m. 2 a.m. 3 p.m., the work_hours is on the left side.
+%w==5|20, 24        means every Friday or everyday 20:00 ~ 23:59
+%w==5|%w==2         means every Friday or Tuesday
+%w!=6&%w!=0         means everyday except Saturday & Sunday.
+</code></pre>`
+            this.$alert(html, 'work_hours format doc', {
+                dangerouslyUseHTMLString: true,
+                closeOnClickModal: true,
+                closeOnPressEscape: true,
+            });
+        },
+        check_error_task({
+            row,
+            rowIndex
+        }) {
+            if (row.error) {
+                return 'warning-row'
+            }
+        },
+        click_cb_name(name) {
+            this.current_cb_doc = this.callback_workers[name]
+            this.new_task_form.custom_info = name + ':'
+        },
+        update_frequency() {
+            let host = this.current_host_rule.host
+            let n = this.current_host_rule.n || 0
+            let interval = this.current_host_rule.interval || 0
+            this.$http.get('update_host_freq', {
+                params: {
+                    host: host,
+                    n: n,
+                    interval: interval
+                }
+            }).then(
+                r => {
+                    var result = r.body
+                    if (result.msg == 'ok') {
+                        this.$message({
+                            message: 'Update frequency ' + host + ': ' +
+                                result.msg,
+                            type: 'success'
+                        });
+                        this.current_host_rule.n = n
+                        this.current_host_rule.interval = interval
+                    } else {
+                        this.$message.error({
+                            message: 'update_frequency ' + host + ' failed: ' + JSON
+                                .stringify(
+                                    result),
+                        });
+                    }
+                }, r => {
+                    this.$message.error({
+                        message: 'connect failed: ' + r.status,
+                    });
+                }
+            )
+        },
+    },
+    watch: {
+        current_host: function (val) {
+            this.visible_host_list = []
+            if (/^https?:\/\//g.test(val)) {
+                val = (new URL(val).hostname)
+                this.current_host = val
+            }
+            this.host_list.forEach(host => {
+                if (host.name.includes(val)) {
+                    this.visible_host_list.push(host)
+                }
+            });
+        },
+        task_info_visible: function (val) {
+            if (!val) {
+                this.current_cb_doc = ''
+            }
+        }
+    },
+    computed: {
+        uni_iframe() {
+            return document.getElementById('uni_iframe')
+        },
+        sub_app() {
+            // return this.$refs.iframe.contentWindow.window.app
+            let uni = this.uni_iframe
+            if (uni) {
+                return uni.contentWindow.app
+            }
+        }
+    }
+}
+var vue_app = Vue.extend(Main)
+var app = new vue_app({
+    delimiters: ['${', '}']
+}).$mount('#app')
+app.load_tasks();
+(() => {
+    // init_vars
+    let node = document.getElementById('init_vars')
+    let args = JSON.parse(node.innerHTML)
+    Object.keys(args).forEach(name => {
+        app[name] = args[name]
+    });
+    node.parentNode.removeChild(node)
+})()
