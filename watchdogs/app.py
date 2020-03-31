@@ -126,7 +126,7 @@ async def index(request: Request, tag: str = ''):
 
 @app.get("/favicon.ico")
 async def favicon():
-    return RedirectResponse('/static/img/favicon.ico', 301)
+    return RedirectResponse('/static/img/favicon.svg', 301)
 
 
 @app.post("/add_new_task")
@@ -408,7 +408,6 @@ async def rss(request: Request,
               host: str = Header('', alias='Host')):
     tasks, _ = await query_tasks(tag=tag)
     source_link = f'https://{host}'
-    # print(source_link)
     xml_data: dict = {
         'channel': {
             'title': f'Watchdogs',
