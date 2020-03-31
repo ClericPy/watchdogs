@@ -95,15 +95,15 @@ async def auth(request: Request,
     auth_not_set = not Config.watchdog_auth
     already_authed = watchdog_auth and watchdog_auth == Config.watchdog_auth
     need_new_pwd = auth_not_set or already_authed
-    kwargs: dict = {'request': request}
-    kwargs['version'] = __version__
+    context: dict = {'request': request}
+    context['version'] = __version__
     if need_new_pwd:
-        kwargs['action'] = 'Init'
-        kwargs['prompt_title'] = 'Set a new password'
+        context['action'] = 'Init'
+        context['prompt_title'] = 'Set a new password'
     else:
-        kwargs['action'] = 'Login'
-        kwargs['prompt_title'] = 'Input the password'
-    return templates.TemplateResponse("auth.html", context=kwargs)
+        context['action'] = 'Login'
+        context['prompt_title'] = 'Input the password'
+    return templates.TemplateResponse("auth.html", context=context)
 
 
 @app.get("/")
@@ -333,29 +333,42 @@ async def delete_host_rule(host: str):
 
 
 @app.get("/log")
-async def log(max_lines: int = 100,
+async def log(request: Request,
+              max_lines: int = 50,
               refresh_every: int = 0,
               log_names: str = 'info-server-error'):
-    html = '<style>body{background-color:#FAFAFA;padding:1em;}pre{background-color:#ECEFF1;padding: 1em;}p{font-size:0.8em;}input, button{outline-style: none;border: 1px solid #ccc; border-radius: 3px;}a.clear_log>button{font-size:0.3em;color:#003cb8}</style>'
-    html += f'<meta http-equiv="refresh" content="{refresh_every};">' if refresh_every else ''
-    html += f'<form>max_lines: <input type="text" name="max_lines" onClick="this.select();" value="{max_lines}"> refresh_every: <input type="text" name="refresh_every" onClick="this.select();" value="{refresh_every}"> log_names: <input type="text" name="log_names" onClick="this.select();" value="{log_names}"> <input type="submit" value="Submit"></form>'
     window: deque = deque((), max_lines)
     names: list = log_names.split('-')
+    items = []
     for name in names:
         fp: Path = Config.CONFIG_DIR / f'{name}.log'
         if not fp.is_file():
             continue
         fp_stat = fp.stat()
         file_size = format_size(fp_stat.st_size)
-        last_change_time = ttime(fp_stat.st_mtime)
+        st_mtime = ttime(fp_stat.st_mtime)
         line_no = 0
         async with aiofiles.open(fp, encoding=Config.ENCODING) as f:
             async for line in f:
                 line_no += 1
                 window.append(line)
-        html += f'<hr><h3><a href="?log_names={name}" target="_blank">{name}.log</a></h3><p>{line_no} lines ({file_size}), st_mtime: {last_change_time} <a href="/log.clear?log_names={name}&current_names={log_names}" class="clear_log"><button>Clear</button></a></p><hr><pre><code>{"".join(window)}</code></pre>'
+        item = {
+            'name': name,
+            'line_no': line_no,
+            'file_size': file_size,
+            'st_mtime': st_mtime,
+            'log_text': "".join(window),
+        }
+        items.append(item)
         window.clear()
-    return HTMLResponse(html)
+    context = {
+        'request': request,
+        'items': items,
+        'log_names': log_names,
+        'refresh_every': refresh_every,
+        'max_lines': max_lines,
+    }
+    return templates.TemplateResponse("logs.html", context=context)
 
 
 @app.get("/log.clear")
@@ -456,6 +469,6 @@ async def lite(request: Request, tag: str = '', sign: str = ''):
         task['text'] = task.get('text') or result.get('text') or ''
         task['timeago'] = timeago(
             (now - task['last_change_time']).seconds, 1, 1, short_name=True)
-    kwargs = {'tasks': tasks, 'request': request}
-    kwargs['version'] = __version__
-    return templates.TemplateResponse("lite.html", context=kwargs)
+    context = {'tasks': tasks, 'request': request}
+    context['version'] = __version__
+    return templates.TemplateResponse("lite.html", context=context)
