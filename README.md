@@ -80,3 +80,10 @@ Such as `post articles` / `news on the web portal` / `server api health` / `bing
 ![image](https://github.com/ClericPy/watchdogs/raw/master/images/5.png)
 
 </details>
+
+<!--
+
+[CSS Minifier](https://cssminifier.com/)
+[JavaScript Minifier](https://javascript-minifier.com/)
+
+-->
