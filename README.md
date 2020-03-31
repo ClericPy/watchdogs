@@ -6,6 +6,8 @@ Such as `post articles` / `news on the web portal` / `server api health` / `bing
 
 ## Intro
 
+> [中文文档](https://clericpy.github.io/blog/posts/20200331171211/)
+
 1. This is a web app based on [fastapi](https://github.com/tiangolo/fastapi), [databases](https://github.com/encode/databases), [uniparser](https://github.com/ClericPy/uniparser), [torequests](https://github.com/ClericPy/torequests).
 2. Smoothly deploy it by pip: `pip install -U watchdogs;python3 -m watchdogs`
 3. Simple to create a new crawler with the Web UI, not like old ways to write duplicate code.
