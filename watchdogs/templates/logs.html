@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="referrer" content="never">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <link rel="shortcut icon" href="/static/img/favicon.svg" type="image/icon" />
+    <title>Watchdogs logs</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="refresh" content="{{refresh_every or ''}};">
+
+    <style>
+        a {
+            color: black;
+        }
+
+        body {
+            background-color: #FAFAFA;
+            padding: 1em;
+            width: 90%;
+            margin: 0 auto;
+        }
+
+        pre {
+            background-color: #ECEFF1;
+            padding: 1em;
+        }
+
+        p {
+            font-size: 0.8em;
+        }
+
+        input,
+        button {
+            outline-style: none;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+
+        a.clear_log>button {
+            font-size: 0.3em;
+            color: black
+        }
+        .log_metas{
+            font-size: 0.8em;
+            color: gray;
+            margin-left: 2em;
+        }
+    </style>
+
+</head>
+
+<body>
+    <form style="font-size: 0.8em;">
+        max_lines: <input type="text" name="max_lines" onClick="this.select();" value="{{max_lines}}">
+        refresh_every: <input type="text" name="refresh_every" onClick="this.select();" value="{{refresh_every}}">
+        log_names: <input type="text" name="log_names" onClick="this.select();" value="{{log_names}}">
+        <input type="submit" value="Submit">
+    </form>
+    {% for item in items %}
+    <hr>
+    <h5><a href="?log_names={{item['name']}}">{{item['name']}}.log</a>
+        <span class="log_metas">{{item['line_no']}} lines ({{item['file_size']}}), st_mtime: {{item['st_mtime']}}</span>
+        <a href="/log.clear?log_names={{item['name']}}&current_names={{log_names}}" class="clear_log">
+            <button>Clear</button></a></h5>
+    <hr>
+    <pre><code>{{item['log_text']}}</code></pre>
+    {% endfor %}
+</body>
+
+</html>
