@@ -283,7 +283,7 @@ def gen_rss(data):
   <link>{channel['link']}</link>
   <description>{channel['description']}</description>
   <image>
-    <url>{channel['link']}/static/img/favicon.ico</url>
+    <url>{channel['link']}/static/img/favicon.svg</url>
     <title>{channel['title']}</title>
     <link>{channel['link']}</link>
     <width>32</width>
