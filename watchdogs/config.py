@@ -1,8 +1,8 @@
-from logging import getLogger, Formatter, INFO, ERROR
+from logging import ERROR, INFO, Formatter, getLogger
 from pathlib import Path
 from time import time
 from traceback import format_exc
-from typing import Any, Callable, List
+from typing import Any, Callable, Dict, List
 
 from databases import Database
 from fastapi import Request
@@ -170,8 +170,13 @@ class Config:
         'text': 'Logs',
         'href': '/log',
         'title': 'view the logs',
+    }, {
+        'text': 'API',
+        'href': '/docs',
+        'title': 'view the docs',
     }]
-    custom_tabs = [{'name': 'apis', 'label': 'API', 'url': '/docs'}]
+    # custom_tabs = [{'name': 'apis', 'label': 'API', 'url': '/docs'}]
+    custom_tabs: List[Dict] = []
     COLLATION: str = None
 
 
