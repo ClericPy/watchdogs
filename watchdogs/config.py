@@ -181,7 +181,8 @@ class Config:
 
     @classmethod
     def add_custom_tabs(cls, label, url, name=None, desc=None):
-        # desc is not work
+        # desc is nonsense
+        assert name or label
         cls.custom_tabs.append({
             'label': label,
             'name': name or label,
@@ -191,7 +192,9 @@ class Config:
 
     @classmethod
     def add_custom_links(cls, url, name, label=None, desc=None):
+        assert name or label
         cls.custom_tabs.append({
+            'name': name or label,
             'label': label or name,
             'url': url,
             'desc': desc
