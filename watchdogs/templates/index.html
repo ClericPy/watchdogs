@@ -20,7 +20,7 @@
     <div id="app" class="full-screen" v-cloak>
         <template>
             <el-tabs @tab-click="handleClick" v-model="activeName" class="full-screen" stretch='true'>
-                <el-tab-pane label="Tasks" name="tasks">
+                <el-tab-pane label="Tasks" title="Show task list" name="tasks">
                     <template>
                         <el-table @row-dblclick="row_db_click" :row-class-name="check_error_task"
                             :default-sort="{prop: 'last_change_time', order: 'descending'}" :data="task_list"
@@ -125,9 +125,9 @@
                                     icon="el-icon-mobile-phone"></el-button>
                             </a>
                             <el-popover placement="top-start" width="200" trigger="hover">
-                                <a v-for="(a,index) in custom_links" :href="a.href" :title="a.title || ''"
-                                    target="_blank">
-                                    <p class="custom_links"> ${ a.text }</p>
+                                <a v-for="(a,index) in custom_links" :href="a.url" :title="a.desc || ''"
+                                    :name="a.name || a.label" target="_blank">
+                                    <p class="custom_links"> ${ a.label }</p>
                                 </a>
                                 <el-button style="margin: 0;" title="Config.custom_links" icon="el-icon-menu"
                                     slot="reference"></el-button>
@@ -135,7 +135,7 @@
                         </div>
                     </template>
                 </el-tab-pane>
-                <el-tab-pane label="New" name="new">
+                <el-tab-pane label="New" title="Create new rules and new tasks" name="new">
                     <iframe v-if="tab_new_clicked" @load='init_iframe()' src="/uniparser/" frameborder="0"
                         id="uni_iframe" style="width: 100%; height: 90%;"></iframe>
                     <el-popover style="margin: 0 0 0 20%;" placement="top-start" title="WARNING" width="200"
@@ -162,7 +162,7 @@
                         Add
                         New Task</el-button>
                 </el-tab-pane>
-                <el-tab-pane label="Rules" name="rules">
+                <el-tab-pane label="Rules" title="Show the host rules" name="rules">
                     <div style="width: 65%;margin: 0 auto;">
                         <el-form @submit.prevent.native="load_hosts" id="input_host_form" label-position="left" inline>
                             <el-form-item>
@@ -181,9 +181,9 @@
                         </div>
                     </div>
                 </el-tab-pane>
-                <el-tab-pane v-for="tab in custom_tabs" :label="tab.label || tab.name" :name="tab.name">
-                    <iframe v-if="activeName==tab.name" :src="tab.url" frameborder="0"
-                        style="width: 100%; height: 90%;"></iframe>
+                <el-tab-pane v-for="tab in custom_tabs" :title="tab.desc" :label="tab.label"
+                    :name="tab.name || tab.label">
+                    <iframe :src="tab.url" frameborder="0" style="width: 100%; height: 90%;"></iframe>
                 </el-tab-pane>
             </el-tabs>
         </template>

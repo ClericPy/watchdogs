@@ -163,21 +163,39 @@ class Config:
     background_funcs: List[Callable] = []
     is_shutdown = False
     custom_links = [{
-        'text': 'Auth',
-        'href': '/auth',
-        'title': 'change your password',
+        'label': 'Auth',
+        'url': '/auth',
+        'desc': 'change your password',
     }, {
-        'text': 'Logs',
-        'href': '/log',
-        'title': 'view the logs',
+        'label': 'Logs',
+        'url': '/log',
+        'desc': 'view the logs',
     }, {
-        'text': 'API',
-        'href': '/docs',
-        'title': 'view the docs',
+        'label': 'Docs',
+        'url': '/docs',
+        'desc': 'view the docs',
     }]
     # custom_tabs = [{'name': 'apis', 'label': 'API', 'url': '/docs'}]
     custom_tabs: List[Dict] = []
     COLLATION: str = None
+
+    @classmethod
+    def add_custom_tabs(cls, label, url, name=None, desc=None):
+        # desc is not work
+        cls.custom_tabs.append({
+            'label': label,
+            'name': name or label,
+            'url': url,
+            'desc': desc
+        })
+
+    @classmethod
+    def add_custom_links(cls, url, name, label=None, desc=None):
+        cls.custom_tabs.append({
+            'label': label or name,
+            'url': url,
+            'desc': desc
+        })
 
 
 def md5(obj, n=32, with_salt=True):
