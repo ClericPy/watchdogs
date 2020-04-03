@@ -188,7 +188,7 @@ async def force_crawl(task_name: str):
     try:
         task = await crawl_once(task_name=task_name)
         task['timeago'] = timeago(
-            (datetime.now() - task['last_change_time']).seconds,
+            (datetime.now() - task['last_change_time']).total_seconds(),
             1,
             1,
             short_name=True)
@@ -221,7 +221,10 @@ async def load_tasks(
         now = datetime.now()
         for item in _result:
             item['timeago'] = timeago(
-                (now - item['last_change_time']).seconds, 1, 1, short_name=True)
+                (now - item['last_change_time']).total_seconds(),
+                1,
+                1,
+                short_name=True)
         result = {'msg': 'ok', 'tasks': _result, 'has_more': has_more}
     except Exception as e:
         result = {'msg': str(e), 'tasks': [], 'has_more': False}
@@ -467,7 +470,10 @@ async def lite(request: Request, tag: str = '', sign: str = ''):
         task['url'] = task.get('url') or result.get('url') or task['origin_url']
         task['text'] = task.get('text') or result.get('text') or ''
         task['timeago'] = timeago(
-            (now - task['last_change_time']).seconds, 1, 1, short_name=True)
+            (now - task['last_change_time']).total_seconds(),
+            1,
+            1,
+            short_name=True)
     context = {'tasks': tasks, 'request': request}
     context['version'] = __version__
     return templates.TemplateResponse("lite.html", context=context)
