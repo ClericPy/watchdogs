@@ -127,7 +127,7 @@
                             <el-popover placement="top-start" width="200" trigger="hover">
                                 <a v-for="(a,index) in custom_links" :href="a.url" :title="a.desc || ''"
                                     :name="a.name || a.label" target="_blank">
-                                    <p class="custom_links"> ${ a.label }</p>
+                                    <p class="custom_links"> ${ a.label || a.name }</p>
                                 </a>
                                 <el-button style="margin: 0;" title="Config.custom_links" icon="el-icon-menu"
                                     slot="reference"></el-button>
@@ -181,7 +181,7 @@
                         </div>
                     </div>
                 </el-tab-pane>
-                <el-tab-pane v-for="tab in custom_tabs" :title="tab.desc" :label="tab.label"
+                <el-tab-pane v-for="tab in custom_tabs" :title="tab.desc" :label="tab.label || tab.name"
                     :name="tab.name || tab.label">
                     <iframe :src="tab.url" frameborder="0" style="width: 100%; height: 90%;"></iframe>
                 </el-tab-pane>
