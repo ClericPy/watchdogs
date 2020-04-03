@@ -10,10 +10,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <style>
-        .result-list a {
-            color: #0065b5;
-        }
-
         a[href^="http"]:empty::before {
             content: attr(href);
         }
@@ -125,7 +121,6 @@
             }
         }
 
-
         div.head a {
             color: #ecf0f1;
             text-decoration: none;
@@ -138,6 +133,11 @@
 
         .result-list>ol {
             padding-left: 1em;
+            font-size: 0.6em;
+        }
+
+        .result-list a {
+            color: #0065b5;
         }
 
         .error {
@@ -186,11 +186,11 @@
     </div>
     <script>
         async function show_more(task_id) {
-            let node = document.querySelector('#task-' + task_id + '>.task-time>.result-list')
+            let node = document.querySelector('#task-' + task_id + '>.result-list')
             if (!node) {
                 node = document.createElement('p')
                 node.className = 'result-list'
-                document.querySelector('#task-' + task_id + '>.task-time').appendChild(node)
+                document.querySelector('#task-' + task_id).appendChild(node)
             }
             if (node.innerHTML) {
                 node.innerHTML = ''
