@@ -69,6 +69,10 @@ p.custom_links {
     box-shadow: 3px 3px 5px #888888
 }
 
+.request_args_pre {
+    font-size: 0.9em;
+}
+
 [v-cloak] {
     display: none;
 }

@@ -1,8 +1,8 @@
-from logging import getLogger, Formatter, INFO, ERROR
+from logging import ERROR, INFO, Formatter, getLogger
 from pathlib import Path
 from time import time
 from traceback import format_exc
-from typing import Any, Callable, List
+from typing import Any, Callable, Dict, List
 
 from databases import Database
 from fastapi import Request
@@ -163,16 +163,42 @@ class Config:
     background_funcs: List[Callable] = []
     is_shutdown = False
     custom_links = [{
-        'text': 'Auth',
-        'href': '/auth',
-        'title': 'change your password',
+        'label': 'Auth',
+        'url': '/auth',
+        'desc': 'change your password',
     }, {
-        'text': 'Logs',
-        'href': '/log',
-        'title': 'view the logs',
+        'label': 'Logs',
+        'url': '/log',
+        'desc': 'view the logs',
+    }, {
+        'label': 'Docs',
+        'url': '/docs',
+        'desc': 'view the docs',
     }]
-    custom_tabs = [{'name': 'apis', 'label': 'API', 'url': '/docs'}]
+    # custom_tabs = [{'name': 'apis', 'label': 'API', 'url': '/docs'}]
+    custom_tabs: List[Dict] = []
     COLLATION: str = None
+
+    @classmethod
+    def add_custom_tabs(cls, label, url, name=None, desc=None):
+        # desc is nonsense
+        assert name or label
+        cls.custom_tabs.append({
+            'label': label,
+            'name': name or label,
+            'url': url,
+            'desc': desc
+        })
+
+    @classmethod
+    def add_custom_links(cls, url, name, label=None, desc=None):
+        assert name or label
+        cls.custom_tabs.append({
+            'name': name or label,
+            'label': label or name,
+            'url': url,
+            'desc': desc
+        })
 
 
 def md5(obj, n=32, with_salt=True):
