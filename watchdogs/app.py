@@ -344,7 +344,8 @@ async def log(request: Request,
     names: list = log_names.split('-')
     items = []
     for name in names:
-        fp: Path = Config.CONFIG_DIR / f'{name}.log'
+        file_name = f'{name}.log'
+        fp: Path = Config.CONFIG_DIR / file_name
         if not fp.is_file():
             continue
         fp_stat = fp.stat()
@@ -361,6 +362,8 @@ async def log(request: Request,
             'file_size': file_size,
             'st_mtime': st_mtime,
             'log_text': "".join(window),
+            'file_size_mb': Config.LOGGING_FILE_CONFIG.get(file_name, {}).get(
+                'file_size_mb', '-1'),
         }
         items.append(item)
         window.clear()

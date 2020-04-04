@@ -61,7 +61,7 @@
     {% for item in items %}
     <hr>
     <h5><a href="?log_names={{item['name']}}">{{item['name']}}.log</a>
-        <span class="log_metas">{{item['line_no']}} lines ({{item['file_size']}}), st_mtime: {{item['st_mtime']}}</span>
+        <span class="log_metas">{{item['line_no']}} lines ( {{item['file_size']}} / {{item['file_size_mb']}} MB ), st_mtime: {{item['st_mtime']}}</span>
         <a href="/log.clear?log_names={{item['name']}}&current_names={{log_names}}" class="clear_log">
             <button>Clear</button></a></h5>
     <hr>
