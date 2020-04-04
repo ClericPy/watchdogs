@@ -3,7 +3,6 @@ var Main = {
         return {
             activeName: 'tasks',
             uniparser_iframe_loaded: false,
-            tab_new_clicked: false,
             task_info_visible: false,
             rule_info_visible: false,
             current_host_rule: {},
@@ -25,6 +24,7 @@ var Main = {
             custom_tabs: [],
             current_cb_doc: '',
             init_iframe_rule_json: '',
+            clicked_tab_names: {},
         }
     },
     methods: {
@@ -102,8 +102,10 @@ var Main = {
             }
             // this.activeName = 'rules'
             // Vue.set(this, 'activeName', 'rules')
-            this.current_host = (new URL(url)).hostname
             document.getElementById('tab-rules').click()
+            setTimeout(() => {
+                this.current_host = (new URL(url)).hostname
+            }, 0);
             this.task_info_visible = false
         },
         view_crawler_rule_by_req(request_args) {
@@ -337,23 +339,25 @@ var Main = {
                 this.uniparser_iframe_loaded = true
             }
         },
-        handleClick(tab, event) {
-            if (tab.name == 'new') {
-                if (!this.tab_new_clicked) {
-                    // for autosize bug in iframe if not seen
-                    this.tab_new_clicked = true
-                    setTimeout(() => {
-                        for (const text of this.uni_iframe.contentWindow.document
-                                .getElementsByTagName(
-                                    'textarea')) {
-                            text.style.height = 'auto';
-                            text.style.height = text.scrollHeight + 'px';
-                        };
-                    }, 0);
+        handleClick(tab) {
+            // init tabs
+            if (!(tab.name in this.clicked_tab_names)) {
+                // handle click event, which is clicked at the first time
+                this.clicked_tab_names[tab.name] = 1
+                // if (tab.name == 'new') {
+                //     // for autosize bug in iframe if not seen
+                //     setTimeout(() => {
+                //         for (const text of this.uni_iframe.contentWindow.document
+                //                 .getElementsByTagName(
+                //                     'textarea')) {
+                //             text.style.height = 'auto';
+                //             text.style.height = text.scrollHeight + 'px';
+                //         };
+                //     }, 0);
+                // }
+                if (tab.name == 'rules') {
+                    this.load_hosts()
                 }
-            }
-            if (tab.name == 'rules') {
-                this.load_hosts()
             }
         },
         escape_html(string) {

@@ -136,7 +136,7 @@
                     </template>
                 </el-tab-pane>
                 <el-tab-pane label="New" title="Create new rules and new tasks" name="new">
-                    <iframe v-if="tab_new_clicked" @load='init_iframe()' src="/uniparser/" frameborder="0"
+                    <iframe v-if="'new' in clicked_tab_names" @load='init_iframe()' src="/uniparser/" frameborder="0"
                         id="uni_iframe" style="width: 100%; height: 90%;"></iframe>
                     <el-popover style="margin: 0 0 0 20%;" placement="top-start" title="WARNING" width="200"
                         trigger="hover"><span style="font-size: 1em;">
@@ -163,7 +163,7 @@
                         New Task</el-button>
                 </el-tab-pane>
                 <el-tab-pane label="Rules" title="Show the host rules" name="rules">
-                    <div style="width: 65%;margin: 0 auto;">
+                    <div v-if="'rules' in clicked_tab_names" style="width: 65%;margin: 0 auto;">
                         <el-form @submit.prevent.native="load_hosts" id="input_host_form" label-position="left" inline>
                             <el-form-item>
                                 <el-input v-model="current_host" title="Press enter to submit"
@@ -183,7 +183,8 @@
                 </el-tab-pane>
                 <el-tab-pane v-for="tab in custom_tabs" :title="tab.desc" :label="tab.label || tab.name"
                     :name="tab.name || tab.label">
-                    <iframe :src="tab.url" frameborder="0" style="width: 100%; height: 90%;"></iframe>
+                    <iframe v-if="(tab.name || tab.label) in clicked_tab_names" :src="tab.url" frameborder="0"
+                        style="width: 100%; height: 90%;"></iframe>
                 </el-tab-pane>
             </el-tabs>
         </template>
@@ -330,6 +331,7 @@
         </el-dialog>
     </div>
     <script src="/static/js/watchdogs.min.js"></script>
+    <!-- <script src="/static/js/watchdogs.js"></script> -->
 </body>
 
 </html>
