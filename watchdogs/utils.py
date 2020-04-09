@@ -214,7 +214,7 @@ def test_result_schema():
         result = {'text': str(text)}
         url = item.get('url')
         if url:
-            result['url'] = url
+            result['url'] = str(url)
     elif isinstance(item, (list, tuple)):
         result = [get_watchdog_result(i) for i in item]
     return result
