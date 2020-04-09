@@ -115,7 +115,7 @@ async def crawl(task):
         else:
             error = 'Invalid crawl_result schema: {rule_name: [{"text": "xxx", "url": "xxx"}]}, but given %r' % crawl_result
             logger.error(f'{task.name}: {error}')
-            result_list = [error]
+            result_list = [{"text": error}]
     return task, error, result_list
 
 
