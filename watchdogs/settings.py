@@ -5,7 +5,9 @@ from functools import lru_cache
 from json import dumps, loads
 from logging.handlers import RotatingFileHandler
 
+import uniparser.fastapi_ui
 from uniparser.parsers import AsyncFrequency, UDFParser, Uniparser
+from uniparser.utils import TorequestsAiohttpAsyncAdapter
 
 from .background import background_loop, db_backup_handler
 from .callbacks import CallbackHandler
@@ -86,11 +88,12 @@ def setup_models():
 
 async def setup_uniparser():
     from uniparser.config import GlobalConfig
-    from torequests.utils import (
-        curlparse, escape, guess_interval, itertools_chain, json, parse_qs,
-        parse_qsl, ptime, quote, quote_plus, slice_by_size, slice_into_pieces,
-        split_n, timeago, ttime, unescape, unique, unquote, unquote_plus,
-        urljoin, urlparse, urlsplit, urlunparse)
+    from torequests.utils import (curlparse, escape, guess_interval,
+                                  itertools_chain, json, parse_qs, parse_qsl,
+                                  ptime, quote, quote_plus, slice_by_size,
+                                  slice_into_pieces, split_n, timeago, ttime,
+                                  unescape, unique, unquote, unquote_plus,
+                                  urljoin, urlparse, urlsplit, urlunparse)
     UDFParser._GLOBALS_ARGS.update({
         'curlparse': curlparse,
         'escape': escape,
@@ -120,6 +123,9 @@ async def setup_uniparser():
     Uniparser._DEFAULT_ASYNC_FREQUENCY = AsyncFrequency(
         *Config.DEFAULT_HOST_FREQUENCY)
     await load_host_freqs()
+    Config.uniparser = Uniparser(
+        request_adapter=TorequestsAiohttpAsyncAdapter())
+    uniparser.fastapi_ui.views.uni = Config.uniparser
 
 
 def setup_cdn_urls(use_default_cdn=False):
@@ -186,10 +192,7 @@ async def setup_md5_salt():
 async def setup_crawler():
     from uniparser import Crawler
 
-    crawler = Crawler(storage=Config.rule_db)
-    Config.logger.info(
-        f'Downloader middleware installed: {crawler.uniparser.ensure_adapter(False).__class__.__name__}'
-    )
+    crawler = Crawler(uniparser=Config.uniparser, storage=Config.rule_db)
     Config.crawler = crawler
     if Config.callback_handler is None:
         Config.callback_handler = CallbackHandler()
