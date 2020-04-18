@@ -28,13 +28,13 @@ description = f"Watchdogs to keep an eye on the world's change.\nRead more: [htt
 app = FastAPI(title="Watchdogs", description=description, version=__version__)
 sub_app.openapi_prefix = '/uniparser'
 app.mount("/uniparser", sub_app)
-app.mount(
-    "/static",
-    StaticFiles(directory=str((Path(__file__).parent / 'static').absolute())),
-    name="static")
+app.mount("/static",
+          StaticFiles(directory=str((Path(__file__).parent /
+                                     'static').absolute())),
+          name="static")
 logger = Config.logger
-templates = Jinja2Templates(
-    directory=str((Path(__file__).parent / 'templates').absolute()))
+templates = Jinja2Templates(directory=str((Path(__file__).parent /
+                                           'templates').absolute()))
 
 
 @app.on_event("startup")
@@ -63,21 +63,19 @@ async def post_auth(request: Request,
             Config.password = password
             await refresh_token()
             resp = JSONResponse({'ok': True, 'redirect': redirect})
-            resp.set_cookie(
-                'watchdog_auth',
-                Config.watchdog_auth,
-                max_age=86400 * 3,
-                httponly=True)
+            resp.set_cookie('watchdog_auth',
+                            Config.watchdog_auth,
+                            max_age=86400 * 3,
+                            httponly=True)
             logger.warning(
                 f'password changed {old_password}->{Config.password}.')
             return resp
         elif (await md5_checker(password, Config.watchdog_auth, freq=True)):
             resp = JSONResponse({'ok': True, 'redirect': redirect})
-            resp.set_cookie(
-                'watchdog_auth',
-                Config.watchdog_auth,
-                max_age=86400 * 3,
-                httponly=True)
+            resp.set_cookie('watchdog_auth',
+                            Config.watchdog_auth,
+                            max_age=86400 * 3,
+                            httponly=True)
             logger.info('correct password, login success.')
             return resp
     # invalid password, clear cookie
@@ -201,12 +199,12 @@ async def force_crawl(task_name: str):
 
 @app.get("/load_tasks")
 async def load_tasks(
-        task_name: Optional[str] = None,
-        page: int = 1,
-        page_size: int = 30,
-        order_by: str = 'last_change_time',
-        sort: str = 'desc',
-        tag: str = '',
+    task_name: Optional[str] = None,
+    page: int = 1,
+    page_size: int = 30,
+    order_by: str = 'last_change_time',
+    sort: str = 'desc',
+    tag: str = '',
 ):
     try:
         _result, has_more = await query_tasks(
@@ -282,7 +280,8 @@ async def get_host_rule(host: str):
 
 
 @app.post("/crawler_rule.{method}")
-async def crawler_rule(method: str, rule: CrawlerRule,
+async def crawler_rule(method: str,
+                       rule: CrawlerRule,
                        force: Optional[int] = 0):
     try:
         if not rule['name']:
@@ -448,7 +447,10 @@ async def rss(request: Request,
 
 
 @app.post("/lite")
-async def post_lite(request: Request, tag: str = '', sign: str = ''):
+async def post_lite(request: Request,
+                    tag: str = '',
+                    sign: str = '',
+                    page: int = 1):
     task_id = loads(await request.body())['task_id']
     tasks, _ = await query_tasks(tag=tag, task_id=task_id)
     if tasks:
@@ -464,8 +466,8 @@ async def post_lite(request: Request, tag: str = '', sign: str = ''):
 
 
 @app.get("/lite")
-async def lite(request: Request, tag: str = '', sign: str = ''):
-    tasks, _ = await query_tasks(tag=tag)
+async def lite(request: Request, tag: str = '', sign: str = '', page: int = 1):
+    tasks, has_more = await query_tasks(tag=tag, page=page)
     now = datetime.now()
     for task in tasks:
         result = loads(task['latest_result'] or '{}')
@@ -479,4 +481,19 @@ async def lite(request: Request, tag: str = '', sign: str = ''):
             short_name=True)
     context = {'tasks': tasks, 'request': request}
     context['version'] = __version__
+    quoted_tag = quote_plus(tag)
+    if has_more:
+        next_page = page + 1
+        sign = Config.get_sign('/lite', f'tag={quoted_tag}&page={next_page}')[1]
+        next_page_url = f'/lite?tag={quoted_tag}&page={next_page}&sign={sign}'
+    else:
+        next_page_url = ''
+    context['next_page_url'] = next_page_url
+    if page > 1:
+        last_page = page - 1
+        sign = Config.get_sign('/lite', f'tag={quoted_tag}&page={last_page}')[1]
+        last_page_url = f'/lite?tag={quoted_tag}&page={last_page}&sign={sign}'
+    else:
+        last_page_url = ''
+    context['last_page_url'] = last_page_url
     return templates.TemplateResponse("lite.html", context=context)
