@@ -387,7 +387,7 @@ async def log_clear(log_names: str = 'info-server-error',
         # use sync writing to block the main thread
         fp.write_bytes(b'')
         logger.info(f'{name}.log cleared')
-    html = f'<meta http-equiv="refresh" content="1; url=/log?log_names={current_names}" />{log_names} log cleared. Redirect back in 1 second.'
+    html = f'<meta http-equiv="refresh" content="0; url=/log?log_names={current_names}" />{log_names} log cleared. Redirecting back.'
     return HTMLResponse(html)
 
 
