@@ -18,6 +18,7 @@ from .callbacks import CallbackHandlerBase
 logger = getLogger('watchdogs')
 logger.setLevel(INFO)
 
+NotSet = object()
 
 # @app.exception_handler(Exception)
 async def exception_handler(request: Request, exc: Exception):

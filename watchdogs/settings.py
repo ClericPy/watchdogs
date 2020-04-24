@@ -5,16 +5,9 @@ from functools import lru_cache
 from json import dumps, loads
 from logging.handlers import RotatingFileHandler
 
-import uniparser.fastapi_ui
-from uniparser.parsers import AsyncFrequency, UDFParser, Uniparser
-from uniparser.utils import TorequestsAiohttpAsyncAdapter
+from uniparser.parsers import AsyncFrequency, Uniparser
 
-from .background import background_loop, db_backup_handler
-from .callbacks import CallbackHandler
-from .config import Config, ensure_dir, md5
-from .crawler import crawl_once
-
-NotSet = object()
+from .config import Config, NotSet, ensure_dir, md5
 
 
 def get_valid_value(values: list, default=None, invalid=NotSet):
@@ -87,13 +80,16 @@ def setup_models():
 
 
 async def setup_uniparser():
-    from uniparser.config import GlobalConfig
     from torequests.utils import (curlparse, escape, guess_interval,
                                   itertools_chain, json, parse_qs, parse_qsl,
                                   ptime, quote, quote_plus, slice_by_size,
                                   slice_into_pieces, split_n, timeago, ttime,
                                   unescape, unique, unquote, unquote_plus,
                                   urljoin, urlparse, urlsplit, urlunparse)
+    from uniparser.utils import TorequestsAiohttpAsyncAdapter
+    from uniparser.parsers import UDFParser
+    from uniparser.config import GlobalConfig
+    import uniparser.fastapi_ui
     UDFParser._GLOBALS_ARGS.update({
         'curlparse': curlparse,
         'escape': escape,
@@ -191,6 +187,7 @@ async def setup_md5_salt():
 
 async def setup_crawler():
     from uniparser import Crawler
+    from .callbacks import CallbackHandler
 
     crawler = Crawler(uniparser=Config.uniparser, storage=Config.rule_db)
     Config.crawler = crawler
@@ -217,6 +214,8 @@ async def refresh_token():
 
 
 async def setup_background():
+    from .crawler import crawl_once
+    from .background import background_loop, db_backup_handler
     Config.background_funcs.append(crawl_once)
     if Config.db_backup_function:
         Config.background_funcs.append(db_backup_handler)

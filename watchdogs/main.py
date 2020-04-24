@@ -3,8 +3,8 @@ import sys
 from fire import Fire
 from uvicorn import run
 
-from .config import ensure_dir
-from .settings import Config, NotSet, get_valid_value, setup
+from .config import NotSet, ensure_dir
+from .settings import Config, get_valid_value, setup
 
 
 def clear_dir(dir_path):
@@ -64,16 +64,15 @@ def start_app(db_url=None,
               config_dir=None,
               use_default_cdn=False,
               **uvicorn_kwargs):
-    app = init_app(
-        db_url=db_url,
-        password=password,
-        uninstall=uninstall,
-        mute_std_log=mute_std_log,
-        mute_file_log=mute_file_log,
-        md5_salt=md5_salt,
-        config_dir=config_dir,
-        use_default_cdn=use_default_cdn,
-        **uvicorn_kwargs)
+    app = init_app(db_url=db_url,
+                   password=password,
+                   uninstall=uninstall,
+                   mute_std_log=mute_std_log,
+                   mute_file_log=mute_file_log,
+                   md5_salt=md5_salt,
+                   config_dir=config_dir,
+                   use_default_cdn=use_default_cdn,
+                   **uvicorn_kwargs)
     run(app, **Config.uvicorn_kwargs)
 
 
