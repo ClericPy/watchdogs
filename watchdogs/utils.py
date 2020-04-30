@@ -253,7 +253,7 @@ class SoloLock:
 async def try_catch(func, *args, **kwargs):
     try:
         return await ensure_await_result(func(*args, **kwargs))
-    except Exception as err:
+    except BaseException as err:
         logger.error(
             f'Catch an error while running {func.__name__}: {format_exc()}')
         return err
