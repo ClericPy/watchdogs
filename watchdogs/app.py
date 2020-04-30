@@ -1,3 +1,4 @@
+from base64 import b64encode
 from collections import deque
 from datetime import datetime
 from json import JSONDecodeError, dumps, loads
@@ -114,11 +115,13 @@ async def index(request: Request, tag: str = ''):
     lite_sign = Config.get_sign('/lite', f'tag={quoted_tag}')[1]
     kwargs['rss_url'] = f'/rss?tag={quoted_tag}&sign={rss_sign}'
     kwargs['lite_url'] = f'/lite?tag={quoted_tag}&sign={lite_sign}'
-    kwargs['init_vars'] = dumps({
+    init_vars_json = dumps({
         'custom_links': Config.custom_links,
         'callback_workers': Config.callback_handler.workers,
         'custom_tabs': Config.custom_tabs,
     })
+    init_vars_b64 = b64encode(init_vars_json.encode('u8')).decode('u8')
+    kwargs['init_vars'] = init_vars_b64
     return templates.TemplateResponse("index.html", context=kwargs)
 
 

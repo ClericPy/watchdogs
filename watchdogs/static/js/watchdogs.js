@@ -711,10 +711,11 @@ var app = new vue_app({
     delimiters: ['${', '}']
 }).$mount('#app')
 app.load_tasks();
+// init app vars
 (() => {
     // init_vars
     let node = document.getElementById('init_vars')
-    let args = JSON.parse(node.innerHTML)
+    let args = JSON.parse(window.atob(node.innerHTML))
     Object.keys(args).forEach(name => {
         app[name] = args[name]
     });
