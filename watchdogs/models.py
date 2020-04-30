@@ -134,7 +134,7 @@ def create_tables(db_url):
             ])
         for sql in sqls:
             ignore_error(engine.execute, sql)
-    except Exception:
+    except BaseException:
         Config.logger.critical(f'Fatal error on creating Table: {format_exc()}')
         import os
         os._exit(1)
