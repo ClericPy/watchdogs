@@ -20,6 +20,7 @@ logger.setLevel(INFO)
 
 NotSet = object()
 
+
 # @app.exception_handler(Exception)
 async def exception_handler(request: Request, exc: Exception):
     trace_id = str(int(time() * 1000))
