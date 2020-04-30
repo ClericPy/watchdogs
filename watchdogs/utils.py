@@ -214,7 +214,9 @@ def test_result_schema():
         result = {'text': str(text)}
         url = item.get('url')
         if url:
-            result['url'] = str(url)
+            url = str(url)
+            if url.startswith('http'):
+                result['url'] = str(url)
     elif isinstance(item, (list, tuple)):
         result = [get_watchdog_result(i) for i in item]
     return result
@@ -251,7 +253,7 @@ class SoloLock:
 async def try_catch(func, *args, **kwargs):
     try:
         return await ensure_await_result(func(*args, **kwargs))
-    except Exception as err:
+    except BaseException as err:
         logger.error(
             f'Catch an error while running {func.__name__}: {format_exc()}')
         return err
@@ -260,7 +262,7 @@ async def try_catch(func, *args, **kwargs):
 def ignore_error(func, *args, **kwargs):
     try:
         return func(*args, **kwargs)
-    except Exception as err:
+    except BaseException as err:
         return err
 
 
