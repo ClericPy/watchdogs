@@ -105,13 +105,13 @@ async def crawl(task):
             # chain result for __request__ which fetch a new request
             result_list = get_watchdog_result(item=crawl_result.popitem()[1])
             if result_list == {'text': 'text not found'}:
-                logger.warning(
-                    f'{task.name} text not found, crawl result given: {crawl_result}'
-                )
-            if not isinstance(result_list, list):
-                result_list = [result_list]
-            # use force crawl one web UI for more log
-            logger.info(f'{task.name} Crawl success: {result_list}' [:150])
+                error = f'{task.name} text not found, crawl result given: {crawl_result}'
+                logger.error(error)
+            else:
+                if not isinstance(result_list, list):
+                    result_list = [result_list]
+                # use force crawl one web UI for more log
+                logger.info(f'{task.name} Crawl success: {result_list}'[:150])
         else:
             error = 'Invalid crawl_result schema: {rule_name: [{"text": "xxx", "url": "xxx"}]}, but given %r' % crawl_result
             logger.error(f'{task.name}: {error}')
@@ -182,7 +182,7 @@ async def _crawl_once(task_name: Optional[str] = None, chunk_size: int = 20):
             task, error, result_list = t.result()
             if error != task.error:
                 crawl_errors.append({'task_id': task.task_id, 'error': error})
-            if result_list is None:
+            if error or result_list is None:
                 # ignore update this task
                 continue
             # compare latest_result and new list
@@ -200,8 +200,8 @@ async def _crawl_once(task_name: Optional[str] = None, chunk_size: int = 20):
                 # new result updated
                 query = UpdateTaskQuery(task.task_id)
                 # JSON
-                new_latest_result = dumps(
-                    to_insert_result_list[0], sort_keys=True)
+                new_latest_result = dumps(to_insert_result_list[0],
+                                          sort_keys=True)
                 query.add('latest_result', new_latest_result)
                 query.add('last_change_time', now)
                 try:
