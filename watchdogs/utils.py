@@ -262,7 +262,7 @@ async def try_catch(func, *args, **kwargs):
 def ignore_error(func, *args, **kwargs):
     try:
         return func(*args, **kwargs)
-    except Exception as err:
+    except BaseException as err:
         return err
 
 
