@@ -81,6 +81,9 @@ def setup_models():
 
 async def setup_uniparser():
     import re
+    import datetime
+    import math
+    import random
     from torequests.utils import (curlparse, escape, guess_interval,
                                   itertools_chain, json, parse_qs, parse_qsl,
                                   ptime, quote, quote_plus, slice_by_size,
@@ -93,7 +96,10 @@ async def setup_uniparser():
     import uniparser.fastapi_ui
     UDFParser._GLOBALS_ARGS.update({
         're': re,
+        'datetime': datetime,
         'curlparse': curlparse,
+        'math': math,
+        'random': random,
         'escape': escape,
         'guess_interval': guess_interval,
         'itertools_chain': itertools_chain,
