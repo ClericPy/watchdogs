@@ -3,28 +3,30 @@
 
 <head>
     <meta charset="utf-8" />
-    <meta name="referrer" content="never">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="referrer" content="never" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <link rel="shortcut icon" href="/static/img/favicon.svg" />
     <title>Watchdogs v{{version}}</title>
-    <meta name="viewport" content="width=device-width, initial-scale=0.3">
+    <meta name="viewport" content="width=device-width, initial-scale=0.3" />
     <script src="{{cdn_urls['VUE_JS_CDN']}}"></script>
     <script src="{{cdn_urls['ELEMENT_JS_CDN']}}"></script>
     <script src="{{cdn_urls['VUE_RESOURCE_CDN']}}"></script>
-    <link rel="stylesheet" type="text/css" href="/static/css/watchdogs.min.css">
-    <link rel="stylesheet" type="text/css" href="{{cdn_urls['ELEMENT_CSS_CDN']}}">
+    <!-- https://cssminifier.com/ -->
+    <!-- <link rel="stylesheet" type="text/css" href="/static/css/watchdogs.css" /> -->
+    <link rel="stylesheet" type="text/css" href="/static/css/watchdogs.min.css" />
+    <link rel="stylesheet" type="text/css" href="{{cdn_urls['ELEMENT_CSS_CDN']}}" />
 </head>
 
 <body>
     <template id="init_vars">{{init_vars}}</template>
     <div id="app" class="full-screen" v-cloak>
         <template>
-            <el-tabs @tab-click="handleClick" v-model="activeName" class="full-screen" stretch='true'>
+            <el-tabs @tab-click="handleClick" v-model="activeName" class="full-screen" stretch="true">
                 <el-tab-pane label="Tasks" name="tasks">
                     <template>
                         <el-table @row-dblclick="row_db_click" :row-class-name="check_error_task"
                             :default-sort="{prop: 'last_change_time', order: 'descending'}" :data="task_list"
-                            style="width: 100%" height="90%" @sort-change="sort_change">
+                            style="width: 100%;" height="90%" @sort-change="sort_change">
                             <el-table-column prop="task_id" label="task_id" sortable="custom" width="100">
                             </el-table-column>
                             <el-table-column prop="name" sortable="custom" label="name" width="280">
@@ -44,20 +46,23 @@
                             <el-table-column label="request_args" width="180">
                                 <template slot-scope="scope">
                                     <el-popover trigger="hover" placement="bottom-start">
-                                        <h3>${(scope.request_args_dict =
+                                        <h3>
+                                            ${(scope.request_args_dict =
                                             JSON.parse(scope.row.request_args))&&(scope._url = new
                                             URL(scope.request_args_dict.url)) &&
-                                            scope._url.host }</h3>
+                                            scope._url.host }
+                                        </h3>
                                         <pre
                                             class="request_args_pre"><code>${JSON.stringify(scope.request_args_dict, null, 2)}</code></pre>
                                         <el-button @click=" view_crawler_rule_by_req(scope.row.request_args)"
-                                            size='mini' icon="el-icon-view"><b>Rule</b></el-button>
-                                        <el-button @click="view_host_by_req(scope.row.request_args)" size='mini'
+                                            size="mini" icon="el-icon-view"><b>Rule</b></el-button>
+                                        <el-button @click="view_host_by_req(scope.row.request_args)" size="mini"
                                             icon="el-icon-view"><b>Host</b></el-button>
                                         <div slot="reference" class="name-wrapper">
                                             <el-tag size="medium">${ scope._url.host }</el-tag>
                                         </div>
-                                        : <a :href="scope._url" target="_blank"
+                                        :
+                                        <a :href="scope._url" target="_blank"
                                             rel="noopener noreferrer">${scope._url}</a>
                                     </el-popover>
                                 </template>
@@ -70,7 +75,7 @@
                                 <template slot-scope="scope">
                                     <el-link @click="show_time(scope.row)" type="info" :underline="false"
                                         :title="scope.row.last_change_time.replace(/\..*/, '').replace('T', ' ')+'. Click to read more.'">
-                                        <b>${scope.row.timeago} ago</b><br>
+                                        <b>${scope.row.timeago} ago</b><br />
                                         <!-- ${scope.row.last_change_time.replace(/\..*/, '').replace('T', ' ')} -->
                                     </el-link>
                                 </template>
@@ -79,8 +84,7 @@
                             <el-table-column label="latest_result" min-width="160">
                                 <template slot-scope="scope">
                                     <i v-if="scope.row.error" class="el-icon-warning" circle size="mini"
-                                        style="margin: 0;" @click='show_task_error(scope.row)'>
-                                    </i>
+                                        style="margin: 0;" @click="show_task_error(scope.row)"> </i>
                                     <el-link style="display: inline;"
                                         :href="JSON.parse(scope.row.latest_result).url||scope.row.origin_url"
                                         type="info" target="_blank" :underline="false">
@@ -94,16 +98,16 @@
                             </el-table-column>
                             <el-table-column fixed="right" label="/" min-width="100">
                                 <template slot-scope="scope">
-                                    <el-switch v-model="scope.row.enable" :active-value='1' :inactive-value='0'
+                                    <el-switch v-model="scope.row.enable" :active-value="1" :inactive-value="0"
                                         active-color="#13ce66" inactive-color="#ff4949"
-                                        @change='change_enable(scope.row)' size="mini"
+                                        @change="change_enable(scope.row)" size="mini"
                                         title="Switch between enable/disable">
                                     </el-switch>
                                     <el-button type="primary" icon="el-icon-caret-right"
-                                        @click="force_crawl(scope.$index, scope.row)" size='mini' style="margin: 0;"
+                                        @click="force_crawl(scope.$index, scope.row)" size="mini" style="margin: 0;"
                                         circle title="Force Crawl"></el-button>
                                     <el-button type="warning" icon="el-icon-edit" @click="update_task(scope.row)"
-                                        size='mini' style="margin: 0;" circle
+                                        size="mini" style="margin: 0;" circle
                                         title="Edit Task. Double click the row for shortcut."></el-button>
                                     <el-button type="danger" icon="el-icon-delete" circle title="Delete Task"
                                         size="mini" style="margin: 0;" @click="delete_task(scope.$index, scope.row)">
@@ -112,8 +116,8 @@
                             </el-table-column>
                         </el-table>
                         <div class="foot">
-                            <el-button type="success" style="margin: 0; width: 20%;" :disabled="!has_more" plain>
-                                Page: ${current_page} - Load More</el-button>
+                            <el-button type="success" style="margin: 0; width: 20%;" :disabled="!has_more" plain> Page:
+                                ${current_page} - Load More</el-button>
 
                             <el-button type="primary" @click="reload_tasks" style="margin: 0;" title="Refresh"
                                 icon="el-icon-refresh-right"></el-button>
@@ -128,7 +132,7 @@
                             <el-popover placement="top-start" width="200" trigger="hover">
                                 <a v-for="(a,index) in custom_links" :href="a.url" :title="a.desc || ''"
                                     :name="a.name || a.label" target="_blank">
-                                    <p class="custom_links"> ${ a.label || a.name }</p>
+                                    <p class="custom_links">${ a.label || a.name }</p>
                                 </a>
                                 <el-button style="margin: 0;" title="Config.custom_links" icon="el-icon-menu"
                                     slot="reference"></el-button>
@@ -137,34 +141,31 @@
                     </template>
                 </el-tab-pane>
                 <el-tab-pane label="New" name="new">
-                    <iframe v-if="'new' in clicked_tab_names" @load='init_iframe()' src="/uniparser/" frameborder="0"
+                    <iframe v-if="'new' in clicked_tab_names" @load="init_iframe()" src="/uniparser/" frameborder="0"
                         id="uni_iframe" style="width: 100%; height: 90%;"></iframe>
                     <el-popover style="margin: 0 0 0 20%;" placement="top-start" title="WARNING" width="200"
                         trigger="hover"><span style="font-size: 1em;">
                             ParseRule's name should have the keys to generate RSS:
-                            <br>
+                            <br />
                             <b>text</b>
-                            <br>
+                            <br />
                             <b>url </b>[Optional]
                         </span>
                         <i slot="reference" class="el-icon-warning"></i>
                     </el-popover>
-                    <el-button icon='el-icon-refresh-right' style="margin: 0;"
-                        title="Init rules between xml and css demo" @click="init_iframe_crawler_rule(null)"> 0.
-                        Init
+                    <el-button icon="el-icon-refresh-right" style="margin: 0;"
+                        title="Init rules between xml and css demo" @click="init_iframe_crawler_rule(null)">
+                        0. Init
                     </el-button>
-                    <el-button icon='el-icon-upload' type='warning' style="margin: 0;"
+                    <el-button icon="el-icon-upload" type="warning" style="margin: 0;"
                         @click="process_crawler_rule('add', null, 0)">
-                        1.
-                        Save Crawler Rule
+                        1. Save Crawler Rule
                     </el-button>
-                    <el-button icon='el-icon-plus' type='success' style="margin: 0;"
-                        @click="show_form_add_new_task(true)"> 2.
-                        Add
-                        New Task</el-button>
+                    <el-button icon="el-icon-plus" type="success" style="margin: 0;"
+                        @click="show_form_add_new_task(true)"> 2. Add New Task</el-button>
                 </el-tab-pane>
                 <el-tab-pane label="Rules" name="rules">
-                    <div v-if="'rules' in clicked_tab_names" style="width: 65%;margin: 0 auto;">
+                    <div v-if="'rules' in clicked_tab_names" style="width: 65%; margin: 0 auto;">
                         <el-form @submit.prevent.native="load_hosts" id="input_host_form" label-position="left" inline>
                             <el-form-item>
                                 <el-input v-model="current_host" title="Press enter to submit"
@@ -200,7 +201,7 @@
                         @keyup.enter.native="add_new_task" placeholder="Task name, Press enter to submit."></el-input>
                 </el-form-item>
                 <el-form-item>
-                    <el-switch active-text="Enable" :active-value='1' :inactive-value='0' inactive-text="Disable"
+                    <el-switch active-text="Enable" :active-value="1" :inactive-value="0" inactive-text="Disable"
                         v-model="new_task_form.enable" active-color="#13ce66" inactive-color="#ff4949">
                     </el-switch>
                 </el-form-item>
@@ -213,31 +214,42 @@
                     </el-input>
                 </el-form-item>
                 <el-form-item title="Input the url, or request_args JSON, or cURL string" label="request_args">
-                    <el-button @click="view_crawler_rule_by_req(new_task_form.request_args)" size='mini'
+                    <el-button @click="view_crawler_rule_by_req(new_task_form.request_args)" size="mini"
                         icon="el-icon-view"><b>Rule</b></el-button>
-                    <el-button @click="view_host_by_req(new_task_form.request_args)" size='mini' icon="el-icon-view">
+                    <el-button @click="view_host_by_req(new_task_form.request_args)" size="mini" icon="el-icon-view">
                         <b>Host</b></el-button>
-                    <span> | "retry": 2, "timeout": 3, "ssl": false, and other args refer to <a
-                            href="https://docs.aiohttp.org/en/stable/client_reference.html#aiohttp.ClientSession.request"
-                            target="_blank" rel="noopener noreferrer">aiohttp</a> </span>
-                    <el-input type="textarea" :validate-event='true' :autosize="{ minRows: 2, maxRows: 4}"
+                    <span>
+                        | "retry": 2, "timeout": 3, "ssl": false, and other args refer to
+                        <a href="https://docs.aiohttp.org/en/stable/client_reference.html#aiohttp.ClientSession.request"
+                            target="_blank" rel="noopener noreferrer">aiohttp</a>
+                    </span>
+                    <el-input type="textarea" :validate-event="true" :autosize="{ minRows: 2, maxRows: 4}"
                         v-model="new_task_form.request_args" autocomplete="off"></el-input>
                 </el-form-item>
                 <el-form-item title="The url for tracing the source" label="origin_url">
                     <el-input v-model="new_task_form.origin_url" autocomplete="off" title="Press enter to submit"
-                        @keyup.enter.native="add_new_task" placeholder='default to request_args.url'></el-input>
+                        @keyup.enter.native="add_new_task" placeholder="default to request_args.url"></el-input>
                 </el-form-item>
                 <el-form-item title="Crawling loop interval seconds." label="interval">
                     <el-link style="margin-left: 1em;" type="danger" @click="new_task_form.interval=300">5 mins
-                    </el-link> |
-                    <el-link type="danger" @click="new_task_form.interval=600">10 mins</el-link> |
-                    <el-link type="warning" @click="new_task_form.interval=1800">30 mins</el-link> |
-                    <el-link type="warning" @click="new_task_form.interval=3600">1 hrs</el-link> |
-                    <el-link type="success" @click="new_task_form.interval=3600*3">3 hrs</el-link> |
-                    <el-link type="success" @click="new_task_form.interval=3600*6">6 hrs</el-link> |
-                    <el-link type="primary" @click="new_task_form.interval=3600*12">12 hrs</el-link> |
-                    <el-link type="primary" @click="new_task_form.interval=86400">1 day</el-link> |
-                    <el-link type="info" @click="new_task_form.interval=86400*7">7 days</el-link> |
+                    </el-link>
+                    |
+                    <el-link type="danger" @click="new_task_form.interval=600">10 mins</el-link>
+                    |
+                    <el-link type="warning" @click="new_task_form.interval=1800">30 mins</el-link>
+                    |
+                    <el-link type="warning" @click="new_task_form.interval=3600">1 hrs</el-link>
+                    |
+                    <el-link type="success" @click="new_task_form.interval=3600*3">3 hrs</el-link>
+                    |
+                    <el-link type="success" @click="new_task_form.interval=3600*6">6 hrs</el-link>
+                    |
+                    <el-link type="primary" @click="new_task_form.interval=3600*12">12 hrs</el-link>
+                    |
+                    <el-link type="primary" @click="new_task_form.interval=86400">1 day</el-link>
+                    |
+                    <el-link type="info" @click="new_task_form.interval=86400*7">7 days</el-link>
+                    |
                     <el-link type="info" @click="new_task_form.interval=86400*30">30 days</el-link>
                     <el-input v-model="new_task_form.interval" autocomplete="off" title="Press enter to submit"
                         @keyup.enter.native="add_new_task"></el-input>
@@ -264,7 +276,7 @@
                         <span class="cb_name" @click="click_cb_name(name)">${name||'default-callback'}</span>
                     </div>
                     <pre
-                        style="margin: 0px;border: 1px solid #8080802b;padding-left: 1em;"><code style="margin: 0;">${current_cb_doc}</code></pre>
+                        style="margin: 0px; border: 1px solid #8080802b; padding-left: 1em;"><code style="margin: 0;">${current_cb_doc}</code></pre>
                 </el-form-item>
             </el-form>
             <div slot="footer" class="dialog-footer">
@@ -277,8 +289,7 @@
             <el-button type="danger" icon="el-icon-delete" @click="delete_host_rule(current_host_rule.host)">Delete
             </el-button>
             <el-row>
-                <h4 title="Example: n=1, interval=3 means crawl once each 3 seconds.">
-                    Frequency: <span>Send [n] request
+                <h4 title="Example: n=1, interval=3 means crawl once each 3 seconds.">Frequency: <span>Send [n] request
                         each [interval] seconds</span></h4>
                 <el-col :span="8">
                     <el-input clearable
@@ -295,8 +306,7 @@
                     </el-input>
                 </el-col>
                 <el-col :span="8">
-                    <el-button @click="update_frequency" type="warning">Update Frequency
-                    </el-button>
+                    <el-button @click="update_frequency" type="warning">Update Frequency </el-button>
                 </el-col>
             </el-row>
             <el-row :gutter="20">
@@ -323,18 +333,19 @@
                     </el-col>
                     <el-col :span="4">
                         <i title="View the CrawlerRule in uniparser console" @click="view_crawler_rule(rule)"
-                            style="zoom: 1.5;cursor: pointer;margin-right: 1em;" class="el-icon-view"></i>
+                            style="zoom: 1.5; cursor: pointer; margin-right: 1em;" class="el-icon-view"></i>
                         <i title="Edit JSON" @click="edit_crawler_rule(rule)"
-                            style="zoom: 1.5;cursor: pointer;margin-right: 1em;" class="el-icon-edit-outline"></i>
+                            style="zoom: 1.5; cursor: pointer; margin-right: 1em;" class="el-icon-edit-outline"></i>
                         <i title="Delete" @click="process_crawler_rule('pop', rule, 0)"
-                            style="zoom: 1.5;cursor: pointer;margin-right: 1em;" class="el-icon-delete"></i>
+                            style="zoom: 1.5; cursor: pointer; margin-right: 1em;" class="el-icon-delete"></i>
                     </el-col>
                 </el-row>
             </div>
         </el-dialog>
     </div>
-    <script src="/static/js/watchdogs.min.js"></script>
+    <!-- https://javascript-minifier.com/ -->
     <!-- <script src="/static/js/watchdogs.js"></script> -->
+    <script src="/static/js/watchdogs.min.js"></script>
 </body>
 
 </html>
