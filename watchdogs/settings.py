@@ -80,6 +80,7 @@ def setup_models():
 
 
 async def setup_uniparser():
+    import re
     from torequests.utils import (curlparse, escape, guess_interval,
                                   itertools_chain, json, parse_qs, parse_qsl,
                                   ptime, quote, quote_plus, slice_by_size,
@@ -91,6 +92,7 @@ async def setup_uniparser():
     from uniparser.config import GlobalConfig
     import uniparser.fastapi_ui
     UDFParser._GLOBALS_ARGS.update({
+        're': re,
         'curlparse': curlparse,
         'escape': escape,
         'guess_interval': guess_interval,
