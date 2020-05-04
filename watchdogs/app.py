@@ -66,7 +66,7 @@ async def post_auth(request: Request,
             resp = JSONResponse({'ok': True, 'redirect': redirect})
             resp.set_cookie('watchdog_auth',
                             Config.watchdog_auth,
-                            max_age=86400 * 3,
+                            max_age=Config.cookie_max_age,
                             httponly=True)
             logger.warning(
                 f'password changed {old_password}->{Config.password}.')
@@ -75,7 +75,7 @@ async def post_auth(request: Request,
             resp = JSONResponse({'ok': True, 'redirect': redirect})
             resp.set_cookie('watchdog_auth',
                             Config.watchdog_auth,
-                            max_age=86400 * 3,
+                            max_age=Config.cookie_max_age,
                             httponly=True)
             logger.info('correct password, login success.')
             return resp
