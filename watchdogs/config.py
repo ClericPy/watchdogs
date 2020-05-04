@@ -180,6 +180,7 @@ class Config:
     # custom_tabs = [{'name': 'apis', 'label': 'API', 'url': '/docs'}]
     custom_tabs: List[Dict] = []
     COLLATION: str = None
+    cookie_max_age = 86400 * 7
 
     @classmethod
     def add_custom_tabs(cls, label, url, name=None, desc=None):
