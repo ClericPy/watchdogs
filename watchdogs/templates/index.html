@@ -143,26 +143,23 @@
                 <el-tab-pane label="New" name="new">
                     <iframe v-if="'new' in clicked_tab_names" @load="init_iframe()" src="/uniparser/" frameborder="0"
                         id="uni_iframe" style="width: 100%; height: 90%;"></iframe>
-                    <el-popover style="margin: 0 0 0 20%;" placement="top-start" title="WARNING" width="200"
-                        trigger="hover"><span style="font-size: 1em;">
-                            ParseRule's name should have the keys to generate RSS:
-                            <br />
-                            <b>text</b>
-                            <br />
-                            <b>url </b>[Optional]
-                        </span>
-                        <i slot="reference" class="el-icon-warning"></i>
-                    </el-popover>
-                    <el-button icon="el-icon-refresh-right" style="margin: 0;"
-                        title="Init rules between xml and css demo" @click="init_iframe_crawler_rule(null)">
-                        0. Init
-                    </el-button>
-                    <el-button icon="el-icon-upload" type="warning" style="margin: 0;"
-                        @click="process_crawler_rule('add', null, 0)">
-                        1. Save Crawler Rule
-                    </el-button>
-                    <el-button icon="el-icon-plus" type="success" style="margin: 0;"
-                        @click="show_form_add_new_task(true)"> 2. Add New Task</el-button>
+                    <div style="display: flex;justify-content:center;">
+                        <el-popover placement="top-start" title="WARNING" style="margin-right: 0.5em;" width="200"
+                            trigger="hover"><span style="font-size: 1em;">
+                                ParseRule's name should have these keys to generate RSS:
+                                <br />
+                                <b>text</b>
+                                <br />
+                                <b>url </b>[Optional]
+                            </span>
+                            <i slot="reference" class="el-icon-warning"></i>
+                        </el-popover>
+                        <el-button icon="el-icon-upload" type="warning" @click="process_crawler_rule('add', null, 0)">
+                            1. Save Crawler Rule
+                        </el-button>
+                        <el-button icon="el-icon-plus" type="success" @click="show_form_add_new_task(true)"> 2. Add New
+                            Task</el-button>
+                    </div>
                 </el-tab-pane>
                 <el-tab-pane label="Rules" name="rules">
                     <div v-if="'rules' in clicked_tab_names" style="width: 65%; margin: 0 auto;">
