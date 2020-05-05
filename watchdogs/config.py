@@ -6,12 +6,12 @@ from typing import Any, Callable, Dict, List
 
 from databases import Database
 from fastapi import Request
-from frequency_controller import AsyncFrequency
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse, RedirectResponse
 from torequests.utils import md5 as _md5
 from torequests.utils import parse_qsl, quote_plus
 from uniparser.crawler import RuleStorage
+from uniparser.parsers import AsyncFrequency
 
 from .callbacks import CallbackHandlerBase
 
