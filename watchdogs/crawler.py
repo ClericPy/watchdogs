@@ -1,9 +1,11 @@
+# -*- coding: utf-8 -*-
+
 from asyncio import ensure_future, wait
 from datetime import datetime, timedelta
 from json import JSONDecodeError, dumps, loads
 from typing import Optional, Tuple
 
-from torequests.utils import ttime
+from torequests.utils import timeago, ttime
 from uniparser import Crawler, RuleNotFoundError
 
 from .config import Config
@@ -38,8 +40,7 @@ class UpdateTaskQuery:
 
 
 def find_next_check_time(
-        work_hours: str,
-        interval: int,
+        task: Task,
         now: Optional[datetime] = None,
 ) -> Tuple[bool, datetime]:
     '''
@@ -63,30 +64,50 @@ Three kinds of format:
             %w==5|20, 24        means every Friday or everyday 20:00 ~ 23:59
             %w==5|%w==2         means every Friday or Tuesday
             %w!=6&%w!=0         means everyday except Saturday & Sunday.
+        5. Set a ensure change interval
+            > If work_hours string endswith `#` and `x` seconds, will check the next_change_time first.
+            > In other words, I am very sure that the interval between two changes is more than `x` seconds
+            > So the crawler of this task will not run until the time is `last_change_time + change_interval`
+            %w==5#86400        means every Friday if it didn't change within 1 day
+            0, 24#3600         means each hour if it didn't change within this hour. The task will only be crawled once if it has changed.
     '''
     # find the latest hour fit work_hours, if not exist, return next day 00:00
     now = now or datetime.now()
+    work_hours = task.work_hours or '0, 24'
+    if '#' in work_hours:
+        # check if changed
+        last_change_time = task.last_change_time or datetime.fromtimestamp(0)
+        # split work_hours and change_interval
+        work_hours, change_interval_str = work_hours.split('#')
+        change_interval = int(change_interval_str)
+        # not fit change interval, will wait for left seconds.
+        next_change_time = last_change_time + timedelta(seconds=change_interval)
+        if now < next_change_time:
+            Config.logger.info(
+                f'Task [{task.name}] has changed in {timeago(change_interval, accuracy=1, format=1, short_name=1)} ago.'
+            )
+            return False, next_change_time
 
-    ok = check_work_time(work_hours, now)
-    if ok:
-        # current time is ok, next_check_time is now+interval
-        next_check_time = now + timedelta(seconds=interval)
-        return ok, next_check_time
+    need_crawl = check_work_time(work_hours, now)
+    if need_crawl:
+        # current time is need_crawl, next_check_time is now+interval
+        next_check_time = now + timedelta(seconds=task.interval)
+        return need_crawl, next_check_time
     else:
-        # current time is not ok
+        # current time is not need_crawl
         next_check_time = now
-        # time machine to check time fast
+        # time machine to update next_check_time fast
         for _ in range(60):
-            # check next interval
-            next_check_time = next_check_time + timedelta(seconds=interval)
-            _ok = check_work_time(work_hours, next_check_time)
-            if _ok:
-                # current is still False, but next_check_time is True
+            # next interval
+            next_check_time = next_check_time + timedelta(seconds=task.interval)
+            _need_crawl = check_work_time(work_hours, next_check_time)
+            if _need_crawl:
+                # current time is still False, but next_check_time is True
                 break
-        return ok, next_check_time
+        return need_crawl, next_check_time
 
 
-async def crawl(task):
+async def crawl(task: Task):
     crawler: Crawler = Config.crawler
     logger = Config.logger
     logger.info(f'Start crawling: {task.name}')
@@ -103,13 +124,17 @@ async def crawl(task):
     else:
         if len(crawl_result) == 1:
             # chain result for __request__ which fetch a new request
-            result_list = get_watchdog_result(item=crawl_result.popitem()[1])
-            if result_list == {'text': 'text not found'}:
+            formated_result = get_watchdog_result(
+                item=crawl_result.popitem()[1])
+            if formated_result == {'text': 'text not found'}:
                 error = f'{task.name} text not found, crawl result given: {crawl_result}'
                 logger.error(error)
+                result_list = None
             else:
-                if not isinstance(result_list, list):
-                    result_list = [result_list]
+                if isinstance(formated_result, list):
+                    result_list = formated_result
+                else:
+                    result_list = [formated_result]
                 # use force crawl one web UI for more log
                 logger.info(f'{task.name} Crawl success: {result_list}'[:150])
         else:
@@ -141,12 +166,11 @@ async def _crawl_once(task_name: Optional[str] = None, chunk_size: int = 20):
     for _task in fetched_tasks:
         task = Task(**dict(_task))
         # check work hours
-        ok, next_check_time = find_next_check_time(task.work_hours or '0, 24',
-                                                   task.interval, now)
+        need_crawl, next_check_time = find_next_check_time(task, now)
         if task_name:
             # always crawl for given task_name
-            ok = True
-        if ok:
+            need_crawl = True
+        if need_crawl:
             t = ensure_future(crawl(task))
             # add task_name for logger
             setattr(t, 'task_name', task.name)
@@ -160,7 +184,7 @@ async def _crawl_once(task_name: Optional[str] = None, chunk_size: int = 20):
         # update task variable for callback
         task.__dict__.update(values)
         update_values.append(values)
-        if not ok:
+        if not need_crawl:
             logger.info(
                 f'Task [{task.name}] is not on work time, next_check_time reset to {next_check_time}'
             )

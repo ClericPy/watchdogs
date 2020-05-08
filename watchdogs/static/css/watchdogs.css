@@ -79,6 +79,9 @@ p.custom_links {
 .el-popover {
     max-width: 50%;
 }
+.el-message-box.work_hours_doc{
+    width: 40%;
+}
 pre {
     word-wrap: break-word;
     white-space: pre-wrap;

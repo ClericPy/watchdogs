@@ -19,7 +19,7 @@ from uniparser.utils import get_host
 
 from . import __version__
 from .config import md5_checker
-from .crawler import crawl_once
+from .crawler import crawl_once, find_next_check_time
 from .models import Task, query_tasks, tasks
 from .settings import (Config, get_host_freq_list, refresh_token, release_app,
                        set_host_freq, setup_app)
@@ -119,6 +119,7 @@ async def index(request: Request, tag: str = ''):
         'custom_links': Config.custom_links,
         'callback_workers': Config.callback_handler.workers,
         'custom_tabs': Config.custom_tabs,
+        'work_hours_doc': find_next_check_time.__doc__,
     })
     init_vars_b64 = b64encode(init_vars_json.encode('u8')).decode('u8')
     kwargs['init_vars'] = init_vars_b64
