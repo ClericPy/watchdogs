@@ -2,7 +2,7 @@ uniparser>=1.4.5
 fastapi
 uvicorn
 databases
-torequests>=5.0.3
+torequests>=5.0.4
 fire
 jinja2
 aiofiles
