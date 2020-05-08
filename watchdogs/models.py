@@ -274,7 +274,7 @@ async def query_tasks(
         task_name: Optional[str] = None,
         task_id: Optional[int] = None,
         page: int = 1,
-        page_size: int = 30,
+        page_size: int = Config.default_page_size,
         order_by: str = 'last_change_time',
         sort: str = 'desc',
         tag: str = '',
