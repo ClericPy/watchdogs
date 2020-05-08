@@ -181,6 +181,7 @@ class Config:
     custom_tabs: List[Dict] = []
     COLLATION: str = None
     cookie_max_age = 86400 * 7
+    default_page_size = 15
 
     @classmethod
     def add_custom_tabs(cls, label, url, name=None, desc=None):

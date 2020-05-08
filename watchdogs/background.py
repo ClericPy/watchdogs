@@ -6,7 +6,6 @@ from .config import Config
 async def crawl_chunks(crawl_once):
     loop_num = 0
     while not Config.is_shutdown:
-        loop_num += 1
         has_more = await crawl_once()
         if isinstance(has_more, Exception):
             Config.logger.error(f'crawl_once error, {has_more!r}')
@@ -15,6 +14,7 @@ async def crawl_chunks(crawl_once):
             f'crawl_once finished, has_more: {has_more}, loop: {loop_num}')
         if not has_more:
             break
+        loop_num += 1
 
 
 async def background_loop(coro_funcs: list = None):
