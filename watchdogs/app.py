@@ -204,7 +204,7 @@ async def force_crawl(task_name: str):
 async def load_tasks(
     task_name: Optional[str] = None,
     page: int = 1,
-    page_size: int = 30,
+    page_size: int = Config.default_page_size,
     order_by: str = 'last_change_time',
     sort: str = 'desc',
     tag: str = '',
@@ -469,8 +469,12 @@ async def post_lite(request: Request,
 
 
 @app.get("/lite")
-async def lite(request: Request, tag: str = '', sign: str = '', page: int = 1):
-    tasks, has_more = await query_tasks(tag=tag, page=page)
+async def lite(request: Request,
+               tag: str = '',
+               sign: str = '',
+               page: int = 1,
+               page_size: int = Config.default_page_size):
+    tasks, has_more = await query_tasks(tag=tag, page=page, page_size=page_size)
     now = datetime.now()
     for task in tasks:
         result = loads(task['latest_result'] or '{}')
