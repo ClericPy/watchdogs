@@ -19,7 +19,7 @@ from uniparser.utils import get_host
 
 from . import __version__
 from .config import md5_checker
-from .crawler import crawl_once
+from .crawler import crawl_once, find_next_check_time
 from .models import Task, query_tasks, tasks
 from .settings import (Config, get_host_freq_list, refresh_token, release_app,
                        set_host_freq, setup_app)
@@ -119,6 +119,7 @@ async def index(request: Request, tag: str = ''):
         'custom_links': Config.custom_links,
         'callback_workers': Config.callback_handler.workers,
         'custom_tabs': Config.custom_tabs,
+        'work_hours_doc': find_next_check_time.__doc__,
     })
     init_vars_b64 = b64encode(init_vars_json.encode('u8')).decode('u8')
     kwargs['init_vars'] = init_vars_b64
@@ -204,7 +205,7 @@ async def force_crawl(task_name: str):
 async def load_tasks(
     task_name: Optional[str] = None,
     page: int = 1,
-    page_size: int = 30,
+    page_size: int = Config.default_page_size,
     order_by: str = 'last_change_time',
     sort: str = 'desc',
     tag: str = '',
@@ -469,8 +470,12 @@ async def post_lite(request: Request,
 
 
 @app.get("/lite")
-async def lite(request: Request, tag: str = '', sign: str = '', page: int = 1):
-    tasks, has_more = await query_tasks(tag=tag, page=page)
+async def lite(request: Request,
+               tag: str = '',
+               sign: str = '',
+               page: int = 1,
+               page_size: int = Config.default_page_size):
+    tasks, has_more = await query_tasks(tag=tag, page=page, page_size=page_size)
     now = datetime.now()
     for task in tasks:
         result = loads(task['latest_result'] or '{}')
