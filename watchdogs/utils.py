@@ -213,14 +213,12 @@ def test_result_schema():
         if text is None:
             return get_watchdog_result(item.popitem()[1])
         result = {'text': str(text)}
-        url = item.get('url')
-        if url:
-            url = str(url)
-            if url.startswith('http'):
-                result['url'] = str(url)
-        if '__key__' in item:
-            # different result with a unique key
-            result['__key__'] = item['__key__']
+        for key in ['__key__', 'cover', 'url']:
+            if key in item:
+                value = item[key]
+                if value and str(value):
+                    result[key] = str(value)
+
     elif isinstance(item, (list, tuple)):
         result = [get_watchdog_result(i) for i in item]
     return result
