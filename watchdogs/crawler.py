@@ -123,7 +123,7 @@ async def crawl(task: Task):
         result_list = None
     else:
         if len(crawl_result) == 1:
-            # chain result for __request__ which fetch a new request
+            # crawl_result schema: {rule_name: list_or_dict}
             formated_result = get_watchdog_result(
                 item=crawl_result.popitem()[1])
             if formated_result == {'text': 'text not found'}:
@@ -138,7 +138,7 @@ async def crawl(task: Task):
                 # use force crawl one web UI for more log
                 logger.info(f'{task.name} Crawl success: {result_list}'[:150])
         else:
-            error = 'Invalid crawl_result schema: {rule_name: [{"text": "xxx", "url": "xxx"}]}, but given %r' % crawl_result
+            error = 'Invalid crawl_result against schema {rule_name: [{"text": "Required", "url": "Optional", "__key__": "Optional"}]}, given is %r' % crawl_result
             logger.error(f'{task.name}: {error}')
             result_list = [{"text": error}]
     return task, error, result_list
@@ -212,10 +212,14 @@ async def _crawl_once(task_name: Optional[str] = None, chunk_size: int = 20):
             # compare latest_result and new list
             # later first, just like the saved result_list sortings
             old_latest_result = loads(task.latest_result)
+            # try to use the __key__
+            old_latest_result_key = old_latest_result.get(
+                '__key__', old_latest_result)
             # list of dict
             to_insert_result_list = []
             for result in result_list:
-                if result == old_latest_result:
+                result_key = result.get('__key__', result)
+                if result_key == old_latest_result_key:
                     break
                 to_insert_result_list.append(result)
             if to_insert_result_list:

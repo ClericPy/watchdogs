@@ -207,6 +207,7 @@ def test_result_schema():
     if isinstance(item, dict):
         __result__ = item.pop('__result__', None)
         if __result__:
+            # may be __result__ > __result__ > __result__ nested...
             return get_watchdog_result(__result__.popitem()[1])
         text = item.get('text')
         if text is None:
@@ -217,6 +218,9 @@ def test_result_schema():
             url = str(url)
             if url.startswith('http'):
                 result['url'] = str(url)
+        if '__key__' in item:
+            # different result with a unique key
+            result['__key__'] = item['__key__']
     elif isinstance(item, (list, tuple)):
         result = [get_watchdog_result(i) for i in item]
     return result
