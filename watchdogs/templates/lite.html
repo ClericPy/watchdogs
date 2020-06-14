@@ -1,276 +1,266 @@
 <!DOCTYPE html>
 <html>
-  <head>
+
+<head>
     <meta charset="utf-8" />
     <meta name="referrer" content="never" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <link
-      rel="shortcut icon"
-      href="/static/img/favicon.svg"
-      type="image/icon"
-    />
+    <link rel="shortcut icon" href="/static/img/favicon.svg" type="image/icon" />
     <title>Watchdogs lite v{{version}}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <style>
-      a[href^="http"]:empty::before {
-        content: attr(href);
-      }
+        a[href^="http"]:empty::before {
+            content: attr(href);
+        }
 
-      html,
-      body {
-        margin: 0 0 0 0;
-        background-color: #f4f8fb;
-      }
+        html,
+        body {
+            margin: 0 0 0 0;
+            background-color: #f4f8fb;
+        }
 
-      input {
-        border-color: #ecf0f1;
-      }
+        input {
+            border-color: #ecf0f1;
+        }
 
-      a {
-        color: #2e3135;
-        text-decoration: none;
-      }
+        a {
+            color: #2e3135;
+            text-decoration: none;
+        }
 
-      #params,
-      #params-toggle {
-        display: none;
-      }
-
-      div.main-body {
-        width: 55%;
-        margin: 0 auto;
-      }
-
-      #params-toggle:checked + #params {
-        display: block;
-      }
-
-      div.tasks-main {
-        display: flex;
-        flex-direction: row-reverse;
-        flex-wrap: nowrap;
-        width: 100%;
-      }
-
-      div.tasks {
-        width: 100%;
-        display: flex;
-        flex-direction: column;
-        flex-wrap: nowrap;
-        justify-content: flex-start;
-        align-items: stretch;
-        align-content: stretch;
-      }
-
-      div.task {
-        background-color: white;
-        margin: 5px 0 5px 0;
-        padding: 0 1.5em 0px 1.5em;
-
-        border-radius: 2px;
-        box-shadow: 1px 5px 15px rgba(0, 0, 0, 0.1);
-      }
-
-      div.task .title {
-        margin-bottom: 0;
-      }
-
-      div.task .desc {
-        color: #999;
-        padding-left: 0.2em;
-        font-size: 0.8em;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        display: -webkit-box;
-        -webkit-box-orient: vertical;
-        -webkit-line-clamp: 2;
-      }
-
-      div.task .task-time {
-        color: #999;
-        font-size: 0.7em;
-        padding: 8px 0 0 0;
-        border-top: 1px dotted rgba(0, 0, 0, 0.1);
-      }
-
-      div.head {
-        background-color: #18688d;
-        margin: auto;
-        padding: 2px;
-        text-align: center;
-      }
-
-      @media (max-width: 900px) {
-        div.tasks-main {
-          flex-direction: column;
+        #params,
+        #params-toggle {
+            display: none;
         }
 
         div.main-body {
-          width: 100%;
-          margin: 0 auto;
+            width: 55%;
+            margin: 0 auto;
         }
 
-        div.head {
-          background-color: #018574;
-          margin: auto;
-          padding: 2px;
-          text-align: center;
+        #params-toggle:checked+#params {
+            display: block;
         }
 
         div.tasks-main {
-          width: 100%;
+            display: flex;
+            flex-direction: row-reverse;
+            flex-wrap: nowrap;
+            width: 100%;
         }
-      }
 
-      div.head a {
-        color: #ecf0f1;
-        text-decoration: none;
-        text-shadow: black 8px 8px 8px;
-      }
+        div.tasks {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            flex-wrap: nowrap;
+            justify-content: flex-start;
+            align-items: stretch;
+            align-content: stretch;
+        }
 
-      .view-more {
-        font-size: 0.6em;
-      }
+        div.task {
+            background-color: white;
+            margin: 5px 0 5px 0;
+            padding: 0 1.5em 0px 1.5em;
 
-      .result-list > ol {
-        padding-left: 1em;
-        font-size: 0.6em;
-      }
+            border-radius: 2px;
+            box-shadow: 1px 5px 15px rgba(0, 0, 0, 0.1);
+        }
 
-      .result-list a {
-        color: #0065b5;
-      }
+        div.task .title {
+            margin-bottom: 0;
+        }
 
-      .error {
-        color: #ebb563;
-        font-size: 0.5em;
-      }
+        div.task .desc {
+            color: #999;
+            padding-left: 0.2em;
+            font-size: 0.8em;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+        }
 
-      .task.error-task {
-        border: 1px solid #ebb563;
-      }
-      .pages {
-        display: flex;
-        text-shadow: black 1px 0px 1px;
-      }
-      .page {
-        flex-grow: 1;
-        text-align: center;
-        background-color: #0000000c;
-        padding: 1em 0 1em 0;
-        border-radius: 1em;
-      }
-      .pages > .page:nth-of-type(2) {
-        margin-left: 5px;
-      }
+        div.task .task-time {
+            color: #999;
+            font-size: 0.7em;
+            padding: 8px 0 0 0;
+            border-top: 1px dotted rgba(0, 0, 0, 0.1);
+        }
+
+        div.head {
+            background-color: #4c75a3;
+            margin: auto;
+            padding: 2px;
+            text-align: center;
+        }
+
+        @media (max-width: 900px) {
+            div.tasks-main {
+                flex-direction: column;
+            }
+
+            div.main-body {
+                width: 100%;
+                margin: 0 auto;
+            }
+
+            div.head {
+                background-color: #018574;
+                margin: auto;
+                padding: 2px;
+                text-align: center;
+            }
+
+            div.tasks-main {
+                width: 100%;
+            }
+        }
+
+        div.head a {
+            color: #ecf0f1;
+            text-decoration: none;
+            text-shadow: black 8px 8px 8px;
+        }
+
+        .view-more {
+            font-size: 0.6em;
+        }
+
+        .result-list>ol {
+            padding-left: 1em;
+            font-size: 0.6em;
+        }
+
+        .result-list a {
+            color: #0065b5;
+        }
+
+        .error {
+            color: #ebb563;
+            font-size: 0.5em;
+            overflow-wrap: break-word;
+        }
+
+        .task.error-task {
+            border: 1px solid #ebb563;
+        }
+
+        .pages {
+            display: flex;
+            text-shadow: black 1px 0px 1px;
+        }
+
+        .page {
+            flex-grow: 1;
+            text-align: center;
+            background-color: #b1b1b126;
+            padding: 1em 0 1em 0;
+        }
+
+        .rss {
+            background-color: #ff74063b;
+        }
     </style>
-  </head>
+</head>
 
-  <body>
+<body>
     <div class="main-body">
-      <div class="head">
-        <h1><a href="/">Watchdogs</a></h1>
-      </div>
-      <div class="tasks-main">
-        <div class="tasks">
-          {%- if not tasks -%}
-          <p style="text-align: center;">No Tasks.</p>
-          {% endif %} {% for task in tasks %}
-          <div
-            class="task{{' error-task' if task.error else ''}}"
-            id="task-{{task.task_id}}"
-          >
-            <h3 class="title">
-              <a href="{{task.url}}" target="_blank">{{task.name}}</a>
-            </h3>
-            <p class="desc">{{task.text}}</p>
-            <p
-              title="Click to show more"
-              class="task-time"
-              onclick="show_more({{task.task_id}})"
-            >
-              <span>{{ '✔' if task.enable else '✖'}}</span>
-              <span class="ts_create"
-                >{{task.last_change_time.strftime('%Y-%m-%d %H:%M:%S')}}</span
-              >
-              <!-- <span class="source">{{task.name}}</span> -->
-              <span class="timeago"> - {{task.timeago}} ago</span>
-              <span class="emoji">📂</span>
-              <span class="view-more">View More</span>
-              {%- if task.error -%}
-              <br />
-              <span class="error">
-                Error: {{task.error}}
-              </span>
-              {% endif %}
-            </p>
-          </div>
-          {% endfor %}
+        <div class="head">
+            <h1><a href="/">Watchdogs</a></h1>
         </div>
-      </div>
-      <div class="pages">
-        {% if last_page_url %}
-        <a href="{{last_page_url}}" class="last_page page" target="_self">
-          Last Page
-        </a>
-        {% endif %} {% if next_page_url %}
-        <a href="{{next_page_url}}" class="next_page page" target="_self">
-          Next Page
-        </a>
-        {% endif %}
-      </div>
+        <div class="tasks-main">
+            <div class="tasks">
+                {%- if not tasks -%}
+                <p style="text-align: center;">No Tasks.</p>
+                {% endif %} {% for task in tasks %}
+                <div class="task{{' error-task' if task.error else ''}}" id="task-{{task.task_id}}">
+                    <h3 class="title">
+                        <a href="{{task.url}}" target="_blank">{{task.name}}</a>
+                    </h3>
+                    <p class="desc">{{task.text}}</p>
+                    <p title="Click to show more" class="task-time" onclick="show_more({{task.task_id}})">
+                        <span>{{ '✔' if task.enable else '✖'}}</span>
+                        <span class="ts_create">{{task.last_change_time.strftime('%Y-%m-%d %H:%M:%S')}}</span>
+                        <!-- <span class="source">{{task.name}}</span> -->
+                        <span class="timeago"> - {{task.timeago}} ago</span>
+                        <span class="emoji">📂</span>
+                        <span class="view-more">View More</span>
+                        {%- if task.error -%}
+                        <br />
+                        <span class="error">
+                            Error: {{task.error}}
+                        </span>
+                        {% endif %}
+                    </p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="pages">
+            {% if last_page_url %}
+            <a href="{{last_page_url}}" class="last_page page" target="_self"><b>&lt;</b></a>
+            {% endif %}
+            <a class="rss page" href="{{rss_url}}" target="_blank">RSS</a>
+            {% if next_page_url %}
+            <a href="{{next_page_url}}" class="next_page page" target="_self"><b>&gt;</b></a>
+            {% endif %}
+        </div>
     </div>
     <script>
-      async function show_more(task_id) {
-        let node = document.querySelector("#task-" + task_id + ">.result-list");
-        if (!node) {
-          node = document.createElement("p");
-          node.className = "result-list";
-          document.querySelector("#task-" + task_id).appendChild(node);
-        }
-        if (node.innerHTML) {
-          node.innerHTML = "";
-          return;
-        }
-        let response = await fetch(document.location, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            task_id: task_id,
-          }),
-        });
-        if (response.ok) {
-          let result_list = (await response.json()).result_list;
-          let html = "<ol>";
-          result_list.forEach((item) => {
-            let text = item.result.title || item.result.text || "";
-            let url = item.result.url || "";
-            if (url) {
-              url = 'href="' + url + '"';
+        async function show_more(task_id) {
+            let node = document.querySelector("#task-" + task_id + ">.result-list");
+            if (!node) {
+                node = document.createElement("p");
+                node.className = "result-list";
+                document.querySelector("#task-" + task_id).appendChild(node);
             }
-            let time = item.time || "";
-            let line =
-              "<li><a " +
-              url +
-              ' target="_blank">' +
-              time +
-              " - " +
-              unescape(text) +
-              "</a></li>";
-            html += line;
-          });
-          if (result_list.length == 0) {
-            html += "No results.";
-          }
-          html += "</ol>";
-          node.innerHTML = html;
-        } else {
-          alert("HTTP-Error: " + response.status);
+            if (node.innerHTML) {
+                node.innerHTML = "";
+                return;
+            }
+            let response = await fetch(document.location, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    task_id: task_id,
+                }),
+            });
+            if (response.ok) {
+                let result_list = (await response.json()).result_list;
+                let html = "<ol>";
+                result_list.forEach((item) => {
+                    let text = item.result.title || item.result.text || "";
+                    let url = item.result.url || "";
+                    if (url) {
+                        url = 'href="' + url + '"';
+                    }
+                    let time = item.time || "";
+                    let line =
+                        "<li><a " +
+                        url +
+                        ' target="_blank">' +
+                        time +
+                        " - " +
+                        unescape(text) +
+                        "</a></li>";
+                    html += line;
+                });
+                if (result_list.length == 0) {
+                    html += "No results.";
+                }
+                html += "</ol>";
+                node.innerHTML = html;
+            } else {
+                alert("HTTP-Error: " + response.status);
+            }
         }
-      }
     </script>
-  </body>
+</body>
+
 </html>
