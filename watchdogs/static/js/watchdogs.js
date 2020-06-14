@@ -671,7 +671,7 @@ var Main = {
                 dangerouslyUseHTMLString: true,
                 closeOnClickModal: true,
                 closeOnPressEscape: true,
-                customClass: 'work_hours_doc',
+                customClass: "work_hours_doc",
             })
         },
         check_error_task({ row, rowIndex }) {
@@ -763,7 +763,7 @@ var vue_app = Vue.extend(Main)
 var app = new vue_app({
     delimiters: ["${", "}"],
 }).$mount("#app")
-app.load_tasks()
+// app.load_tasks()
 // init app vars
 ;(() => {
     // init_vars
@@ -773,4 +773,12 @@ app.load_tasks()
         app[name] = args[name]
     })
     node.parentNode.removeChild(node)
+    // auto load
+    var io = new IntersectionObserver((entries) => {
+        if (entries[0].intersectionRatio <= 0) return
+        if (app.has_more) {
+            app.load_tasks()
+        }
+    })
+    io.observe(document.getElementById("auto_load"))
 })()

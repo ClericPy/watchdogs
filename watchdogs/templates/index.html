@@ -114,9 +114,13 @@
                                     </el-button>
                                 </template>
                             </el-table-column>
+                            <template slot="append">
+                                <br id="auto_load">
+                            </template>
                         </el-table>
                         <div class="foot">
-                            <el-button type="success" style="margin: 0; width: 20%;" @click="load_tasks" :disabled="!has_more" plain> Page:
+                            <el-button type="success" style="margin: 0; width: 20%;" @click="load_tasks"
+                                :disabled="!has_more" plain> Page:
                                 ${current_page} - Load More</el-button>
 
                             <el-button type="primary" @click="reload_tasks" style="margin: 0;" title="Refresh"
