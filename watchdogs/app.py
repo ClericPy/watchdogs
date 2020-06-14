@@ -505,4 +505,7 @@ async def lite(request: Request,
     else:
         last_page_url = ''
     context['last_page_url'] = last_page_url
+    quoted_tag = quote_plus(tag)
+    rss_sign = Config.get_sign('/rss', f'tag={quoted_tag}')[1]
+    context['rss_url'] = f'/rss?tag={quoted_tag}&sign={rss_sign}'
     return templates.TemplateResponse("lite.html", context=context)
