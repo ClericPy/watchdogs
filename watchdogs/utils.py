@@ -213,7 +213,7 @@ def test_result_schema():
         if text is None:
             return get_watchdog_result(item.popitem()[1])
         result = {'text': str(text)}
-        for key in ['__key__', 'cover', 'url']:
+        for key in ['__key__', 'cover', 'url', 'title']:
             if key in item:
                 value = item[key]
                 if value and str(value):

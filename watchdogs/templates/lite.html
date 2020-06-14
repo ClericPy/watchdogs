@@ -246,7 +246,7 @@
           let result_list = (await response.json()).result_list;
           let html = "<ol>";
           result_list.forEach((item) => {
-            let text = item.result.text || "";
+            let text = item.result.title || item.result.text || "";
             let url = item.result.url || "";
             if (url) {
               url = 'href="' + url + '"';
