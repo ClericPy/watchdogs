@@ -434,7 +434,8 @@ var Main = {
         },
         get_latest_result(latest_result, max_length = 80) {
             try {
-                return JSON.parse(latest_result).text.slice(0, max_length)
+                let item = JSON.parse(latest_result)
+                return item.title || item.text.slice(0, max_length)
             } catch (error) {
                 return latest_result
             }
@@ -455,7 +456,7 @@ var Main = {
                     '</td><td><a target="_blank" ' +
                     href +
                     ">" +
-                    this.escape_html(result.text) +
+                    this.escape_html(result.title || result.text) +
                     "</a></td></tr>"
             })
             text += "</table>"
