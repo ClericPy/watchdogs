@@ -76,11 +76,14 @@ async def auth_checker(request: Request, call_next):
         # try checking sign
         given_sign, valid_sign = Config.get_sign(path, query_string)
         if given_sign == valid_sign:
+            # sign checking pass
             return await call_next(request)
+    # try check cookie
     if not Config.watchdog_auth or Config.watchdog_auth == request.cookies.get(
             'watchdog_auth', ''):
-        # no watchdog_auth or cookie is valid
+        # valid cookie, or no watchdog_auth checker
         return await call_next(request)
+    # not pass either checker, refused
     if query_has_sign:
         # request with sign will not redirect
         return JSONResponse(
@@ -90,6 +93,7 @@ async def auth_checker(request: Request, call_next):
             },
         )
     else:
+        # bad cookie, reset the watchdog_auth cookie as null
         resp = RedirectResponse(
             f'/auth?redirect={quote_plus(request.scope["path"])}', 302)
         resp.set_cookie('watchdog_auth', '')
@@ -181,7 +185,7 @@ class Config:
     custom_tabs: List[Dict] = []
     COLLATION: str = None
     cookie_max_age = 86400 * 7
-    default_page_size = 15
+    default_page_size = 20
 
     @classmethod
     def add_custom_tabs(cls, label, url, name=None, desc=None):
