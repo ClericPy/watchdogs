@@ -433,7 +433,7 @@ async def rss(request: Request,
             logger.error(f'latest_result is list: {latest_result}')
         link: str = latest_result.get('url') or task['origin_url']
         description: str = latest_result.get('text') or ''
-        title: str = f'{task["name"]}#{description[:80]}'
+        title: str = f'{task["name"]}#{latest_result.get("title", description[:80])}'
         item: dict = {
             'title': title,
             'link': link,
@@ -479,9 +479,10 @@ async def lite(request: Request,
     now = datetime.now()
     for task in tasks:
         result = loads(task['latest_result'] or '{}')
-        # for cache...
+        # set / get cache from task
         task['url'] = task.get('url') or result.get('url') or task['origin_url']
-        task['text'] = task.get('text') or result.get('text') or ''
+        task['text'] = task.get('text') or result.get('title') or result.get(
+            'text') or ''
         task['timeago'] = timeago(
             (now - task['last_change_time']).total_seconds(),
             1,
@@ -504,4 +505,7 @@ async def lite(request: Request,
     else:
         last_page_url = ''
     context['last_page_url'] = last_page_url
+    quoted_tag = quote_plus(tag)
+    rss_sign = Config.get_sign('/rss', f'tag={quoted_tag}')[1]
+    context['rss_url'] = f'/rss?tag={quoted_tag}&sign={rss_sign}'
     return templates.TemplateResponse("lite.html", context=context)
