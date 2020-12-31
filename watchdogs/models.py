@@ -11,7 +11,6 @@ from uniparser import CrawlerRule, HostRule
 from uniparser.crawler import RuleStorage, get_host
 
 from .config import Config
-from .utils import ignore_error
 
 if Config.COLLATION is None:
     if Config.db_url.startswith('sqlite'):
@@ -119,21 +118,6 @@ def create_tables(db_url):
     try:
         engine = sqlalchemy.create_engine(db_url)
         metadata.create_all(engine)
-        # backward compatibility for tasks table without error column
-        sqls = [
-            'ALTER TABLE `tasks` ADD COLUMN `error` TEXT',
-        ]
-        if Config.db_url.startswith('mysql'):
-            sqls.extend([
-                'ALTER TABLE `tasks` ADD COLUMN `ts_create` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP',
-                'ALTER TABLE `host_rules` ADD COLUMN `ts_create` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP',
-                'ALTER TABLE `metas` ADD COLUMN `ts_create` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP',
-                'ALTER TABLE `tasks` ADD COLUMN `ts_update` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
-                'ALTER TABLE `host_rules` ADD COLUMN `ts_update` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
-                'ALTER TABLE `metas` ADD COLUMN `ts_update` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
-            ])
-        for sql in sqls:
-            ignore_error(engine.execute, sql)
     except BaseException:
         Config.logger.critical(f'Fatal error on creating Table: {format_exc()}')
         import os
@@ -264,9 +248,6 @@ class Task(BaseModel):
     next_check_time: datetime = date0
     last_change_time: datetime = date0
     custom_info: str = ''
-    if Config.db_url.startswith('mysql://'):
-        ts_create: Optional[datetime] = datetime.now()
-        ts_update: Optional[datetime] = datetime.now()
 
 
 @alru_cache(maxsize=Config.query_tasks_cache_maxsize)
