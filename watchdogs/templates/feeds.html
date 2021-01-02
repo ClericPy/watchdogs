@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="referrer" content="never" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <link rel="shortcut icon" href="/static/img/favicon.svg" type="image/icon" />
+    <title>Watchdogs lite v{{version}}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <style>
+        a[href^="http"]:empty::before {
+            content: attr(href);
+        }
+
+        html,
+        body {
+            margin: 0 0 0 0;
+            background-color: #f4f8fb;
+        }
+
+        input {
+            border-color: #ecf0f1;
+        }
+
+        a {
+            color: #2e3135;
+            text-decoration: none;
+        }
+
+        #params,
+        #params-toggle {
+            display: none;
+        }
+
+        div.main-body {
+            width: 55%;
+            margin: 0 auto;
+        }
+
+        #params-toggle:checked+#params {
+            display: block;
+        }
+
+        div.tasks-main {
+            display: flex;
+            flex-direction: row-reverse;
+            flex-wrap: nowrap;
+            width: 100%;
+        }
+
+        div.feeds {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            flex-wrap: nowrap;
+            justify-content: flex-start;
+            align-items: stretch;
+            align-content: stretch;
+        }
+
+        div.feed {
+            background-color: white;
+            margin: 5px 0 5px 0;
+            padding: 0 1.5em 0px 1.5em;
+
+            border-radius: 2px;
+            box-shadow: 1px 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        div.feed .title {
+            margin-bottom: 0;
+        }
+
+        div.feed .desc {
+            color: #999;
+            padding-left: 0.2em;
+            font-size: 0.8em;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+        }
+
+        div.feed .task-time {
+            color: #999;
+            font-size: 0.7em;
+            padding: 8px 0 0 0;
+            border-top: 1px dotted rgba(0, 0, 0, 0.1);
+        }
+
+        div.head {
+            background-color: #4c75a3;
+            margin: auto;
+            padding: 2px;
+            text-align: center;
+        }
+
+        @media (max-width: 900px) {
+            div.tasks-main {
+                flex-direction: column;
+            }
+
+            div.main-body {
+                width: 100%;
+                margin: 0 auto;
+            }
+
+            div.head {
+                background-color: #018574;
+                margin: auto;
+                padding: 2px;
+                text-align: center;
+            }
+
+            div.tasks-main {
+                width: 100%;
+            }
+        }
+
+        div.head a {
+            color: #ecf0f1;
+            text-decoration: none;
+            text-shadow: black 8px 8px 8px;
+        }
+
+        .result-list>ol {
+            padding-left: 1em;
+            font-size: 0.6em;
+        }
+
+        .result-list a {
+            color: #0065b5;
+        }
+
+        .pages {
+            display: flex;
+            text-shadow: black 1px 0px 1px;
+        }
+
+        .page {
+            flex-grow: 1;
+            text-align: center;
+            background-color: #b1b1b126;
+            padding: 1em 0 1em 0;
+        }
+
+        .rss {
+            background-color: #eaedf066;
+        }
+
+        .date-line {
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="main-body">
+        <div class="head">
+            <h1><a href="/">Watchdogs</a></h1>
+        </div>
+        <div class="tasks-main">
+            <div class="feeds">
+                {%- if not feeds -%}
+                <p style="text-align: center;">No Tasks.</p>
+                {% endif %}
+                {% for feed in feeds %}
+                {%- if feed.get("name") -%}
+                <div class="feed" id="task-{{feed.task_id}}">
+                    <h3 class="title">
+                        <a href="{{feed.url}}" target="_blank">{{feed.name}}</a>
+                    </h3>
+                    <p class="desc">{{feed.text}}</p>
+                    <p title="Click to show more" class="task-time">
+                        <span class="ts_create">{{feed.ts_create.strftime('%Y-%m-%d %H:%M:%S')}}</span>
+                        <!-- <span class="source">{{feed.name}}</span> -->
+                        <span class="timeago"> - {{feed.timeago}} ago</span>
+                        <span class="emoji">📂</span>
+                    </p>
+                </div>
+                {% endif %}
+                {%- if feed.get("current_date") -%}
+                <h3 class="date-line">{{feed["current_date"]}}</h3>
+                {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+        <div class="pages">
+            {% if last_page_url %}
+            <a href="{{last_page_url}}" class="last_page page" target="_self"><b>&lt;</b></a>
+            {% endif %}
+            <a class="rss page" href="{{rss_url}}" target="_blank">RSS</a>
+            {% if next_page_url %}
+            <a href="{{next_page_url}}" class="next_page page" target="_self"><b>&gt;</b></a>
+            {% endif %}
+        </div>
+    </div>
+    <script>
+
+    </script>
+</body>
+
+</html>
