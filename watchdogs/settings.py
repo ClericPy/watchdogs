@@ -182,9 +182,8 @@ async def setup_md5_salt():
             return
         else:
             # create new salt
-            from time import time
-            from random import random
-            Config.md5_salt = md5(time() * random(), with_salt=False)
+            from uuid import uuid1
+            Config.md5_salt = uuid1().hex
     elif Config.md5_salt == exist_salt:
         # no need to update
         return

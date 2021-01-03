@@ -3,13 +3,14 @@
 from asyncio import ensure_future, wait
 from datetime import datetime, timedelta
 from json import JSONDecodeError, dumps, loads
+from traceback import format_exc
 from typing import Optional, Tuple
 
 from torequests.utils import timeago, ttime
 from uniparser import Crawler, RuleNotFoundError
 
 from .config import Config
-from .models import Database, Task, query_tasks, tasks
+from .models import Database, Task, query_feeds, query_tasks, tasks
 from .utils import check_work_time, get_watchdog_result, solo, try_catch
 
 
@@ -260,6 +261,7 @@ async def _crawl_once(task_name: Optional[str] = None, chunk_size: int = 20):
         )
         for task in changed_tasks:
             ensure_future(try_catch(Config.callback_handler.callback, task))
+        await save_feeds(changed_tasks, db)
     else:
         logger.info(f'Crawl task_name={task_name} finished. 0 todo.')
     if CLEAR_CACHE_NEEDED:
@@ -279,3 +281,29 @@ async def crawl_once(task_name: Optional[str] = None):
     with solo:
         result = await try_catch(_crawl_once, task_name)
         return result
+
+
+async def save_feeds(tasks, db):
+    if not tasks:
+        return
+    try:
+        values = []
+        for task in tasks:
+            latest_result = loads(
+                task.latest_result) if task.latest_result else {}
+            text = latest_result.get('text') or latest_result.get('title') or ''
+            value = {
+                'task_id': task.task_id,
+                'name': task.name,
+                'text': text,
+                'url': latest_result.get('url') or task.origin_url,
+                'ts_create': datetime.now(),
+            }
+            values.append(value)
+        query = "INSERT INTO feeds (`task_id`, `name`, `text`, `url`, `ts_create`) values (:task_id, :name, :text, :url, :ts_create)"
+        result = await db.execute_many(query=query, values=values)
+        Config.logger.info(f'Insert task logs success: ({len(values)})')
+        query_feeds.cache_clear()
+        return result
+    except Exception:
+        Config.logger.error(f'Inserting task logs failed: {format_exc()}')

@@ -20,12 +20,12 @@ from uniparser.utils import get_host
 from . import __version__
 from .config import md5_checker
 from .crawler import crawl_once, find_next_check_time
-from .models import Task, query_tasks, tasks
+from .models import Task, query_feeds, query_tasks, tasks
 from .settings import (Config, get_host_freq_list, refresh_token, release_app,
                        set_host_freq, setup_app)
 from .utils import format_size, gen_rss
 
-description = f"Watchdogs to keep an eye on the world's change.\nRead more: [https://github.com/ClericPy/watchdogs](https://github.com/ClericPy/watchdogs)"
+description = "Watchdogs to keep an eye on the world's change.\nRead more: [https://github.com/ClericPy/watchdogs](https://github.com/ClericPy/watchdogs)"
 app = FastAPI(title="Watchdogs", description=description, version=__version__)
 sub_app.openapi_prefix = '/uniparser'
 app.mount("/uniparser", sub_app)
@@ -113,8 +113,13 @@ async def index(request: Request, tag: str = ''):
     quoted_tag = quote_plus(tag)
     rss_sign = Config.get_sign('/rss', f'tag={quoted_tag}')[1]
     lite_sign = Config.get_sign('/lite', f'tag={quoted_tag}')[1]
+    feeds_sign = Config.get_sign('/feeds', f'tag={quoted_tag}')[1]
+    rss_feeds_sign = Config.get_sign('/rss_feeds', f'tag={quoted_tag}')[1]
     kwargs['rss_url'] = f'/rss?tag={quoted_tag}&sign={rss_sign}'
     kwargs['lite_url'] = f'/lite?tag={quoted_tag}&sign={lite_sign}'
+    kwargs['feeds_url'] = f'/feeds?tag={quoted_tag}&sign={feeds_sign}'
+    kwargs[
+        'rss_feeds_url'] = f'/rss_feeds?tag={quoted_tag}&sign={rss_feeds_sign}'
     init_vars_json = dumps({
         'custom_links': Config.custom_links,
         'callback_workers': Config.callback_handler.workers,
@@ -303,7 +308,7 @@ async def crawler_rule(method: str,
         elif method == 'pop':
             _result = await Config.rule_db.pop_crawler_rule(rule)
         else:
-            raise ValueError(f'method only support add and pop')
+            raise ValueError('method only support add and pop')
         result = {'msg': 'ok', 'result': _result}
     except Exception as e:
         result = {'msg': repr(e)}
@@ -419,7 +424,7 @@ async def rss(request: Request,
     source_link = f'https://{host}'
     xml_data: dict = {
         'channel': {
-            'title': f'Watchdogs',
+            'title': 'Watchdogs',
             'description': f'Watchdog on web change, v{__version__}.',
             'link': source_link,
         },
@@ -505,7 +510,93 @@ async def lite(request: Request,
     else:
         last_page_url = ''
     context['last_page_url'] = last_page_url
-    quoted_tag = quote_plus(tag)
     rss_sign = Config.get_sign('/rss', f'tag={quoted_tag}')[1]
     context['rss_url'] = f'/rss?tag={quoted_tag}&sign={rss_sign}'
     return templates.TemplateResponse("lite.html", context=context)
+
+
+@app.get("/feeds")
+async def feeds(
+    request: Request,
+    tag: str = '',
+    # user: str = '',
+    sign: str = '',
+    page: int = 1,
+    page_size: int = Config.default_page_size,
+):
+    feeds, has_more = await query_feeds(tag=tag, page=page, page_size=page_size)
+    now = datetime.now()
+    _feeds = []
+    current_date = None
+    today = datetime.today().strftime('%Y-%m-%d')
+    for feed in feeds:
+        date = feed['ts_create'].strftime('%Y-%m-%d')
+        if date != current_date:
+            current_date = date
+            if date == today:
+                date += ' [Today]'
+            _feeds.append({'current_date': date})
+        feed['timeago'] = timeago((now - feed['ts_create']).total_seconds(),
+                                  1,
+                                  1,
+                                  short_name=True)
+        _feeds.append(feed)
+    context = {'feeds': _feeds, 'request': request}
+    context['version'] = __version__
+    quoted_tag = quote_plus(tag)
+    if has_more:
+        next_page = page + 1
+        sign = Config.get_sign('/feeds',
+                               f'tag={quoted_tag}&page={next_page}')[1]
+        next_page_url = f'/feeds?tag={quoted_tag}&page={next_page}&sign={sign}'
+    else:
+        next_page_url = ''
+    context['next_page_url'] = next_page_url
+    if page > 1:
+        last_page = page - 1
+        sign = Config.get_sign('/feeds',
+                               f'tag={quoted_tag}&page={last_page}')[1]
+        last_page_url = f'/feeds?tag={quoted_tag}&page={last_page}&sign={sign}'
+    else:
+        last_page_url = ''
+    context['last_page_url'] = last_page_url
+    rss_sign = Config.get_sign('/rss_feeds', f'tag={quoted_tag}')[1]
+    context['rss_url'] = f'/rss_feeds?tag={quoted_tag}&sign={rss_sign}'
+    return templates.TemplateResponse("feeds.html", context=context)
+
+
+@app.get("/rss_feeds")
+async def rss_feeds(request: Request,
+                    tag: str = '',
+                    sign: str = '',
+                    host: str = Header('', alias='Host')):
+    feeds, _ = await query_feeds(tag=tag)
+    source_link = f'https://{host}'
+    xml_data: dict = {
+        'channel': {
+            'title': 'Watchdogs Timeline',
+            'description': f'Watchdog on web change, v{__version__}.',
+            'link': source_link,
+        },
+        'items': []
+    }
+    for feed in feeds:
+        pubDate: str = feed['ts_create'].strftime(
+            format='%a, %d %b %Y %H:%M:%S')
+        link: str = feed['url']
+        description: str = feed['text']
+        title: str = f'{feed["name"]}#{description[:80]}'
+        item: dict = {
+            'title': title,
+            'link': link,
+            'guid': str(feed['id']),
+            'description': description,
+            'pubDate': pubDate
+        }
+        xml_data['items'].append(item)
+    xml: str = gen_rss(xml_data)
+    response = Response(
+        content=xml,
+        media_type="application/xml",
+        headers={'Content-Type': 'application/xml; charset="utf-8"'})
+    return response

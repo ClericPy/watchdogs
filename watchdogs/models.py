@@ -1,17 +1,16 @@
 from datetime import datetime
 from traceback import format_exc
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 import sqlalchemy
 from async_lru import alru_cache
 from databases import Database
 from pydantic import BaseModel
-from sqlalchemy.sql import func, text
+from sqlalchemy.sql import text
 from uniparser import CrawlerRule, HostRule
 from uniparser.crawler import RuleStorage, get_host
 
 from .config import Config
-from .utils import ignore_error
 
 if Config.COLLATION is None:
     if Config.db_url.startswith('sqlite'):
@@ -25,64 +24,58 @@ date0 = datetime.strptime('1970-01-01 08:00:00', '%Y-%m-%d %H:%M:%S')
 tasks = sqlalchemy.Table(
     "tasks",
     metadata,
-    sqlalchemy.Column(
-        'task_id', sqlalchemy.Integer, primary_key=True, autoincrement=True),
-    sqlalchemy.Column(
-        "name",
-        sqlalchemy.String(64, collation=Config.COLLATION),
-        nullable=False,
-        index=True,
-        unique=True),
-    sqlalchemy.Column(
-        "enable", sqlalchemy.Integer, server_default=text('1'), nullable=False),
-    sqlalchemy.Column(
-        "tag",
-        sqlalchemy.String(128, collation=Config.COLLATION),
-        server_default="default",
-        nullable=False),
+    sqlalchemy.Column('task_id',
+                      sqlalchemy.Integer,
+                      primary_key=True,
+                      autoincrement=True),
+    sqlalchemy.Column("name",
+                      sqlalchemy.String(64, collation=Config.COLLATION),
+                      nullable=False,
+                      index=True,
+                      unique=True),
+    sqlalchemy.Column("enable",
+                      sqlalchemy.Integer,
+                      server_default=text('1'),
+                      nullable=False),
+    sqlalchemy.Column("tag",
+                      sqlalchemy.String(128, collation=Config.COLLATION),
+                      server_default="default",
+                      nullable=False),
     sqlalchemy.Column("error", sqlalchemy.TEXT(collation=Config.COLLATION)),
-    sqlalchemy.Column(
-        "request_args",
-        sqlalchemy.TEXT(collation=Config.COLLATION),
-        nullable=False),
-    sqlalchemy.Column(
-        "origin_url",
-        sqlalchemy.String(1024),
-        nullable=False,
-        server_default=""),
-    sqlalchemy.Column(
-        "interval",
-        sqlalchemy.Integer,
-        server_default=text('300'),
-        nullable=False),
-    sqlalchemy.Column(
-        "work_hours",
-        sqlalchemy.String(32),
-        server_default='0, 24',
-        nullable=False),
-    sqlalchemy.Column(
-        "max_result_count",
-        sqlalchemy.Integer,
-        server_default=text('10'),
-        nullable=False),
+    sqlalchemy.Column("request_args",
+                      sqlalchemy.TEXT(collation=Config.COLLATION),
+                      nullable=False),
+    sqlalchemy.Column("origin_url",
+                      sqlalchemy.String(1024),
+                      nullable=False,
+                      server_default=""),
+    sqlalchemy.Column("interval",
+                      sqlalchemy.Integer,
+                      server_default=text('300'),
+                      nullable=False),
+    sqlalchemy.Column("work_hours",
+                      sqlalchemy.String(32),
+                      server_default='0, 24',
+                      nullable=False),
+    sqlalchemy.Column("max_result_count",
+                      sqlalchemy.Integer,
+                      server_default=text('10'),
+                      nullable=False),
     sqlalchemy.Column("latest_result", sqlalchemy.TEXT),
     sqlalchemy.Column("result_list", sqlalchemy.TEXT),  # JSON list
-    sqlalchemy.Column(
-        "last_check_time",
-        sqlalchemy.TIMESTAMP,
-        server_default="1970-01-01 08:00:00",
-        nullable=False),
-    sqlalchemy.Column(
-        "next_check_time",
-        sqlalchemy.TIMESTAMP,
-        server_default="1970-01-01 08:00:00",
-        nullable=False),
-    sqlalchemy.Column(
-        "last_change_time",
-        sqlalchemy.TIMESTAMP,
-        server_default="1970-01-01 08:00:00",
-        index=True,
-        nullable=False),
+    sqlalchemy.Column("last_check_time",
+                      sqlalchemy.TIMESTAMP,
+                      server_default="1970-01-01 08:00:00",
+                      nullable=False),
+    sqlalchemy.Column("next_check_time",
+                      sqlalchemy.TIMESTAMP,
+                      server_default="1970-01-01 08:00:00",
+                      nullable=False),
+    sqlalchemy.Column("last_change_time",
+                      sqlalchemy.TIMESTAMP,
+                      server_default="1970-01-01 08:00:00",
+                      index=True,
+                      nullable=False),
     sqlalchemy.Column("custom_info",
                       sqlalchemy.TEXT(collation=Config.COLLATION)),
 )
@@ -95,45 +88,39 @@ host_rules = sqlalchemy.Table(
 metas = sqlalchemy.Table(
     "metas",
     metadata,
-    sqlalchemy.Column('key', sqlalchemy.String(64, collation=Config.COLLATION), primary_key=True),
+    sqlalchemy.Column('key',
+                      sqlalchemy.String(64, collation=Config.COLLATION),
+                      primary_key=True),
     sqlalchemy.Column('value', sqlalchemy.TEXT(collation=Config.COLLATION)),
 )
-if Config.db_url.startswith('mysql'):
-    for table in [tasks, host_rules, metas]:
-        table.append_column(
-            sqlalchemy.Column(
-                "ts_create",
-                sqlalchemy.TIMESTAMP,
-                server_default=func.now(),
-                nullable=False))
-        table.append_column(
-            sqlalchemy.Column(
-                "ts_update",
-                sqlalchemy.TIMESTAMP,
-                server_default=func.now(),
-                onupdate=func.now(),
-                nullable=False))
+feeds = sqlalchemy.Table(
+    "feeds",
+    metadata,
+    sqlalchemy.Column('id',
+                      sqlalchemy.Integer,
+                      primary_key=True,
+                      autoincrement=True),
+    sqlalchemy.Column('task_id', sqlalchemy.Integer, nullable=False),
+    sqlalchemy.Column("name",
+                      sqlalchemy.String(64, collation=Config.COLLATION),
+                      nullable=False),
+    # sqlalchemy.Column("tag",
+    #                   sqlalchemy.String(128, collation=Config.COLLATION),
+    #                   server_default="default",
+    #                   nullable=False),
+    sqlalchemy.Column("text", sqlalchemy.TEXT),
+    sqlalchemy.Column("url",
+                      sqlalchemy.String(1024),
+                      nullable=False,
+                      server_default=""),
+    sqlalchemy.Column("ts_create", sqlalchemy.TIMESTAMP, nullable=False),
+)
 
 
 def create_tables(db_url):
     try:
         engine = sqlalchemy.create_engine(db_url)
         metadata.create_all(engine)
-        # backward compatibility for tasks table without error column
-        sqls = [
-            'ALTER TABLE `tasks` ADD COLUMN `error` TEXT',
-        ]
-        if Config.db_url.startswith('mysql'):
-            sqls.extend([
-                'ALTER TABLE `tasks` ADD COLUMN `ts_create` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP',
-                'ALTER TABLE `host_rules` ADD COLUMN `ts_create` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP',
-                'ALTER TABLE `metas` ADD COLUMN `ts_create` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP',
-                'ALTER TABLE `tasks` ADD COLUMN `ts_update` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
-                'ALTER TABLE `host_rules` ADD COLUMN `ts_update` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
-                'ALTER TABLE `metas` ADD COLUMN `ts_update` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
-            ])
-        for sql in sqls:
-            ignore_error(engine.execute, sql)
     except BaseException:
         Config.logger.critical(f'Fatal error on creating Table: {format_exc()}')
         import os
@@ -223,20 +210,18 @@ class RuleStorageDB(RuleStorage):
         exist_host_rule = await self.get_host_rule(rule['host'])
         if exist_host_rule:
             query = "update host_rules set host_rule=:host_rule_string WHERE host = :host"
-            return await self.db.execute(
-                query=query,
-                values={
-                    'host_rule_string': rule.dumps(),
-                    'host': rule['host']
-                })
+            return await self.db.execute(query=query,
+                                         values={
+                                             'host_rule_string': rule.dumps(),
+                                             'host': rule['host']
+                                         })
         else:
             query = "INSERT INTO host_rules (host, host_rule) values (:host, :host_rule_string)"
-            return await self.db.execute(
-                query=query,
-                values={
-                    'host_rule_string': rule.dumps(),
-                    'host': rule['host']
-                })
+            return await self.db.execute(query=query,
+                                         values={
+                                             'host_rule_string': rule.dumps(),
+                                             'host': rule['host']
+                                         })
 
     async def pop_host_rule(self, host: str, commit=None):
         exist_host_rule = await self.get_host_rule(host)
@@ -264,52 +249,14 @@ class Task(BaseModel):
     next_check_time: datetime = date0
     last_change_time: datetime = date0
     custom_info: str = ''
-    if Config.db_url.startswith('mysql://'):
-        ts_create: Optional[datetime] = datetime.now()
-        ts_update: Optional[datetime] = datetime.now()
 
 
-@alru_cache(maxsize=Config.query_tasks_cache_maxsize)
-async def query_tasks(
-        task_name: Optional[str] = None,
-        task_id: Optional[int] = None,
-        page: int = 1,
-        page_size: int = Config.default_page_size,
-        order_by: str = 'last_change_time',
-        sort: str = 'desc',
-        tag: str = '',
-        task_ids: Tuple[int] = None,
-) -> Tuple[list, bool]:
-    offset = page_size * (page - 1)
-    query = tasks.select()
-    if task_ids:
-        query = query.where(tasks.c.task_id.in_(task_ids))
-    else:
-        if task_id is not None:
-            query = query.where(tasks.c.task_id == task_id)
-        if task_name is not None:
-            query = query.where(tasks.c.name == task_name)
-        if tag:
-            query = query.where(tasks.c.tag == tag)
-    if order_by and sort:
-        ob = getattr(tasks.c, order_by, None)
-        if ob is None:
-            raise ValueError(f'bad order_by {order_by}')
-        if sort.lower() == 'desc':
-            ob = sqlalchemy.desc(ob)
-        elif sort.lower() == 'asc':
-            ob = sqlalchemy.asc(ob)
-        else:
-            raise ValueError(
-                f"bad sort arg {sort} not in ('desc', 'asc', 'DESC', 'ASC')")
-        query = query.order_by(ob)
-    query = query.limit(page_size + 1).offset(offset)
-    _result = await Config.db.fetch_all(query=query)
-    has_more = len(_result) > page_size
-    result = [dict(i) for i in _result][:page_size]
-    Config.logger.info(
-        f'[Query] {len(result)} tasks (has_more={has_more}): {query}')
-    return result, has_more
+class Feed(BaseModel):
+    task_id: int
+    name: str
+    text: str
+    url: str
+    ts_create: datetime
 
 
 class Metas(object):
@@ -352,3 +299,106 @@ class Metas(object):
 
     def clear_cache(self):
         self._get.cache_clear()
+
+
+@alru_cache(maxsize=Config.query_tasks_cache_maxsize)
+async def query_tasks(
+        task_name: Optional[str] = None,
+        task_id: Optional[int] = None,
+        page: int = 1,
+        page_size: int = Config.default_page_size,
+        order_by: str = 'last_change_time',
+        sort: str = 'desc',
+        tag: str = '',
+        task_ids: Tuple[int] = None,
+) -> Tuple[List[dict], bool]:
+    # task_ids arg type is tuple for cache hashing
+    offset = page_size * (page - 1)
+    query = tasks.select()
+    if task_ids:
+        query = query.where(tasks.c.task_id.in_(task_ids))
+    else:
+        if task_id is not None:
+            query = query.where(tasks.c.task_id == task_id)
+        if task_name is not None:
+            query = query.where(tasks.c.name == task_name)
+        if tag:
+            query = query.where(tasks.c.tag == tag)
+    if order_by and sort:
+        ob = getattr(tasks.c, order_by, None)
+        if ob is None:
+            raise ValueError(f'bad order_by {order_by}')
+        if sort.lower() == 'desc':
+            ob = sqlalchemy.desc(ob)
+        elif sort.lower() == 'asc':
+            ob = sqlalchemy.asc(ob)
+        else:
+            raise ValueError(
+                f"bad sort arg {sort} not in ('desc', 'asc', 'DESC', 'ASC')")
+        query = query.order_by(ob)
+    query = query.limit(page_size + 1).offset(offset)
+    _result = await Config.db.fetch_all(query=query)
+    has_more = len(_result) > page_size
+    result = [dict(i) for i in _result][:page_size]
+    Config.logger.info(
+        f'[Query] {len(result)} tasks (has_more={has_more}): {query}')
+    return result, has_more
+
+
+@alru_cache(maxsize=Config.query_task_ids_cache_maxsize)
+async def query_task_ids(task_name: Optional[str] = None,
+                         tag: str = '') -> List[int]:
+    query = tasks.select()
+    if task_name is not None:
+        query = query.where(tasks.c.name == task_name)
+    if tag:
+        query = query.where(tasks.c.tag == tag)
+    _result = await Config.db.fetch_all(query=query)
+    result = [dict(i)['task_id'] for i in _result]
+    Config.logger.info(f'[Query] {len(result)} task ids: {query}')
+    return result
+
+
+@alru_cache(maxsize=Config.query_feeds_cache_maxsize)
+async def query_feeds(
+        task_name: Optional[str] = None,
+        task_id: Optional[int] = None,
+        page: int = 1,
+        page_size: int = Config.default_page_size,
+        order_by: str = 'id',
+        sort: str = 'desc',
+        tag: str = '',
+        task_ids: Tuple[int] = None,
+) -> Tuple[List[dict], bool]:
+    # task_ids arg type is tuple for cache hashing
+    offset = page_size * (page - 1)
+    query = feeds.select()
+    _task_ids = list(task_ids) if task_ids else []
+    if tag:
+        _task_ids += await query_task_ids(tag=tag)
+    if _task_ids:
+        query = query.where(feeds.c.task_id.in_(_task_ids))
+    else:
+        if task_id is not None:
+            query = query.where(feeds.c.task_id == task_id)
+        if task_name is not None:
+            query = query.where(feeds.c.name == task_name)
+    if order_by and sort:
+        ob = getattr(feeds.c, order_by, None)
+        if ob is None:
+            raise ValueError(f'bad order_by {order_by}')
+        if sort.lower() == 'desc':
+            ob = sqlalchemy.desc(ob)
+        elif sort.lower() == 'asc':
+            ob = sqlalchemy.asc(ob)
+        else:
+            raise ValueError(
+                f"bad sort arg {sort} not in ('desc', 'asc', 'DESC', 'ASC')")
+        query = query.order_by(ob)
+    query = query.limit(page_size + 1).offset(offset)
+    _result = await Config.db.fetch_all(query=query)
+    has_more = len(_result) > page_size
+    result = [dict(i) for i in _result][:page_size]
+    Config.logger.info(
+        f'[Query] {len(result)} feeds (has_more={has_more}): {query}')
+    return result, has_more
