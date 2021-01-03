@@ -291,11 +291,11 @@ async def save_feeds(tasks, db):
         for task in tasks:
             latest_result = loads(
                 task.latest_result) if task.latest_result else {}
+            text = latest_result.get('text') or latest_result.get('title') or ''
             value = {
                 'task_id': task.task_id,
                 'name': task.name,
-                'text': latest_result.get('text') or latest_result.get('title')
-                        or '',
+                'text': text,
                 'url': latest_result.get('url') or task.origin_url,
                 'ts_create': datetime.now(),
             }
