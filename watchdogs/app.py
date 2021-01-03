@@ -114,9 +114,12 @@ async def index(request: Request, tag: str = ''):
     rss_sign = Config.get_sign('/rss', f'tag={quoted_tag}')[1]
     lite_sign = Config.get_sign('/lite', f'tag={quoted_tag}')[1]
     feeds_sign = Config.get_sign('/feeds', f'tag={quoted_tag}')[1]
+    rss_feeds_sign = Config.get_sign('/rss_feeds', f'tag={quoted_tag}')[1]
     kwargs['rss_url'] = f'/rss?tag={quoted_tag}&sign={rss_sign}'
     kwargs['lite_url'] = f'/lite?tag={quoted_tag}&sign={lite_sign}'
     kwargs['feeds_url'] = f'/feeds?tag={quoted_tag}&sign={feeds_sign}'
+    kwargs[
+        'rss_feeds_url'] = f'/rss_feeds?tag={quoted_tag}&sign={rss_feeds_sign}'
     init_vars_json = dumps({
         'custom_links': Config.custom_links,
         'callback_workers': Config.callback_handler.workers,
@@ -512,25 +515,6 @@ async def lite(request: Request,
     return templates.TemplateResponse("lite.html", context=context)
 
 
-# @app.post("/feeds")
-# async def post_feeds(request: Request,
-#                     tag: str = '',
-#                     sign: str = '',
-#                     page: int = 1):
-#     task_id = loads(await request.body())['task_id']
-#     tasks, _ = await query_tasks(tag=tag, task_id=task_id)
-#     if tasks:
-#         task = tasks[0]
-#         try:
-#             result_list = loads(
-#                 task['result_list']) if task['result_list'] else []
-#         except JSONDecodeError:
-#             result_list = []
-#         return {'result_list': result_list}
-#     else:
-#         return {'result_list': []}
-
-
 @app.get("/feeds")
 async def feeds(
     request: Request,
@@ -576,6 +560,43 @@ async def feeds(
     else:
         last_page_url = ''
     context['last_page_url'] = last_page_url
-    rss_sign = Config.get_sign('/rss', f'tag={quoted_tag}')[1]
+    rss_sign = Config.get_sign('/rss_feeds', f'tag={quoted_tag}')[1]
     context['rss_url'] = f'/rss_feeds?tag={quoted_tag}&sign={rss_sign}'
     return templates.TemplateResponse("feeds.html", context=context)
+
+
+@app.get("/rss_feeds")
+async def rss_feeds(request: Request,
+                    tag: str = '',
+                    sign: str = '',
+                    host: str = Header('', alias='Host')):
+    feeds, _ = await query_feeds(tag=tag)
+    source_link = f'https://{host}'
+    xml_data: dict = {
+        'channel': {
+            'title': 'Watchdogs Timeline',
+            'description': f'Watchdog on web change, v{__version__}.',
+            'link': source_link,
+        },
+        'items': []
+    }
+    for feed in feeds:
+        pubDate: str = feed['ts_create'].strftime(
+            format='%a, %d %b %Y %H:%M:%S')
+        link: str = feed['url']
+        description: str = feed['text']
+        title: str = f'{feed["name"]}#{description[:80]}'
+        item: dict = {
+            'title': title,
+            'link': link,
+            'guid': str(feed['id']),
+            'description': description,
+            'pubDate': pubDate
+        }
+        xml_data['items'].append(item)
+    xml: str = gen_rss(xml_data)
+    response = Response(
+        content=xml,
+        media_type="application/xml",
+        headers={'Content-Type': 'application/xml; charset="utf-8"'})
+    return response
