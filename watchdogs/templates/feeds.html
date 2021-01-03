@@ -6,7 +6,7 @@
     <meta name="referrer" content="never" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <link rel="shortcut icon" href="/static/img/favicon.svg" type="image/icon" />
-    <title>Watchdogs Lite v{{version}}</title>
+    <title>Watchdogs Timeline v{{version}}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <style>
@@ -50,7 +50,7 @@
             width: 100%;
         }
 
-        div.tasks {
+        div.feeds {
             width: 100%;
             display: flex;
             flex-direction: column;
@@ -60,7 +60,7 @@
             align-content: stretch;
         }
 
-        div.task {
+        div.feed {
             background-color: white;
             margin: 5px 0 5px 0;
             padding: 0 1.5em 0px 1.5em;
@@ -69,11 +69,11 @@
             box-shadow: 1px 5px 15px rgba(0, 0, 0, 0.1);
         }
 
-        div.task .title {
+        div.feed .title {
             margin-bottom: 0;
         }
 
-        div.task .desc {
+        div.feed .desc {
             color: #999;
             padding-left: 0.2em;
             font-size: 0.8em;
@@ -84,7 +84,7 @@
             -webkit-line-clamp: 2;
         }
 
-        div.task .task-time {
+        div.feed .task-time {
             color: #999;
             font-size: 0.7em;
             padding: 8px 0 0 0;
@@ -126,10 +126,6 @@
             text-shadow: black 8px 8px 8px;
         }
 
-        .view-more {
-            font-size: 0.6em;
-        }
-
         .result-list>ol {
             padding-left: 1em;
             font-size: 0.6em;
@@ -137,16 +133,6 @@
 
         .result-list a {
             color: #0065b5;
-        }
-
-        .error {
-            color: #ebb563;
-            font-size: 0.5em;
-            overflow-wrap: break-word;
-        }
-
-        .task.error-task {
-            border: 1px solid #ebb563;
         }
 
         .pages {
@@ -164,6 +150,10 @@
         .rss {
             background-color: #eaedf066;
         }
+
+        .date-line {
+            text-align: center;
+        }
     </style>
 </head>
 
@@ -173,30 +163,27 @@
             <h1><a href="/">Watchdogs</a></h1>
         </div>
         <div class="tasks-main">
-            <div class="tasks">
-                {%- if not tasks -%}
+            <div class="feeds">
+                {%- if not feeds -%}
                 <p style="text-align: center;">No Tasks.</p>
-                {% endif %} {% for task in tasks %}
-                <div class="task{{' error-task' if task.error else ''}}" id="task-{{task.task_id}}">
+                {% endif %}
+                {% for feed in feeds %}
+                {%- if feed.get("name") -%}
+                <div class="feed" id="task-{{feed.task_id}}">
                     <h3 class="title">
-                        <a href="{{task.url}}" target="_blank">{{task.name}}</a>
+                        <a href="{{feed.url}}" target="_blank">{{feed.name}}</a>
                     </h3>
-                    <p class="desc">{{task.text}}</p>
-                    <p title="Click to show more" class="task-time" onclick="show_more({{task.task_id}})">
-                        <span>{{ '✔' if task.enable else '✖'}}</span>
-                        <span class="ts_create">{{task.last_change_time.strftime('%Y-%m-%d %H:%M:%S')}}</span>
-                        <!-- <span class="source">{{task.name}}</span> -->
-                        <span class="timeago"> - {{task.timeago}} ago</span>
-                        <span class="emoji">📂</span>
-                        <span class="view-more">View More</span>
-                        {%- if task.error -%}
-                        <br />
-                        <span class="error">
-                            Error: {{task.error}}
-                        </span>
-                        {% endif %}
+                    <p class="desc">{{feed.text}}</p>
+                    <p title="Click to show more" class="task-time">
+                        <span class="ts_create">{{feed.ts_create.strftime('%Y-%m-%d %H:%M:%S')}}</span>
+                        <!-- <span class="source">{{feed.name}}</span> -->
+                        <span class="timeago"> - {{feed.timeago}} ago</span>
                     </p>
                 </div>
+                {% endif %}
+                {%- if feed.get("current_date") -%}
+                <h3 class="date-line">{{feed["current_date"]}}</h3>
+                {% endif %}
                 {% endfor %}
             </div>
         </div>
@@ -211,55 +198,7 @@
         </div>
     </div>
     <script>
-        async function show_more(task_id) {
-            let node = document.querySelector("#task-" + task_id + ">.result-list");
-            if (!node) {
-                node = document.createElement("p");
-                node.className = "result-list";
-                document.querySelector("#task-" + task_id).appendChild(node);
-            }
-            if (node.innerHTML) {
-                node.innerHTML = "";
-                return;
-            }
-            let response = await fetch(document.location, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    task_id: task_id,
-                }),
-            });
-            if (response.ok) {
-                let result_list = (await response.json()).result_list;
-                let html = "<ol>";
-                result_list.forEach((item) => {
-                    let text = item.result.title || item.result.text || "";
-                    let url = item.result.url || "";
-                    if (url) {
-                        url = 'href="' + url + '"';
-                    }
-                    let time = item.time || "";
-                    let line =
-                        "<li><a " +
-                        url +
-                        ' target="_blank">' +
-                        time +
-                        " - " +
-                        unescape(text) +
-                        "</a></li>";
-                    html += line;
-                });
-                if (result_list.length == 0) {
-                    html += "No results.";
-                }
-                html += "</ol>";
-                node.innerHTML = html;
-            } else {
-                alert("HTTP-Error: " + response.status);
-            }
-        }
+
     </script>
 </body>
 

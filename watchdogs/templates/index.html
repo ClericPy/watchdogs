@@ -133,6 +133,14 @@
                                 <el-button title="Lite page for mobile view" type="success" style="margin: 0;"
                                     icon="el-icon-mobile-phone"></el-button>
                             </a>
+                            <a href="{{rss_feeds_url}}" target="_blank" rel="noopener noreferrer" style="margin: 0;">
+                                <el-button title="RSS Timeline" style="margin: 0;" type="warning" icon="el-icon-star-on">
+                                </el-button>
+                            </a>
+                            <a href="{{feeds_url}}" target="_blank" rel="noopener noreferrer" style="margin: 0;">
+                                <el-button title="Timeline Feeds" type="success" style="margin: 0;"
+                                    icon="el-icon-s-operation"></el-button>
+                            </a>
                             <el-popover placement="top-start" width="200" trigger="hover">
                                 <a v-for="(a,index) in custom_links" :href="a.url" :title="a.desc || ''"
                                     :name="a.name || a.label" target="_blank">
@@ -218,7 +226,8 @@
                     <el-button @click="view_crawler_rule_by_req(new_task_form.request_args)" size="mini"
                         icon="el-icon-view"><b>Rule</b></el-button>
                     <el-button @click="view_host_by_req(new_task_form.request_args)" size="mini" icon="el-icon-view">
-                        <b>Host</b></el-button>
+                        <b>Host</b>
+                    </el-button>
                     <span>
                         | "retry": 2, "timeout": 3, "ssl": false, and other args refer to
                         <a href="https://docs.aiohttp.org/en/stable/client_reference.html#aiohttp.ClientSession.request"

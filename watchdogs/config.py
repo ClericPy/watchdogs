@@ -60,6 +60,7 @@ def get_sign(path, query):
             given_sign = value
         else:
             query_list.append(f'{key}={value}')
+    query_list.sort()
     valid_sign = md5(f'{path}?{"&".join(query_list)}')
     return given_sign, valid_sign
 
@@ -160,7 +161,9 @@ class Config:
         'dispatch': auth_checker
     }]
     md5_cache_maxsize = 128
+    query_task_ids_cache_maxsize = 128
     query_tasks_cache_maxsize = 128
+    query_feeds_cache_maxsize = 128
     metas_cache_maxsize = 128
     sign_cache_maxsize = 128
     _md5 = _md5
