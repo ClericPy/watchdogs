@@ -438,7 +438,7 @@ async def rss(request: Request,
             logger.error(f'latest_result is list: {latest_result}')
         link: str = latest_result.get('url') or task['origin_url']
         description: str = latest_result.get('text') or ''
-        title: str = f'{task["name"]}#{latest_result.get("title", description[:80])}'
+        title: str = f'{task["name"]}#{latest_result.get("title", description[:Config.TEXT_SLICE_LENGTH])}'
         item: dict = {
             'title': title,
             'link': link,
@@ -585,7 +585,7 @@ async def rss_feeds(request: Request,
             format='%a, %d %b %Y %H:%M:%S')
         link: str = feed['url']
         description: str = feed['text']
-        title: str = f'{feed["name"]}#{description[:80]}'
+        title: str = f'{feed["name"]}#{description[:Config.TEXT_SLICE_LENGTH]}'
         item: dict = {
             'title': title,
             'link': link,
