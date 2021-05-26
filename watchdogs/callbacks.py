@@ -6,7 +6,6 @@ from typing import Dict, Type
 
 from torequests.utils import ttime
 
-from .config import Config
 from .utils import ensure_await_result
 
 
@@ -94,6 +93,7 @@ Wechat notify toolkit.
     name = "server_chan"
 
     # doc = 'http://sc.ftqq.com/'
+    TEXT_SLICE_LENGTH = 200
 
     def __init__(self):
         from torequests.dummy import Requests
@@ -108,7 +108,7 @@ Wechat notify toolkit.
         latest_result = loads(task.latest_result or '{}')
         text = latest_result.get('text') or ''
         url = latest_result.get('url') or task.origin_url
-        title = f'{task.name}#{text[:Config.TEXT_SLICE_LENGTH]}'
+        title = f'{task.name}#{text[:self.TEXT_SLICE_LENGTH]}'
         body = f'{url}\n\n{text}'
         oks = []
         for key in set(arg.strip().split()):
