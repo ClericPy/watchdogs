@@ -261,7 +261,7 @@ async def _crawl_once(task_name: Optional[str] = None, chunk_size: int = 20):
         )
         for task in changed_tasks:
             ensure_future(try_catch(Config.callback_handler.callback, task))
-        await save_feeds(changed_tasks, db)
+        await save_feeds(changed_tasks, db, since_time=ttime_now)
     else:
         logger.info(f'Crawl task_name={task_name} finished. 0 todo.')
     if CLEAR_CACHE_NEEDED:
@@ -283,23 +283,35 @@ async def crawl_once(task_name: Optional[str] = None):
         return result
 
 
-async def save_feeds(tasks, db):
+async def save_feeds(tasks, db, since_time=None):
     if not tasks:
         return
     try:
         values = []
         for task in tasks:
-            latest_result = loads(
-                task.latest_result) if task.latest_result else {}
-            text = latest_result.get('text') or latest_result.get('title') or ''
-            value = {
-                'task_id': task.task_id,
-                'name': task.name,
-                'text': text,
-                'url': latest_result.get('url') or task.origin_url,
-                'ts_create': datetime.now(),
-            }
-            values.append(value)
+            result_list = loads(task.result_list) if task.result_list else []
+            if not result_list:
+                continue
+            for index, item in enumerate(result_list):
+                _result = item.get('result')
+                if not _result:
+                    continue
+                item_time = item.get('time', '')
+                if since_time:
+                    if item_time and item_time < since_time:
+                        continue
+                elif index > 0:
+                    break
+                text = _result.get('title') or _result.get('text') or ''
+                value = {
+                    'task_id': task.task_id,
+                    'name': task.name,
+                    'text': text,
+                    'url': _result.get('url') or task.origin_url,
+                    'ts_create': datetime.now(),
+                }
+                values.append(value)
+
         query = "INSERT INTO feeds (`task_id`, `name`, `text`, `url`, `ts_create`) values (:task_id, :name, :text, :url, :ts_create)"
         result = await db.execute_many(query=query, values=values)
         Config.logger.info(f'Insert task logs success: ({len(values)})')
