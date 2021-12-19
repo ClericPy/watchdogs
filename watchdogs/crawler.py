@@ -41,8 +41,8 @@ class UpdateTaskQuery:
 
 
 def find_next_check_time(
-        task: Task,
-        now: Optional[datetime] = None,
+    task: Task,
+    now: Optional[datetime] = None,
 ) -> Tuple[bool, datetime]:
     '''
 Three kinds of format:
@@ -239,12 +239,15 @@ async def _crawl_once(task_name: Optional[str] = None, chunk_size: int = 20):
                 except JSONDecodeError:
                     old_result_list = []
                 # older insert first, keep the newer is on the top
+                new_seeds = []
                 for result in to_insert_result_list[::-1]:
                     # result is dict, not json string
                     old_result_list.insert(0, {
                         'result': result,
                         'time': ttime_now
                     })
+                    new_seeds.append(result)
+                await save_feed(new_seeds, db, task)
                 new_result_list = dumps(old_result_list[:task.max_result_count])
                 query.add('result_list', new_result_list)
                 logger.info(f'[Updated] {task.name}. +++')
@@ -261,7 +264,7 @@ async def _crawl_once(task_name: Optional[str] = None, chunk_size: int = 20):
         )
         for task in changed_tasks:
             ensure_future(try_catch(Config.callback_handler.callback, task))
-        await save_feeds(changed_tasks, db, since_time=ttime_now)
+        query_feeds.cache_clear()
     else:
         logger.info(f'Crawl task_name={task_name} finished. 0 todo.')
     if CLEAR_CACHE_NEEDED:
@@ -283,39 +286,25 @@ async def crawl_once(task_name: Optional[str] = None):
         return result
 
 
-async def save_feeds(tasks, db, since_time=None):
-    if not tasks:
+async def save_feed(new_seeds, db, task):
+    if not new_seeds:
         return
     try:
         values = []
-        for task in tasks:
-            result_list = loads(task.result_list) if task.result_list else []
-            if not result_list:
-                continue
-            for index, item in enumerate(result_list):
-                _result = item.get('result')
-                if not _result:
-                    continue
-                item_time = item.get('time', '')
-                if since_time:
-                    if item_time and item_time < since_time:
-                        continue
-                elif index > 0:
-                    break
-                text = _result.get('title') or _result.get('text') or ''
-                value = {
-                    'task_id': task.task_id,
-                    'name': task.name,
-                    'text': text,
-                    'url': _result.get('url') or task.origin_url,
-                    'ts_create': datetime.now(),
-                }
-                values.append(value)
+        for result in new_seeds:
+            value = {
+                'task_id': task.task_id,
+                'name': task.name,
+                'text': result.get('title') or result.get('text') or '',
+                'url': result.get('url') or task.origin_url,
+                'ts_create': datetime.now(),
+            }
+            values.append(value)
 
         query = "INSERT INTO feeds (`task_id`, `name`, `text`, `url`, `ts_create`) values (:task_id, :name, :text, :url, :ts_create)"
         result = await db.execute_many(query=query, values=values)
-        Config.logger.info(f'Insert task logs success: ({len(values)})')
-        query_feeds.cache_clear()
+        Config.logger.info(
+            f'Insert task seeds success({task.name}): ({len(values)})')
         return result
     except Exception:
-        Config.logger.error(f'Inserting task logs failed: {format_exc()}')
+        Config.logger.error(f'Inserting task seeds failed({task.name}): {format_exc()}')
