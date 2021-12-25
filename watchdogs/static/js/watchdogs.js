@@ -248,7 +248,7 @@ var Main = {
                     origin_url: "",
                     interval: 300,
                     work_hours: "0, 24",
-                    max_result_count: 10,
+                    max_result_count: 30,
                     result_list: "[]",
                     custom_info: "",
                 }

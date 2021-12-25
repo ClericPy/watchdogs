@@ -242,7 +242,7 @@ class Task(BaseModel):
     origin_url: str = ''
     interval: int = 300
     work_hours: str = '0, 24'
-    max_result_count: int = 10
+    max_result_count: int = 30
     latest_result: str = '{}'
     result_list = '[]'
     last_check_time: datetime = date0
