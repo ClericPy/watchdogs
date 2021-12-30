@@ -67,6 +67,7 @@ def setup_logger():
 
 def setup_models():
     from databases import Database
+
     # lazy import models to config cache size, means set cache after run main.init_app
     from .models import Metas, RuleStorageDB, create_tables
 
@@ -80,20 +81,21 @@ def setup_models():
 
 
 async def setup_uniparser():
-    import re
     import datetime
     import math
     import random
+    import re
+
+    import uniparser.fastapi_ui
     from torequests.utils import (curlparse, escape, guess_interval,
                                   itertools_chain, json, parse_qs, parse_qsl,
                                   ptime, quote, quote_plus, slice_by_size,
                                   slice_into_pieces, split_n, timeago, ttime,
                                   unescape, unique, unquote, unquote_plus,
                                   urljoin, urlparse, urlsplit, urlunparse)
-    from uniparser.utils import TorequestsAiohttpAsyncAdapter
-    from uniparser.parsers import UDFParser
     from uniparser.config import GlobalConfig
-    import uniparser.fastapi_ui
+    from uniparser.parsers import UDFParser
+    from uniparser.utils import TorequestsAiohttpAsyncAdapter
     UDFParser._GLOBALS_ARGS.update({
         're': re,
         'datetime': datetime,
@@ -194,6 +196,7 @@ async def setup_md5_salt():
 
 async def setup_crawler():
     from uniparser import Crawler
+
     from .callbacks import CallbackHandler
 
     crawler = Crawler(uniparser=Config.uniparser, storage=Config.rule_db)
@@ -221,8 +224,8 @@ async def refresh_token():
 
 
 async def setup_background():
-    from .crawler import crawl_once
     from .background import background_loop, db_backup_handler
+    from .crawler import crawl_once
     Config.background_funcs.append(crawl_once)
     if Config.db_backup_function:
         Config.background_funcs.append(db_backup_handler)
@@ -267,7 +270,10 @@ async def setup_app(app):
     await setup_crawler()
     # 3
     await setup_background()
-    Config.logger.info(f'App start success, CONFIG_DIR: {Config.CONFIG_DIR}')
+    from . import __version__
+    Config.logger.info(
+        f'App started, the current version is {__version__}, CONFIG_DIR: {Config.CONFIG_DIR}'
+    )
 
 
 async def release_app(app):
