@@ -11,7 +11,8 @@ from uniparser import Crawler, RuleNotFoundError
 
 from .config import Config
 from .models import Database, Task, query_feeds, query_tasks, tasks
-from .utils import check_work_time, get_watchdog_result, solo, try_catch
+from .utils import (check_work_time, get_result_key, get_watchdog_result, solo,
+                    try_catch)
 
 
 class UpdateTaskQuery:
@@ -139,7 +140,7 @@ async def crawl(task: Task):
                 # use force crawl one web UI for more log
                 logger.info(f'{task.name} Crawl success: {result_list}'[:150])
         else:
-            error = 'Invalid crawl_result against schema {rule_name: [{"text": "Required", "url": "Optional", "__key__": "Optional"}]}, given is %r' % crawl_result
+            error = 'Invalid crawl_result against schema {rule_name: [{"text": "Required", "url": "Optional", "key": "Optional", "unique": "Optional"}]}, given is %r' % crawl_result
             logger.error(f'{task.name}: {error}')
             result_list = [{"text": error}]
     return task, error, result_list
@@ -213,14 +214,26 @@ async def _crawl_once(task_name: Optional[str] = None, chunk_size: int = 20):
             # compare latest_result and new list
             # later first, just like the saved result_list sortings
             old_latest_result = loads(task.latest_result)
-            # try to use the __key__
-            old_latest_result_key = old_latest_result.get(
-                '__key__', old_latest_result)
+            # try to use the key, or it self
+            old_latest_result_key = get_result_key(old_latest_result)
+            try:
+                old_result_list = loads(
+                    task.result_list) if task.result_list else []
+            except JSONDecodeError:
+                old_result_list = []
+            if old_latest_result.get('unique'):
+                # unique mode will skip all the Duplicated results
+                exist_keys = {
+                    get_result_key(_old_result['result'])
+                    for _old_result in old_result_list
+                }
+            else:
+                exist_keys = {old_latest_result_key}
             # list of dict
             to_insert_result_list = []
             for result in result_list:
-                result_key = result.get('__key__', result)
-                if result_key == old_latest_result_key:
+                result_key = get_result_key(result)
+                if result_key in exist_keys:
                     break
                 to_insert_result_list.append(result)
             if to_insert_result_list:
@@ -233,11 +246,6 @@ async def _crawl_once(task_name: Optional[str] = None, chunk_size: int = 20):
                                           sort_keys=True)
                 query.add('latest_result', new_latest_result)
                 query.add('last_change_time', now)
-                try:
-                    old_result_list = loads(
-                        task.result_list) if task.result_list else []
-                except JSONDecodeError:
-                    old_result_list = []
                 # older insert first, keep the newer is on the top
                 new_seeds = []
                 for result in to_insert_result_list[::-1]:
@@ -307,4 +315,5 @@ async def save_feed(new_seeds, db, task):
             f'Insert task seeds success({task.name}): ({len(values)})')
         return result
     except Exception:
-        Config.logger.error(f'Inserting task seeds failed({task.name}): {format_exc()}')
+        Config.logger.error(
+            f'Inserting task seeds failed({task.name}): {format_exc()}')

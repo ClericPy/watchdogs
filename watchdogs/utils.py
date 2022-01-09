@@ -1,7 +1,7 @@
 import re
 from datetime import datetime
 from inspect import isawaitable
-from json import loads
+from json import dumps, loads
 from logging import getLogger
 from sys import _getframe
 from traceback import format_exc
@@ -213,7 +213,7 @@ def test_result_schema():
         if text is None:
             return get_watchdog_result(item.popitem()[1])
         result = {'text': str(text)}
-        for key in ['__key__', 'cover', 'url', 'title']:
+        for key in ['__key__', 'unique', 'key', 'cover', 'url', 'title']:
             if key in item:
                 value = item[key]
                 if value and str(value):
@@ -297,6 +297,14 @@ def gen_rss(data):
 </channel>
 </rss>
 '''
+
+
+def get_result_key(result: dict):
+    key = result.get('__key__', result.get('key'))
+    if key:
+        return key
+    else:
+        return dumps(result, sort_keys=True)
 
 
 solo = SoloLock()
