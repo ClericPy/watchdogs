@@ -667,7 +667,9 @@ var Main = {
                 )
         },
         show_work_hours_doc() {
-            let html = `<pre><code>${this.work_hours_doc}</code></pre>`
+            let html = `<textarea style="height: ${
+                (window.innerHeight * 3) / 4
+            }px;width: 100%;">${this.work_hours_doc}</textarea  >`
             this.$alert(html, "work_hours format doc", {
                 dangerouslyUseHTMLString: true,
                 closeOnClickModal: true,
