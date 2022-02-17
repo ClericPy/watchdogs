@@ -7,6 +7,7 @@ from typing import Optional
 
 import aiofiles
 from fastapi import Cookie, FastAPI, Header
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from starlette.requests import Request
 from starlette.responses import (HTMLResponse, JSONResponse, RedirectResponse,
@@ -27,6 +28,7 @@ from .utils import format_size, gen_rss
 
 description = "Watchdogs to keep an eye on the world's change.\nRead more: [https://github.com/ClericPy/watchdogs](https://github.com/ClericPy/watchdogs)"
 app = FastAPI(title="Watchdogs", description=description, version=__version__)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 sub_app.openapi_prefix = '/uniparser'
 app.mount("/uniparser", sub_app)
 app.mount("/static",
