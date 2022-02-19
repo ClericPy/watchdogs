@@ -21,7 +21,7 @@ from uniparser.utils import get_host
 from . import __version__
 from .config import md5_checker
 from .crawler import crawl_once, find_next_check_time
-from .models import Task, query_feeds, query_tasks, tasks
+from .models import Task, query_feeds, query_tasks, tasks, query_group_task_ids
 from .settings import (Config, get_host_freq_list, refresh_token, release_app,
                        set_host_freq, setup_app)
 from .utils import format_size, gen_rss
@@ -418,11 +418,25 @@ async def update_host_freq(host: str,
 
 
 @app.get("/rss")
-async def rss(request: Request,
-              tag: str = '',
-              sign: str = '',
-              host: str = Header('', alias='Host')):
-    tasks, _ = await query_tasks(tag=tag)
+async def rss(
+        request: Request,
+        tag: str = '',
+        sign: str = '',
+        host: str = Header('', alias='Host'),
+        group_ids: str = '',
+):
+    if group_ids:
+        task_ids = tuple(await query_group_task_ids(group_ids))
+        if not task_ids:
+            return JSONResponse(
+                status_code=404,
+                content={
+                    "message": 'query no tasks',
+                },
+            )
+        tasks, _ = await query_tasks(task_ids=task_ids)
+    else:
+        tasks, _ = await query_tasks(tag=tag)
     source_link = f'https://{host}'
     xml_data: dict = {
         'channel': {
@@ -458,12 +472,9 @@ async def rss(request: Request,
 
 
 @app.post("/lite")
-async def post_lite(request: Request,
-                    tag: str = '',
-                    sign: str = '',
-                    page: int = 1):
+async def post_lite(request: Request, tag: str = '', sign: str = ''):
     task_id = loads(await request.body())['task_id']
-    tasks, _ = await query_tasks(tag=tag, task_id=task_id)
+    tasks, _ = await query_tasks(task_id=task_id)
     if tasks:
         task = tasks[0]
         try:
@@ -477,12 +488,30 @@ async def post_lite(request: Request,
 
 
 @app.get("/lite")
-async def lite(request: Request,
-               tag: str = '',
-               sign: str = '',
-               page: int = 1,
-               page_size: int = Config.default_page_size):
-    tasks, has_more = await query_tasks(tag=tag, page=page, page_size=page_size)
+async def lite(
+    request: Request,
+    tag: str = '',
+    sign: str = '',
+    page: int = 1,
+    page_size: int = Config.default_page_size,
+    group_ids: str = '',
+):
+    if group_ids:
+        task_ids = tuple(await query_group_task_ids(group_ids))
+        if not task_ids:
+            return JSONResponse(
+                status_code=404,
+                content={
+                    "message": 'query no tasks',
+                },
+            )
+        tasks, has_more = await query_tasks(task_ids=task_ids,
+                                            page=page,
+                                            page_size=page_size)
+    else:
+        tasks, has_more = await query_tasks(tag=tag,
+                                            page=page,
+                                            page_size=page_size)
     now = datetime.now()
     for task in tasks:
         result = loads(task['latest_result'] or '{}')
@@ -525,8 +554,24 @@ async def feeds(
     sign: str = '',
     page: int = 1,
     page_size: int = Config.default_page_size,
+    group_ids: str = '',
 ):
-    feeds, has_more = await query_feeds(tag=tag, page=page, page_size=page_size)
+    if group_ids:
+        task_ids = tuple(await query_group_task_ids(group_ids))
+        if not task_ids:
+            return JSONResponse(
+                status_code=404,
+                content={
+                    "message": 'query no tasks',
+                },
+            )
+        feeds, has_more = await query_feeds(task_ids=task_ids,
+                                            page=page,
+                                            page_size=page_size)
+    else:
+        feeds, has_more = await query_feeds(tag=tag,
+                                            page=page,
+                                            page_size=page_size)
     now = datetime.now()
     _feeds = []
     current_date = None
@@ -571,8 +616,20 @@ async def feeds(
 async def rss_feeds(request: Request,
                     tag: str = '',
                     sign: str = '',
-                    host: str = Header('', alias='Host')):
-    feeds, _ = await query_feeds(tag=tag)
+                    host: str = Header('', alias='Host'),
+                    group_ids: str = ''):
+    if group_ids:
+        task_ids = tuple(await query_group_task_ids(group_ids))
+        if not task_ids:
+            return JSONResponse(
+                status_code=404,
+                content={
+                    "message": 'query no tasks',
+                },
+            )
+        feeds, _ = await query_feeds(task_ids=task_ids)
+    else:
+        feeds, _ = await query_feeds(tag=tag)
     source_link = f'https://{host}'
     xml_data: dict = {
         'channel': {
