@@ -161,6 +161,7 @@ class Config:
         'dispatch': auth_checker
     }]
     md5_cache_maxsize = 128
+    query_group_task_ids_cache_maxsize = 128
     query_task_ids_cache_maxsize = 128
     query_tasks_cache_maxsize = 128
     query_feeds_cache_maxsize = 128

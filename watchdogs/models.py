@@ -1,6 +1,7 @@
+import re
 from datetime import datetime
 from traceback import format_exc
-from typing import List, Optional, Tuple
+from typing import List, Optional, Set, Tuple, Union
 
 import sqlalchemy
 from async_lru import alru_cache
@@ -113,6 +114,19 @@ feeds = sqlalchemy.Table(
                       sqlalchemy.String(1024),
                       nullable=False,
                       server_default=""),
+    sqlalchemy.Column("ts_create", sqlalchemy.TIMESTAMP, nullable=False),
+)
+groups = sqlalchemy.Table(
+    "groups",
+    metadata,
+    sqlalchemy.Column('id',
+                      sqlalchemy.Integer,
+                      primary_key=True,
+                      autoincrement=True),
+    sqlalchemy.Column("name",
+                      sqlalchemy.String(64, collation=Config.COLLATION),
+                      nullable=False),
+    sqlalchemy.Column("task_ids", sqlalchemy.TEXT),
     sqlalchemy.Column("ts_create", sqlalchemy.TIMESTAMP, nullable=False),
 )
 
@@ -303,14 +317,14 @@ class Metas(object):
 
 @alru_cache(maxsize=Config.query_tasks_cache_maxsize)
 async def query_tasks(
-        task_name: Optional[str] = None,
-        task_id: Optional[int] = None,
-        page: int = 1,
-        page_size: int = Config.default_page_size,
-        order_by: str = 'last_change_time',
-        sort: str = 'desc',
-        tag: str = '',
-        task_ids: Tuple[int] = None,
+    task_name: Optional[str] = None,
+    task_id: Optional[int] = None,
+    page: int = 1,
+    page_size: int = Config.default_page_size,
+    order_by: str = 'last_change_time',
+    sort: str = 'desc',
+    tag: str = '',
+    task_ids: Tuple[int] = None,
 ) -> Tuple[List[dict], bool]:
     # task_ids arg type is tuple for cache hashing
     offset = page_size * (page - 1)
@@ -359,16 +373,45 @@ async def query_task_ids(task_name: Optional[str] = None,
     return result
 
 
+@alru_cache(maxsize=Config.query_group_task_ids_cache_maxsize)
+async def query_group_task_ids(
+    group_id: int = None,
+    group_ids: Union[str, Tuple[int]] = None,
+) -> List[int]:
+    _group_ids: Set[int] = set()
+    if group_id:
+        _group_ids.add(int(group_id))
+    if group_ids:
+        if isinstance(group_ids, str):
+            for _group_id in re.findall(r'\d+', group_ids):
+                _group_ids.add(int(_group_id))
+        elif isinstance(group_ids, tuple):
+            _group_ids.add(int(_group_id))
+    task_ids: Set[int] = set()
+    for _group_id in _group_ids:
+        query = groups.select()
+        query = query.where(groups.c.id == _group_id)
+        _result = await Config.db.fetch_one(query=query)
+        if _result:
+            task_ids_str = dict(_result).get('task_ids') or ''
+            for task_id in task_ids_str.split(','):
+                task_ids.add(int(task_id))
+    Config.logger.info(
+        f'[Query] {len(task_ids)} task_ids by group {group_id or group_ids}: {query}'
+    )
+    return list(task_ids)
+
+
 @alru_cache(maxsize=Config.query_feeds_cache_maxsize)
 async def query_feeds(
-        task_name: Optional[str] = None,
-        task_id: Optional[int] = None,
-        page: int = 1,
-        page_size: int = Config.default_page_size,
-        order_by: str = 'id',
-        sort: str = 'desc',
-        tag: str = '',
-        task_ids: Tuple[int] = None,
+    task_name: Optional[str] = None,
+    task_id: Optional[int] = None,
+    page: int = 1,
+    page_size: int = Config.default_page_size,
+    order_by: str = 'id',
+    sort: str = 'desc',
+    tag: str = '',
+    task_ids: Tuple[int] = None,
 ) -> Tuple[List[dict], bool]:
     # task_ids arg type is tuple for cache hashing
     offset = page_size * (page - 1)
