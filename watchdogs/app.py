@@ -13,7 +13,7 @@ from starlette.requests import Request
 from starlette.responses import (HTMLResponse, JSONResponse, RedirectResponse,
                                  Response)
 from starlette.templating import Jinja2Templates
-from torequests.utils import quote_plus, timeago, ttime
+from torequests.utils import timeago, ttime
 from uniparser import CrawlerRule, Uniparser
 from uniparser.fastapi_ui import app as sub_app
 from uniparser.utils import get_host
@@ -112,16 +112,10 @@ async def index(request: Request, tag: str = ''):
     kwargs: dict = {'request': request}
     kwargs['cdn_urls'] = Config.cdn_urls
     kwargs['version'] = __version__
-    quoted_tag = quote_plus(tag)
-    rss_sign = Config.get_sign('/rss', f'tag={quoted_tag}')[1]
-    lite_sign = Config.get_sign('/lite', f'tag={quoted_tag}')[1]
-    feeds_sign = Config.get_sign('/feeds', f'tag={quoted_tag}')[1]
-    rss_feeds_sign = Config.get_sign('/rss_feeds', f'tag={quoted_tag}')[1]
-    kwargs['rss_url'] = f'/rss?tag={quoted_tag}&sign={rss_sign}'
-    kwargs['lite_url'] = f'/lite?tag={quoted_tag}&sign={lite_sign}'
-    kwargs['feeds_url'] = f'/feeds?tag={quoted_tag}&sign={feeds_sign}'
-    kwargs[
-        'rss_feeds_url'] = f'/rss_feeds?tag={quoted_tag}&sign={rss_feeds_sign}'
+    kwargs['rss_url'] = Config.get_route('/rss', tag=tag)
+    kwargs['lite_url'] = Config.get_route('/lite', tag=tag)
+    kwargs['feeds_url'] = Config.get_route('/feeds', tag=tag)
+    kwargs['rss_feeds_url'] = Config.get_route('/rss_feeds', tag=tag)
     init_vars_json = dumps({
         'custom_links': Config.custom_links,
         'callback_workers': Config.callback_handler.workers,
@@ -493,7 +487,6 @@ async def lite(
     tag: str = '',
     sign: str = '',
     page: int = 1,
-    page_size: int = Config.default_page_size,
     group_ids: str = '',
 ):
     if group_ids:
@@ -505,13 +498,9 @@ async def lite(
                     "message": 'query no tasks',
                 },
             )
-        tasks, has_more = await query_tasks(task_ids=task_ids,
-                                            page=page,
-                                            page_size=page_size)
+        tasks, has_more = await query_tasks(task_ids=task_ids, page=page)
     else:
-        tasks, has_more = await query_tasks(tag=tag,
-                                            page=page,
-                                            page_size=page_size)
+        tasks, has_more = await query_tasks(tag=tag, page=page)
     now = datetime.now()
     for task in tasks:
         result = loads(task['latest_result'] or '{}')
@@ -526,23 +515,27 @@ async def lite(
             short_name=True)
     context = {'tasks': tasks, 'request': request}
     context['version'] = __version__
-    quoted_tag = quote_plus(tag)
+    if group_ids:
+        params = {'group_ids': group_ids}
+    else:
+        params = {'tag': tag}
     if has_more:
-        next_page = page + 1
-        sign = Config.get_sign('/lite', f'tag={quoted_tag}&page={next_page}')[1]
-        next_page_url = f'/lite?tag={quoted_tag}&page={next_page}&sign={sign}'
+        if group_ids:
+            last_page_url = Config.get_route('/lite', page=page + 1, **params)
+        else:
+            last_page_url = Config.get_route('/lite', page=page + 1, **params)
     else:
         next_page_url = ''
     context['next_page_url'] = next_page_url
     if page > 1:
-        last_page = page - 1
-        sign = Config.get_sign('/lite', f'tag={quoted_tag}&page={last_page}')[1]
-        last_page_url = f'/lite?tag={quoted_tag}&page={last_page}&sign={sign}'
+        if group_ids:
+            last_page_url = Config.get_route('/lite', page=page - 1, **params)
+        else:
+            last_page_url = Config.get_route('/lite', page=page - 1, **params)
     else:
         last_page_url = ''
     context['last_page_url'] = last_page_url
-    rss_sign = Config.get_sign('/rss', f'tag={quoted_tag}')[1]
-    context['rss_url'] = f'/rss?tag={quoted_tag}&sign={rss_sign}'
+    context['rss_url'] = Config.get_route('/rss', **params)
     return templates.TemplateResponse("lite.html", context=context)
 
 
@@ -553,7 +546,7 @@ async def feeds(
     # user: str = '',
     sign: str = '',
     page: int = 1,
-    page_size: int = Config.default_page_size,
+    # page_size: int = Config.default_page_size,
     group_ids: str = '',
 ):
     if group_ids:
@@ -565,13 +558,9 @@ async def feeds(
                     "message": 'query no tasks',
                 },
             )
-        feeds, has_more = await query_feeds(task_ids=task_ids,
-                                            page=page,
-                                            page_size=page_size)
+        feeds, has_more = await query_feeds(task_ids=task_ids, page=page)
     else:
-        feeds, has_more = await query_feeds(tag=tag,
-                                            page=page,
-                                            page_size=page_size)
+        feeds, has_more = await query_feeds(tag=tag, page=page)
     now = datetime.now()
     _feeds = []
     current_date = None
@@ -590,25 +579,27 @@ async def feeds(
         _feeds.append(feed)
     context = {'feeds': _feeds, 'request': request}
     context['version'] = __version__
-    quoted_tag = quote_plus(tag)
+    if group_ids:
+        params = {'group_ids': group_ids}
+    else:
+        params = {'tag': tag}
     if has_more:
-        next_page = page + 1
-        sign = Config.get_sign('/feeds',
-                               f'tag={quoted_tag}&page={next_page}')[1]
-        next_page_url = f'/feeds?tag={quoted_tag}&page={next_page}&sign={sign}'
+        if group_ids:
+            next_page_url = Config.get_route('/feeds', page=page + 1, **params)
+        else:
+            next_page_url = Config.get_route('/feeds', page=page + 1, **params)
     else:
         next_page_url = ''
     context['next_page_url'] = next_page_url
     if page > 1:
-        last_page = page - 1
-        sign = Config.get_sign('/feeds',
-                               f'tag={quoted_tag}&page={last_page}')[1]
-        last_page_url = f'/feeds?tag={quoted_tag}&page={last_page}&sign={sign}'
+        if group_ids:
+            last_page_url = Config.get_route('/feeds', page=page - 1, **params)
+        else:
+            last_page_url = Config.get_route('/feeds', page=page - 1, **params)
     else:
         last_page_url = ''
     context['last_page_url'] = last_page_url
-    rss_sign = Config.get_sign('/rss_feeds', f'tag={quoted_tag}')[1]
-    context['rss_url'] = f'/rss_feeds?tag={quoted_tag}&sign={rss_sign}'
+    context['rss_url'] = Config.get_route('/rss_feeds', **params)
     return templates.TemplateResponse("feeds.html", context=context)
 
 

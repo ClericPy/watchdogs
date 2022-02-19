@@ -127,7 +127,7 @@ groups = sqlalchemy.Table(
                       sqlalchemy.String(64, collation=Config.COLLATION),
                       nullable=False),
     sqlalchemy.Column("task_ids", sqlalchemy.TEXT),
-    sqlalchemy.Column("ts_create", sqlalchemy.TIMESTAMP, nullable=False),
+    # sqlalchemy.Column("ts_create", sqlalchemy.TIMESTAMP, nullable=False),
 )
 
 
@@ -354,8 +354,10 @@ async def query_tasks(
     _result = await Config.db.fetch_all(query=query)
     has_more = len(_result) > page_size
     result = [dict(i) for i in _result][:page_size]
+    query_string = str(query.compile(
+        compile_kwargs={"literal_binds": True})).replace('\n', '')
     Config.logger.info(
-        f'[Query] {len(result)} tasks (has_more={has_more}): {query}')
+        f'[Query] {len(result)} tasks (has_more={has_more}): {query_string}')
     return result, has_more
 
 
@@ -369,7 +371,9 @@ async def query_task_ids(task_name: Optional[str] = None,
         query = query.where(tasks.c.tag == tag)
     _result = await Config.db.fetch_all(query=query)
     result = [dict(i)['task_id'] for i in _result]
-    Config.logger.info(f'[Query] {len(result)} task ids: {query}')
+    query_string = str(query.compile(
+        compile_kwargs={"literal_binds": True})).replace('\n', '')
+    Config.logger.info(f'[Query] {len(result)} task ids: {query_string}')
     return result
 
 
@@ -396,8 +400,10 @@ async def query_group_task_ids(
             task_ids_str = dict(_result).get('task_ids') or ''
             for task_id in task_ids_str.split(','):
                 task_ids.add(int(task_id))
+    query_string = str(query.compile(
+        compile_kwargs={"literal_binds": True})).replace('\n', '')
     Config.logger.info(
-        f'[Query] {len(task_ids)} task_ids by group {group_id or group_ids}: {query}'
+        f'[Query] {len(task_ids)} task_ids by group {group_id or group_ids}: {query_string}'
     )
     return list(task_ids)
 
@@ -420,7 +426,7 @@ async def query_feeds(
     if tag:
         _task_ids += await query_task_ids(tag=tag)
     if _task_ids:
-        query = query.where(feeds.c.task_id.in_(_task_ids))
+        query = query.where(feeds.c.task_id.in_(tuple(_task_ids)))
     else:
         if task_id is not None:
             query = query.where(feeds.c.task_id == task_id)
@@ -442,6 +448,8 @@ async def query_feeds(
     _result = await Config.db.fetch_all(query=query)
     has_more = len(_result) > page_size
     result = [dict(i) for i in _result][:page_size]
+    query_string = str(query.compile(
+        compile_kwargs={"literal_binds": True})).replace('\n', '')
     Config.logger.info(
-        f'[Query] {len(result)} feeds (has_more={has_more}): {query}')
+        f'[Query] {len(result)} feeds (has_more={has_more}): {query_string}')
     return result, has_more
