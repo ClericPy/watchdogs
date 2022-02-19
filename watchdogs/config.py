@@ -9,7 +9,7 @@ from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse, RedirectResponse
 from torequests.utils import md5 as _md5
-from torequests.utils import parse_qsl, quote_plus
+from torequests.utils import parse_qsl, quote_plus, unparse_qsl
 from uniparser.crawler import RuleStorage
 from uniparser.parsers import AsyncFrequency
 
@@ -106,7 +106,7 @@ class Config:
     ENCODING = 'utf-8'
     AUTH_PATH_WHITE_LIST = {'/auth'}
     # db_url defaults to sqlite://
-    db_url: str = f'sqlite:///{CONFIG_DIR / "storage.sqlite"}'
+    db_url: str = f'sqlite:///{(CONFIG_DIR / "storage.sqlite").as_posix()}'
     db: Database = None
     logger = logger
     password: str = ''
@@ -191,6 +191,18 @@ class Config:
     cookie_max_age = 86400 * 7
     default_page_size = 20
     TEXT_SLICE_LENGTH = 200
+
+    @classmethod
+    def get_route(cls, path, **kwargs):
+        params_string = unparse_qsl([
+            (k, str(v)) for k, v in kwargs.items() if str(v)
+        ])
+        sign = cls.get_sign(path, params_string)[1]
+        if params_string:
+            result = f'{path}?{params_string}&sign={sign}'
+        else:
+            result = f'{path}?sign={sign}'
+        return result
 
     @classmethod
     def add_custom_tabs(cls, label, url, name=None, desc=None):
