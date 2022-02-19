@@ -81,6 +81,8 @@ def setup_models():
 
 
 async def setup_uniparser():
+    import base64
+    import binascii
     import datetime
     import math
     import random
@@ -124,6 +126,8 @@ async def setup_uniparser():
         'urlparse': urlparse,
         'urlsplit': urlsplit,
         'urlunparse': urlunparse,
+        'base64': base64,
+        'binascii': binascii,
     })
     GlobalConfig.GLOBAL_TIMEOUT = Config.downloader_timeout
     Uniparser._DEFAULT_ASYNC_FREQUENCY = AsyncFrequency(
