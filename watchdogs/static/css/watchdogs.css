@@ -8,6 +8,7 @@ body,
 
 html {
     margin: 0 auto;
+    zoom: 90%;
     width: 90%;
     height: 90%;
 }
