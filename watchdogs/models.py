@@ -265,6 +265,12 @@ class Task(BaseModel):
     custom_info: str = ''
 
 
+class Group(BaseModel):
+    id: Optional[int] = None
+    name: str = ''
+    task_ids: str = ''
+
+
 class Feed(BaseModel):
     task_id: int
     name: str
@@ -398,7 +404,7 @@ async def query_group_task_ids(
         _result = await Config.db.fetch_one(query=query)
         if _result:
             task_ids_str = dict(_result).get('task_ids') or ''
-            for task_id in task_ids_str.split(','):
+            for task_id in re.findall(r'\d+', task_ids_str):
                 task_ids.add(int(task_id))
     query_string = str(query.compile(
         compile_kwargs={"literal_binds": True})).replace('\n', '')
@@ -453,3 +459,16 @@ async def query_feeds(
     Config.logger.info(
         f'[Query] {len(result)} feeds (has_more={has_more}): {query_string}')
     return result, has_more
+
+
+@alru_cache(maxsize=Config.query_groups_cache_maxsize)
+async def query_all_groups() -> List[dict]:
+    query = groups.select()
+    rows = await Config.db.fetch_all(query=query)
+    result = []
+    for row in rows:
+        result.append(dict(row))
+    query_string = str(query.compile(
+        compile_kwargs={"literal_binds": True})).replace('\n', '')
+    Config.logger.info(f'[Query] {len(result)} groups: {query_string}')
+    return result

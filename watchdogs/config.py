@@ -161,6 +161,7 @@ class Config:
         'dispatch': auth_checker
     }]
     md5_cache_maxsize = 128
+    query_groups_cache_maxsize = 128
     query_group_task_ids_cache_maxsize = 128
     query_task_ids_cache_maxsize = 128
     query_tasks_cache_maxsize = 128
@@ -172,19 +173,28 @@ class Config:
     background_task = None
     background_funcs: List[Callable] = []
     is_shutdown = False
-    custom_links = [{
-        'label': 'Auth',
-        'url': '/auth',
-        'desc': 'change your password',
-    }, {
-        'label': 'Logs',
-        'url': '/log',
-        'desc': 'view the logs',
-    }, {
-        'label': 'Docs',
-        'url': '/docs',
-        'desc': 'view the docs',
-    }]
+    custom_links = [
+        {
+            'label': 'Auth',
+            'url': '/auth',
+            'desc': 'change your password',
+        },
+        {
+            'label': 'Logs',
+            'url': '/log',
+            'desc': 'view the logs',
+        },
+        {
+            'label': 'Docs',
+            'url': '/docs',
+            'desc': 'read the docs',
+        },
+        {
+            'label': 'Groups',
+            'url': '/groups',
+            'desc': 'admin the groups',
+        },
+    ]
     # custom_tabs = [{'name': 'apis', 'label': 'API', 'url': '/docs'}]
     custom_tabs: List[Dict] = []
     COLLATION: str = None
