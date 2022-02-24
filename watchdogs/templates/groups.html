@@ -70,7 +70,11 @@
                 </div>
                 {% endfor %}
                 <hr>
-                <input style="width: 100%;" type="submit" value="Add New Group" onclick="send_api(null, 'new')">
+                <div style="margin: 0 auto;" id="new_group"><input style="width: 10%;" type="text" id="new_id"
+                        placeholder="id" value="">
+                    <input style="width: 10%;" type="submit" value="New Group"
+                        onclick="send_api(parseInt(document.getElementById('new_id').value)||null,'new')">
+                </div>
             </div>
         </div>
     </div>
@@ -100,11 +104,12 @@
             }
             if (group_id) {
                 let node = document.getElementById(group_id)
-                data.name = node.querySelector('[name="name"]').value
-                data.task_ids = node.querySelector('[name="task_ids"]').value
+                if (node) {
+                    data.name = node.querySelector('[name="name"]').value
+                    data.task_ids = node.querySelector('[name="task_ids"]').value
+                }
             }
             return data
-
         }
         function update_group(group_id, action) {
             if (confirm(action + '?')) {
