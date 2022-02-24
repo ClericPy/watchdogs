@@ -521,6 +521,8 @@ async def lite(
         params = {'group_ids': group_ids}
     else:
         params = {'tag': tag}
+    home_url = Config.get_route('/lite', **params)
+    context['home_url'] = home_url
     if has_more:
         if group_ids:
             last_page_url = Config.get_route('/lite', page=page + 1, **params)
@@ -585,6 +587,8 @@ async def feeds(
         params = {'group_ids': group_ids}
     else:
         params = {'tag': tag}
+    home_url = Config.get_route('/feeds', **params)
+    context['home_url'] = home_url
     if has_more:
         if group_ids:
             next_page_url = Config.get_route('/feeds', page=page + 1, **params)
