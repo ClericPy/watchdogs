@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="referrer" content="never" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <link rel="shortcut icon" href="/static/img/favicon.svg" type="image/icon" />
+    <title>Watchdogs Groups v{{version}}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <style>
+        html {
+            margin: 3em 10% 3em 10%;
+        }
+
+        input {
+            min-width: 5em;
+            -webkit-font-smoothing: antialiased;
+            appearance: none;
+            background-color: #FAFBFC;
+            border: 1px solid rgba(27, 31, 35, 0.15);
+            border-radius: 6px;
+            box-shadow: rgba(27, 31, 35, 0.04) 0 1px 0, rgba(255, 255, 255, 0.25) 0 1px 0 inset;
+            box-sizing: border-box;
+            color: #24292E;
+            display: inline-block;
+            font-size: .9em;
+            font-weight: bold;
+            line-height: 1.5em;
+            list-style: none;
+            padding: 6px 16px;
+            position: relative;
+            transition: background-color 0.2s cubic-bezier(0.3, 0, 0.5, 1);
+            touch-action: manipulation;
+            vertical-align: middle;
+            white-space: nowrap;
+            word-wrap: break-word;
+        }
+
+        a {
+            color: black;
+        }
+
+        span {
+            font-weight: bold;
+            margin: .5em;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="main-body">
+        <div>
+            <h3>
+                <a href="/">Watchdogs</a>
+            </h3>
+            <div>
+                {% for group in groups %}
+                <div id="{{group.id}}">
+                    <span>id: </span><input style="width: 10%;" type="text" name="id" disabled value="{{group.id}}">
+                    <span>name: </span><input style="width: 15%;" type="text" name="name" value="{{group.name}}">
+                    <span>task_ids: </span><input type="text" name="task_ids" style="width: 30%;"
+                        value="{{group.task_ids}}">
+                    <input style="width: 5%;" type="submit" onclick="update_group({{group.id}}, 'update')">
+                    <input style="width: 5%;" type="submit" onclick="update_group({{group.id}}, 'delete')"
+                        value="Delete">
+                    <a target="_blank" href="{{group.href_lite}}">Lite</a>
+                    <a target="_blank" href="{{group.href_feeds}}">Feed</a>
+                </div>
+                {% endfor %}
+                <hr>
+                <input style="width: 100%;" type="submit" value="Add New Group" onclick="send_api(null, 'new')">
+            </div>
+        </div>
+    </div>
+    <script>
+        function send_api(group_id, action) {
+            let data = JSON.stringify(get_data(group_id))
+            fetch('/update_group?action=' + action, {
+                method: "POST",
+                body: data,
+                headers: {
+                    "Content-Type": "application/json"
+                }
+            })
+                .then(function (response) {
+                    return response.text();
+                })
+                .then(function (body) {
+                    alert(body)
+                    window.location.reload()
+                });
+        }
+        function get_data(group_id) {
+            let data = {
+                id: group_id,
+                name: "",
+                task_ids: "",
+            }
+            if (group_id) {
+                let node = document.getElementById(group_id)
+                data.name = node.querySelector('[name="name"]').value
+                data.task_ids = node.querySelector('[name="task_ids"]').value
+            }
+            return data
+
+        }
+        function update_group(group_id, action) {
+            if (confirm(action + '?')) {
+                send_api(group_id, action)
+            }
+        }
+    </script>
+</body>
+
+</html>

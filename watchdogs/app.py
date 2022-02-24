@@ -21,7 +21,8 @@ from uniparser.utils import get_host
 from . import __version__
 from .config import md5_checker
 from .crawler import crawl_once, find_next_check_time
-from .models import Task, query_feeds, query_tasks, tasks, query_group_task_ids
+from .models import (Group, Task, groups, query_all_groups, query_feeds,
+                     query_group_task_ids, query_tasks, tasks)
 from .settings import (Config, get_host_freq_list, refresh_token, release_app,
                        set_host_freq, setup_app)
 from .utils import format_size, gen_rss
@@ -135,7 +136,6 @@ async def favicon():
 @app.post("/add_new_task")
 async def add_new_task(task: Task):
     try:
-        exist = 'unknown'
         if task.interval < 60:
             raise ValueError('interval should not less than 60 seconds.')
         db = Config.db
@@ -169,7 +169,9 @@ async def add_new_task(task: Task):
         query_tasks.cache_clear()
     except Exception as e:
         result = {'msg': repr(e)}
-    logger.info(f'{"[Update]" if exist else "[Add] new"} task {task}: {result}')
+    logger.info(
+        f'{"[Add]" if task.task_id is None else "[Update]"} task {task}: {result}'
+    )
     return result
 
 
@@ -650,3 +652,51 @@ async def rss_feeds(request: Request,
         media_type="application/xml",
         headers={'Content-Type': 'application/xml; charset="utf-8"'})
     return response
+
+
+@app.get("/groups")
+async def groups_route(request: Request):
+    groups = await query_all_groups()
+    for _group in groups:
+        _group['href_feeds'] = Config.get_route('/feeds',
+                                                group_ids=_group['id'])
+        _group['href_lite'] = Config.get_route('/lite', group_ids=_group['id'])
+    context = {
+        'request': request,
+        'groups': groups,
+    }
+    return templates.TemplateResponse("groups.html", context=context)
+
+
+@app.post("/update_group")
+async def update_group(group: Group, action: str):
+    try:
+        db = Config.db
+        # check exist
+        if action == 'new':
+            # insert new task
+            query = groups.insert()
+            values = dict(group)
+            # insert with task_id is None
+            resp = await db.execute(query=query, values=values)
+        elif action == 'delete':
+            query = 'delete from groups where `id`=:id'
+            values = {'id': group.id}
+            resp = await db.execute(query=query, values=values)
+        else:
+            # update old task
+            query = 'update groups set `name`=:name,`task_ids`=:task_ids where `id`=:id'
+            values = {
+                'id': group.id,
+                'name': group.name,
+                'task_ids': group.task_ids,
+            }
+            resp = await db.execute(query=query, values=values)
+        result = {'msg': 'ok', 'resp': str(resp)}
+    except Exception as e:
+        result = {'msg': repr(e)}
+    finally:
+        query_all_groups.cache_clear()
+        query_group_task_ids.cache_clear()
+    logger.info(f'[{action.title()}] {group}: {result}')
+    return result
