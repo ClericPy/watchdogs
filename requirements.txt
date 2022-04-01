@@ -10,7 +10,7 @@ jsonpath-rw-ext
 lxml
 objectpath
 pyyaml>=5.3
-selectola
+selectolax
 toml
 torequests>=5.0.4
 uniparser>=3.0.0
