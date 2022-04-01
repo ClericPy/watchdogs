@@ -5,7 +5,8 @@ from functools import lru_cache
 from json import dumps, loads
 from logging.handlers import RotatingFileHandler
 
-from uniparser.parsers import AsyncFrequency, Uniparser
+from frequency_controller import AsyncFrequency
+from uniparser.parsers import Uniparser
 
 from .config import Config, NotSet, ensure_dir, md5
 
