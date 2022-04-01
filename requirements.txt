@@ -1,7 +1,7 @@
 aiofiles
 async_lru
 bs4
-databases
+databases>=0.5.5
 fastapi
 fire
 jinja2
