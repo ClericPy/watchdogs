@@ -73,6 +73,8 @@ def start_app(db_url=None,
                    config_dir=config_dir,
                    use_default_cdn=use_default_cdn,
                    **uvicorn_kwargs)
+    from fastapi.middleware.gzip import GZipMiddleware
+    app.add_middleware(GZipMiddleware, minimum_size=1000)
     run(app, **Config.uvicorn_kwargs)
 
 
