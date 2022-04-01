@@ -55,6 +55,12 @@
             <h3>
                 <a href="/">Watchdogs</a>
             </h3>
+            <div style="text-align: right;" id="new_group">
+                <input style="width: 20%;" type="text" id="new_id" placeholder="id" value="">
+                <input style="width: 10%;" type="submit" value="New Group"
+                    onclick="send_api(parseInt(document.getElementById('new_id').value)||null,'new')">
+            </div>
+            <hr>
             <div>
                 {% for group in groups %}
                 <div id="{{group.id}}">
@@ -69,12 +75,6 @@
                     <a target="_blank" href="{{group.href_feeds}}">Feed</a>
                 </div>
                 {% endfor %}
-                <hr>
-                <div style="margin: 0 auto;" id="new_group"><input style="width: 10%;" type="text" id="new_id"
-                        placeholder="id" value="">
-                    <input style="width: 10%;" type="submit" value="New Group"
-                        onclick="send_api(parseInt(document.getElementById('new_id').value)||null,'new')">
-                </div>
             </div>
         </div>
     </div>
