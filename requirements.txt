@@ -13,5 +13,5 @@ pyyaml>=5.3
 selectolax
 toml
 torequests>=5.0.4
-uniparser>=3.0.0
+uniparser>=3.0.1
 uvicorn
