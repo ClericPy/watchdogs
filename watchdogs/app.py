@@ -522,9 +522,9 @@ async def lite(
     context['home_url'] = Config.get_route('/lite', **params)
     if has_more:
         if group_ids:
-            last_page_url = Config.get_route('/lite', page=page + 1, **params)
+            next_page_url = Config.get_route('/lite', page=page + 1, **params)
         else:
-            last_page_url = Config.get_route('/lite', page=page + 1, **params)
+            next_page_url = Config.get_route('/lite', page=page + 1, **params)
     else:
         next_page_url = ''
     context['next_page_url'] = next_page_url
