@@ -30,12 +30,25 @@ def init_app(db_url=None,
              md5_salt=None,
              config_dir=None,
              use_default_cdn=False,
+             allow_new_request=False,
              **uvicorn_kwargs):
     if config_dir:
         Config.CONFIG_DIR = ensure_dir(config_dir)
     if uninstall:
         clear_dir(Config.CONFIG_DIR)
         sys.exit('Config dir cleared.')
+    if allow_new_request:
+        # will allow use requests / aiohttp / tPool / Requests in UDFParser
+        import aiohttp
+        import requests
+        from torequests.dummy import Requests
+        from torequests.main import tPool
+        from uniparser.parsers import UDFParser
+
+        UDFParser._GLOBALS_ARGS.update(aiohttp=aiohttp,
+                                       requests=requests,
+                                       Requests=Requests,
+                                       tPool=tPool)
     # backward compatibility for ignore_stdout_log & ignore_file_log
     Config.mute_std_log = get_valid_value(
         [uvicorn_kwargs.pop('ignore_stdout_log', NotSet), mute_std_log],
@@ -63,6 +76,7 @@ def start_app(db_url=None,
               md5_salt=None,
               config_dir=None,
               use_default_cdn=False,
+              allow_new_request=False,
               **uvicorn_kwargs):
     app = init_app(db_url=db_url,
                    password=password,
@@ -72,6 +86,7 @@ def start_app(db_url=None,
                    md5_salt=md5_salt,
                    config_dir=config_dir,
                    use_default_cdn=use_default_cdn,
+                   allow_new_request=allow_new_request,
                    **uvicorn_kwargs)
     from fastapi.middleware.gzip import GZipMiddleware
     app.add_middleware(GZipMiddleware, minimum_size=1000)
