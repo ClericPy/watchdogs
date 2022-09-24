@@ -306,8 +306,8 @@ var Main = {
             } else {
                 this.query_tasks_args["tag"] = ""
             }
-            this.current_page += 1
-            this.query_tasks_args["page"] = this.current_page
+            current_page = this.current_page + 1
+            this.query_tasks_args["page"] = current_page
             this.$http
                 .get("load_tasks", {
                     params: this.query_tasks_args,
@@ -320,16 +320,15 @@ var Main = {
                                 this.task_list.push(item)
                             })
                             this.has_more = result.has_more
+                            this.current_page = current_page
                         } else {
                             this.$message.error({
                                 message: "Loading tasks failed: " + result.msg,
                             })
                             this.has_more = result.has_more
-                            this.current_page -= 1
                         }
                     },
                     (r) => {
-                        this.current_page -= 1
                         this.$message.error({
                             message: "connect failed: " + r.status,
                         })
