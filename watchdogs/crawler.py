@@ -196,14 +196,20 @@ async def _crawl_once(task_name: Optional[str] = None, chunk_size: int = 20):
         CLEAR_CACHE_NEEDED = True
     logger.info(f'crawl_once crawling {len(todo)} valid tasks.')
     if todo:
+        crawl_errors = []
         done, pending = await wait(todo, timeout=Config.default_crawler_timeout)
         if pending:
             names = [getattr(t, 'task_name', None) for t in pending]
             logger.error(f'crawl timeout {len(names)}: {names}')
+            for _pending in pending:
+                crawl_errors.append({
+                    'task_id': task.task_id,
+                    'error': 'timeout(%s)' % Config.default_crawler_timeout
+                })
+                _pending.cancel()
         ttime_now = ttime()
         changed_tasks = []
         update_counts = 0
-        crawl_errors = []
         for t in done:
             task, error, result_list = t.result()
             if error != task.error:
@@ -215,19 +221,19 @@ async def _crawl_once(task_name: Optional[str] = None, chunk_size: int = 20):
             # later first, just like the saved result_list sortings
             old_latest_result = loads(task.latest_result)
             # try to use the key, or it self
-            old_latest_result_key = get_result_key(old_latest_result)
             try:
                 old_result_list = loads(
                     task.result_list) if task.result_list else []
             except JSONDecodeError:
                 old_result_list = []
-            if old_latest_result.get('unique'):
+            if old_latest_result.get('unique', True):
                 # unique mode will skip all the Duplicated results
                 exist_keys = {
                     get_result_key(_old_result['result'])
                     for _old_result in old_result_list
                 }
             else:
+                old_latest_result_key = get_result_key(old_latest_result)
                 exist_keys = {old_latest_result_key}
             # list of dict
             to_insert_result_list = []
