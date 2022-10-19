@@ -482,6 +482,7 @@ async def query_task_errors(tag: str = '',
     if task_ids:
         query = query.where(tasks.c.task_id.in_(tuple(task_ids)))
     query = query.where(tasks.c.error != '')
+    query = query.where(tasks.c.enable == 1)
     if tag:
         query = query.where(tasks.c.tag == tag)
     query = query.order_by(sqlalchemy.desc('last_change_time'))
