@@ -1,7 +1,7 @@
 import re
 from datetime import datetime
 from traceback import format_exc
-from typing import List, Optional, Set, Tuple, Union
+from typing import Iterable, List, Optional, Set, Tuple, Union
 
 import sqlalchemy
 from async_lru import alru_cache
@@ -428,7 +428,9 @@ async def query_feeds(
     # task_ids arg type is tuple for cache hashing
     offset = page_size * (page - 1)
     query = feeds.select()
-    _task_ids = list(task_ids) if task_ids else []
+    _task_ids: List[int] = []
+    if task_ids:
+        _task_ids.extend(task_ids)
     if tag:
         _task_ids += await query_task_ids(tag=tag)
     if _task_ids:
@@ -471,4 +473,21 @@ async def query_all_groups() -> List[dict]:
     query_string = str(query.compile(
         compile_kwargs={"literal_binds": True})).replace('\n', '')
     Config.logger.info(f'[Query] {len(result)} groups: {query_string}')
+    return result
+
+
+async def query_task_errors(tag: str = '',
+                            task_ids: Iterable = None) -> List[dict]:
+    query = tasks.select().with_only_columns(tasks.c.name, tasks.c.error)
+    if task_ids:
+        query = query.where(tasks.c.task_id.in_(tuple(task_ids)))
+    query = query.where(tasks.c.error != '')
+    if tag:
+        query = query.where(tasks.c.tag == tag)
+    query = query.order_by(sqlalchemy.desc('last_change_time'))
+    _result: list = await Config.db.fetch_all(query=query)
+    result = [dict(task) for task in _result]
+    query_string = str(query.compile(
+        compile_kwargs={"literal_binds": True})).replace('\n', '')
+    Config.logger.info(f'[Query] {len(result)} task errors: {query_string}')
     return result

@@ -21,7 +21,8 @@ from . import __version__
 from .config import md5_checker
 from .crawler import crawl_once, find_next_check_time
 from .models import (Group, Task, groups, query_all_groups, query_feeds,
-                     query_group_task_ids, query_tasks, tasks)
+                     query_group_task_ids, query_task_errors, query_tasks,
+                     tasks)
 from .settings import (Config, get_host_freq_list, refresh_token, release_app,
                        set_host_freq, setup_app)
 from .utils import format_size, gen_rss
@@ -550,6 +551,7 @@ async def feeds(
     # page_size: int = Config.default_page_size,
     group_ids: str = '',
 ):
+    error_tasks = []
     if group_ids:
         task_ids = tuple(await query_group_task_ids(group_ids))
         if not task_ids:
@@ -559,9 +561,16 @@ async def feeds(
                     "message": 'query no tasks',
                 },
             )
-        feeds, has_more = await query_feeds(task_ids=task_ids, page=page)
+        feeds, has_more = await query_feeds(task_ids=task_ids,
+                                            tag=tag,
+                                            page=page)
+        if page == 1:
+            error_tasks.extend(await query_task_errors(tag=tag,
+                                                       task_ids=task_ids))
     else:
         feeds, has_more = await query_feeds(tag=tag, page=page)
+        if page == 1:
+            error_tasks.extend(await query_task_errors(tag=tag))
     now = datetime.now()
     _feeds = []
     current_date = None
@@ -578,7 +587,7 @@ async def feeds(
                                   1,
                                   short_name=True)
         _feeds.append(feed)
-    context = {'feeds': _feeds, 'request': request}
+    context = {'feeds': _feeds, 'request': request, 'error_tasks': error_tasks}
     context['version'] = __version__
     if group_ids:
         params = {'group_ids': group_ids}

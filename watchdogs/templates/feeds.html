@@ -157,6 +157,17 @@
         .date-line {
             text-align: center;
         }
+
+        .errors {
+            background-color: #ffc6349c;
+        }
+
+        .errors>p {
+            white-space: nowrap;
+            text-overflow: ellipsis;
+            overflow: hidden;
+        }
+
     </style>
 </head>
 
@@ -167,6 +178,11 @@
         </div>
         <div class="tasks-main">
             <div class="feeds">
+                <div class="errors">
+                    {% for task in error_tasks %}
+                    <p>[{{task.name}}]: {{task.error}}</p>
+                    {% endfor %}
+                </div>
                 {%- if not feeds -%}
                 <p style="text-align: center;">No Feeds.</p>
                 {% endif %}
