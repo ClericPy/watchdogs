@@ -9,8 +9,8 @@ import aiofiles
 from fastapi import Cookie, FastAPI, Header
 from fastapi.staticfiles import StaticFiles
 from starlette.requests import Request
-from starlette.responses import (HTMLResponse, JSONResponse, RedirectResponse,
-                                 Response)
+from starlette.responses import (FileResponse, HTMLResponse, JSONResponse,
+                                 RedirectResponse, Response)
 from starlette.templating import Jinja2Templates
 from torequests.utils import timeago, ttime
 from uniparser import CrawlerRule, Uniparser
@@ -709,3 +709,10 @@ async def update_group(group: Group, action: str):
         query_group_task_ids.cache_clear()
     logger.info(f'[{action.title()}] {group}: {result}')
     return result
+
+
+@app.get("/sqlite")
+async def download_db():
+    if Config.db_url.startswith('sqlite:///'):
+        return FileResponse(path=Config.db_url.replace('sqlite:///', ''))
+    return Response(content=b'not sqlite', status_code=404)
