@@ -1,6 +1,7 @@
 aiofiles
 async_lru
 bs4
+SQLAlchemy==1.4.41
 databases>=0.5.5
 fastapi
 fire
