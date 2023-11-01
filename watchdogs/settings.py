@@ -90,12 +90,31 @@ async def setup_uniparser():
     import re
 
     import uniparser.fastapi_ui
-    from torequests.utils import (curlparse, escape, guess_interval,
-                                  itertools_chain, json, parse_qs, parse_qsl,
-                                  ptime, quote, quote_plus, slice_by_size,
-                                  slice_into_pieces, split_n, timeago, ttime,
-                                  unescape, unique, unquote, unquote_plus,
-                                  urljoin, urlparse, urlsplit, urlunparse)
+    from torequests.utils import (
+        curlparse,
+        escape,
+        guess_interval,
+        itertools_chain,
+        json,
+        parse_qs,
+        parse_qsl,
+        ptime,
+        quote,
+        quote_plus,
+        slice_by_size,
+        slice_into_pieces,
+        split_n,
+        timeago,
+        ttime,
+        unescape,
+        unique,
+        unquote,
+        unquote_plus,
+        urljoin,
+        urlparse,
+        urlsplit,
+        urlunparse,
+    )
     from uniparser.config import GlobalConfig
     from uniparser.parsers import UDFParser
     from uniparser.utils import TorequestsAiohttpAsyncAdapter
@@ -243,11 +262,6 @@ def setup_exception_handlers(app):
         app.add_exception_handler(exc, callback)
 
 
-def setup_middleware(app):
-    for middleware in Config.middlewares:
-        app.add_middleware(**middleware)
-
-
 def mute_noise_logger():
     # uvicorn will set new handler for root logger and access logger after app launched.
     logging.getLogger('').handlers.clear()
@@ -268,7 +282,6 @@ async def setup_app(app):
     # refresh_token should be after setup_md5_salt
     await refresh_token()
     setup_exception_handlers(app)
-    setup_middleware(app)
     # 1
     await setup_uniparser()
     # 2
