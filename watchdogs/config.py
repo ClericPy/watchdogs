@@ -6,6 +6,7 @@ from typing import Any, Callable, Dict, List
 
 from databases import Database
 from fastapi import Request
+from fastapi.middleware.gzip import GZipMiddleware
 from frequency_controller import AsyncFrequency
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse, RedirectResponse
@@ -156,10 +157,16 @@ class Config:
     exception_handlers: list = [
         (Exception, exception_handler),
     ]
-    middlewares = [{
-        'middleware_class': BaseHTTPMiddleware,
-        'dispatch': auth_checker
-    }]
+    middlewares = [
+        {
+            'middleware_class': BaseHTTPMiddleware,
+            'dispatch': auth_checker
+        },
+        {
+            'middleware_class': GZipMiddleware,
+            'minimum_size': 1000
+        },
+    ]
     md5_cache_maxsize = 128
     query_groups_cache_maxsize = 128
     query_group_task_ids_cache_maxsize = 128
@@ -234,6 +241,11 @@ class Config:
             'url': url,
             'desc': desc
         })
+
+    @classmethod
+    def setup_middleware(cls, app):
+        for middleware in cls.middlewares:
+            app.add_middleware(**middleware)
 
 
 def md5(obj, n=32, with_salt=True):

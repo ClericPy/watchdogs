@@ -9,8 +9,13 @@ import aiofiles
 from fastapi import Cookie, FastAPI, Header
 from fastapi.staticfiles import StaticFiles
 from starlette.requests import Request
-from starlette.responses import (FileResponse, HTMLResponse, JSONResponse,
-                                 RedirectResponse, Response)
+from starlette.responses import (
+    FileResponse,
+    HTMLResponse,
+    JSONResponse,
+    RedirectResponse,
+    Response,
+)
 from starlette.templating import Jinja2Templates
 from torequests.utils import timeago, ttime
 from uniparser import CrawlerRule, Uniparser
@@ -20,15 +25,31 @@ from uniparser.utils import get_host
 from . import __version__
 from .config import md5_checker
 from .crawler import crawl_once, find_next_check_time
-from .models import (Group, Task, groups, query_all_groups, query_feeds,
-                     query_group_task_ids, query_task_errors, query_tasks,
-                     tasks)
-from .settings import (Config, get_host_freq_list, refresh_token, release_app,
-                       set_host_freq, setup_app)
+from .models import (
+    Group,
+    Task,
+    groups,
+    query_all_groups,
+    query_feeds,
+    query_group_task_ids,
+    query_task_errors,
+    query_tasks,
+    tasks,
+)
+from .settings import (
+    Config,
+    get_host_freq_list,
+    refresh_token,
+    release_app,
+    set_host_freq,
+    setup_app,
+)
 from .utils import format_size, gen_rss
 
 description = "Watchdogs to keep an eye on the world's change.\nRead more: [https://github.com/ClericPy/watchdogs](https://github.com/ClericPy/watchdogs)"
 app = FastAPI(title="Watchdogs", description=description, version=__version__)
+
+Config.setup_middleware(app)
 sub_app.openapi_prefix = '/uniparser'
 app.mount("/uniparser", sub_app)
 app.mount("/static",
